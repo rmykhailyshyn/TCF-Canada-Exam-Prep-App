@@ -4,39 +4,50 @@
 draft
 
 ## Goal
-Allow a developer to import reading comprehension questions from source files into the
-local SQLite database via a CLI script. The source material consists of a PNG image
-containing the passage text and one or more HTML files each containing one question with
-four answer options and a marker identifying the correct option. Once imported, questions
-are available for quiz sessions.
+Allow a developer to import a full reading section run (39 questions) into the local SQLite
+database via a CLI script. A run consists of one HTML file containing all 39 questions with
+their answer options and correct answer markers, and 39 PNG images named `q01.png`–`q39.png`,
+each containing the passage text for the corresponding question. Once imported, questions are
+available for quiz sessions.
 
 ## Scope
 - In scope:
-  - CLI script `npm run ocr -- --passage <path.png> --questions <q1.html> [q2.html ...]`
-  - OCR extraction of passage text from PNG via Tesseract CLI
-  - HTML parsing of question text, four options (A–D), and correct answer identifier
-  - Persisting passage + questions + options to DB
-  - Idempotent import: re-running with the same files does not create duplicates
+  - CLI script `npm run import:reading -- --html <path.html> --images <dir/>`
+  - HTML parsing of all 39 questions: question text, four options (A–D), correct answer identifier
+  - Matching each question to its PNG by 1-based sequence position and filename convention (`q<NN>.png`)
+  - OCR extraction of passage text from each PNG via Tesseract CLI
+  - Persisting passage + question + options to DB for each of the 39 questions
+  - Idempotent import: re-running with the same HTML path does not create duplicates
   - Error reporting for unreadable images or malformed HTML
 - Out of scope:
   - In-app import UI (CLI only for now)
-  - Batch/folder import (invoked per passage)
+  - Runs with fewer or more than 39 questions
   - Automatic LLM explanation generation (separate script, Milestone 6)
   - Editing or deleting imported questions via CLI
 
 ## Behaviour
-1. The user runs the import script with a passage image path and one or more question HTML paths.
-2. The script runs Tesseract OCR on the PNG and stores the extracted passage text in the DB.
-3. For each HTML file, the script parses: question text, options A/B/C/D, and the correct answer identifier.
-4. Each question is linked to the passage and persisted with its options and correct answer.
-5. If an import with the same source file paths has already been run, the script reports a
-   duplicate warning and skips without inserting new rows.
-6. If Tesseract returns a non-zero exit code, the script logs stderr and exits with a
-   non-zero code without writing anything to the DB.
-7. If an HTML file cannot be parsed (missing question, missing options, missing correct answer
-   marker), the script logs a descriptive error for that file, skips it, and continues with
-   the remaining files.
-8. On success, the script prints a summary: passage id, number of questions imported.
+1. The user runs the import script with a path to the HTML file and a path to a directory
+   containing the PNG images named `q01.png`–`q39.png`.
+2. The script parses the HTML and extracts 39 questions in document order. Each question
+   record contains: question text, options A/B/C/D, and the correct answer identifier.
+3. For each question at position N (1-based), the script resolves the matching image as
+   `<images-dir>/q<NN>.png` (zero-padded to two digits).
+4. The script runs Tesseract OCR on the matched PNG and stores the extracted text as the
+   passage for that question.
+5. Each passage, question, and its options are persisted to the DB. Passage and question
+   are linked; each question has exactly one passage.
+6. If an import run for the same HTML source path already exists, the script prints a
+   duplicate warning and exits without inserting any rows.
+7. If the HTML contains fewer or more than 39 parsed questions, the script logs an error
+   and exits without writing anything to the DB.
+8. If a required PNG file is missing for any question, the script logs which file is missing
+   and exits without writing anything to the DB.
+9. If Tesseract returns a non-zero exit code for any image, the script logs stderr for that
+   image and exits without writing anything to the DB.
+10. If any question in the HTML cannot be parsed (missing text, missing options, missing
+    correct answer marker), the script logs a descriptive error for that question index and
+    exits without writing anything to the DB.
+11. On success, the script prints a summary: number of passages and questions imported.
 
 ## Data model changes
 ```
@@ -48,8 +59,9 @@ passages
 
 questions
   id           integer primary key
-  passage_id   integer not null references passages(id)
-  source_file  text not null unique  -- original HTML path
+  passage_id   integer references passages(id)   -- null for listening questions
+  source_file  text not null unique              -- original HTML path + "?q=<N>" to make it unique per question
+  sequence     integer not null                  -- 1-based position within the section run
   text         text not null
   section      text not null check (section in ('reading', 'listening'))
   created_at   integer not null
@@ -67,8 +79,13 @@ None — CLI script only.
 
 ## Open questions
 - What is the exact HTML structure used in the source question files? The parser needs to
-  know which element or attribute marks the correct answer. Needs to be confirmed against
-  a real sample file before implementation.
+  know which element or attribute marks the correct answer and how questions are delimited
+  within the single HTML file. Needs to be confirmed against a real sample file before
+  implementation.
+- Should the import be atomic (all 39 or nothing) or should partial imports be supported?
+  Current behaviour spec assumes atomic (exit on any error). Confirm before implementation.
 
 ## Revision history
 - 2026-06-04: Initial draft
+- 2026-06-04: Revised — corrected import model: one HTML file contains all 39 questions;
+  one PNG per question matched by q<NN>.png filename convention; one passage per question strictly.
