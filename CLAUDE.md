@@ -24,7 +24,7 @@ This project also serves as a **testbed for evaluating spec-driven development**
 |---|---|
 | Frontend | React 18, Vite, Tailwind CSS, TypeScript |
 | Backend | Express (Node.js), TypeScript |
-| Database | SQLite via Drizzle ORM |
+| Database | PostgreSQL via Drizzle ORM |
 | Audio transcription | Whisper CLI (Apple Silicon, `mlx-whisper` or `whisper.cpp`) |
 | OCR | Tesseract OCR (CLI) |
 | Package manager | npm |
@@ -152,6 +152,7 @@ Every non-trivial function or component must include a one-line comment referenc
 ### Drizzle
 - Schema changes require a migration. Never mutate the DB directly during development.
 - Run `drizzle-kit generate` after every schema change. Commit both the schema and the migration together.
+- The database connection string is read from `DATABASE_URL` in `.env`. Never hardcode connection details.
 
 ### Whisper / Tesseract
 - CLI calls are wrapped in `scripts/` or `server/services/`. Never inline shell commands in route handlers.
@@ -188,11 +189,13 @@ npm run db:migrate
 # Generate migration after schema change
 npm run db:generate
 
-# Run OCR on an image (Apple Silicon only)
-npm run ocr -- --input <path>
+# Import reading questions from a directory (Apple Silicon only)
+# Directory must contain one HTML file and up to 39 PNG files
+npm run ocr -- --dir <path>
 
-# Transcribe audio (Apple Silicon only)
-npm run transcribe -- --input <path>
+# Import listening questions from a directory (Apple Silicon only)
+# Directory must contain one HTML file and up to 39 MP3 files
+npm run transcribe -- --dir <path>
 
 # Type-check without emitting (runs both client and server)
 npm run typecheck
@@ -223,7 +226,7 @@ npm test -- <path/to/file.test.ts>
 - Keep `docs/sdd-learnings.md` updated with observations about the SDD process.
 - Never write business logic inside route handlers — services only.
 - Never use `any` without an inline comment explaining why.
-- Never run `git commit` — leave commits to the human.
+- Never run `git commit` unless directly asked to do so.
 - Never add Apple Silicon / macOS-specific logic outside of `scripts/` and `server/services/` wrappers for OCR and Whisper.
 
 ---

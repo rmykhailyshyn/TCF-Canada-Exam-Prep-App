@@ -48,7 +48,7 @@ and self-hosted models via Ollama, configured through environment variables.
 ## Data model changes
 ```
 explanations
-  id               integer primary key
+  id               serial primary key
   question_id      integer not null unique references questions(id)
   correct_reason   text not null     -- why the correct answer is right
   option_a_reason  text not null     -- why A is wrong (or reinforces why A is correct)
@@ -56,7 +56,7 @@ explanations
   option_c_reason  text not null
   option_d_reason  text not null
   generated_by     text not null     -- e.g. "claude/claude-opus-4-8" or "ollama/llama3"
-  generated_at     integer not null  -- unix timestamp
+  generated_at     timestamptz not null default now()
 ```
 
 ## API contract

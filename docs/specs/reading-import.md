@@ -4,88 +4,85 @@
 draft
 
 ## Goal
-Allow a developer to import a full reading section run (39 questions) into the local SQLite
-database via a CLI script. A run consists of one HTML file containing all 39 questions with
-their answer options and correct answer markers, and 39 PNG images named `q01.png`–`q39.png`,
-each containing the passage text for the corresponding question. Once imported, questions are
-available for quiz sessions.
+Allow a developer to import reading comprehension questions from a source directory into the
+local PostgreSQL database via a CLI script. The source directory contains exactly one HTML
+file listing all questions (up to 39) and one PNG image per question, each containing the
+passage text. Once imported, questions are available for quiz sessions.
 
 ## Scope
 - In scope:
-  - CLI script `npm run import:reading -- --html <path.html> --images <dir/>`
-  - HTML parsing of all 39 questions: question text, four options (A–D), correct answer identifier
-  - Matching each question to its PNG by 1-based sequence position and filename convention (`q<NN>.png`)
+  - CLI script `npm run ocr -- --dir <path>`
+  - Directory discovery: locate the single HTML file and all PNG files (up to 39) in the directory
   - OCR extraction of passage text from each PNG via Tesseract CLI
-  - Persisting passage + question + options to DB for each of the 39 questions
-  - Idempotent import: re-running with the same HTML path does not create duplicates
+  - HTML parsing of all questions: question text, options A–D, correct answer identifier
+  - Matching each question to its corresponding PNG by a defined convention (see Open questions)
+  - Persisting passages + questions + options to DB
+  - Idempotent import: re-running with the same directory does not create duplicates
   - Error reporting for unreadable images or malformed HTML
 - Out of scope:
   - In-app import UI (CLI only for now)
-  - Runs with fewer or more than 39 questions
   - Automatic LLM explanation generation (separate script, Milestone 6)
   - Editing or deleting imported questions via CLI
 
 ## Behaviour
-1. The user runs the import script with a path to the HTML file and a path to a directory
-   containing the PNG images named `q01.png`–`q39.png`.
-2. The script parses the HTML and extracts 39 questions in document order. Each question
-   record contains: question text, options A/B/C/D, and the correct answer identifier.
-3. For each question at position N (1-based), the script resolves the matching image as
-   `<images-dir>/q<NN>.png` (zero-padded to two digits).
-4. The script runs Tesseract OCR on the matched PNG and stores the extracted text as the
-   passage for that question.
-5. Each passage, question, and its options are persisted to the DB. Passage and question
-   are linked; each question has exactly one passage.
-6. If an import run for the same HTML source path already exists, the script prints a
-   duplicate warning and exits without inserting any rows.
-7. If the HTML contains fewer or more than 39 parsed questions, the script logs an error
-   and exits without writing anything to the DB.
-8. If a required PNG file is missing for any question, the script logs which file is missing
-   and exits without writing anything to the DB.
-9. If Tesseract returns a non-zero exit code for any image, the script logs stderr for that
-   image and exits without writing anything to the DB.
-10. If any question in the HTML cannot be parsed (missing text, missing options, missing
-    correct answer marker), the script logs a descriptive error for that question index and
-    exits without writing anything to the DB.
-11. On success, the script prints a summary: number of passages and questions imported.
+1. The user runs the import script with a path to a source directory.
+2. The script scans the directory, locates the single HTML file and all PNG files; it exits
+   with an error if no HTML file is found, more than one HTML file is found, or no PNG files
+   are found.
+3. The script parses the HTML to extract all questions, each with: question text, options
+   A/B/C/D, and correct answer identifier.
+4. Each question is matched to its corresponding PNG file by the defined convention.
+5. For each PNG, the script runs Tesseract OCR and stores the extracted text as a passage.
+6. Each question is linked to its passage and persisted with its options and correct answer.
+7. If a PNG with the same file path already exists in the DB, the script prints a duplicate
+   warning for that file and skips it (and its linked question) without inserting new rows.
+8. If Tesseract returns a non-zero exit code for a PNG, the script logs stderr and skips
+   that PNG and its linked question; remaining PNGs continue to be processed.
+9. If the HTML cannot be parsed (missing questions, missing options, missing correct answer
+   markers), the script logs a descriptive error and exits without writing anything to the DB.
+10. On success, the script prints a summary: number of passages imported, number of questions imported.
 
 ## Data model changes
 ```
 passages
-  id          integer primary key
+  id          serial primary key
   source_file text not null unique   -- original PNG path, used for duplicate detection
   text        text not null          -- OCR-extracted passage content
-  created_at  integer not null       -- unix timestamp
+  created_at  timestamptz not null default now()
 
 questions
-  id           integer primary key
-  passage_id   integer references passages(id)   -- null for listening questions
-  source_file  text not null unique              -- original HTML path + "?q=<N>" to make it unique per question
-  sequence     integer not null                  -- 1-based position within the section run
+  id           serial primary key
+  passage_id   integer references passages(id)
+  source_file  text not null unique  -- original HTML path
   text         text not null
   section      text not null check (section in ('reading', 'listening'))
-  created_at   integer not null
+  created_at   timestamptz not null default now()
 
 options
-  id          integer primary key
+  id          serial primary key
   question_id integer not null references questions(id)
   label       text not null check (label in ('A', 'B', 'C', 'D'))
   text        text not null
-  is_correct  integer not null check (is_correct in (0, 1))
+  is_correct  boolean not null
 ```
 
 ## API contract
 None — CLI script only.
 
 ## Open questions
-- What is the exact HTML structure used in the source question files? The parser needs to
-  know which element or attribute marks the correct answer and how questions are delimited
-  within the single HTML file. Needs to be confirmed against a real sample file before
-  implementation.
-- Should the import be atomic (all 39 or nothing) or should partial imports be supported?
-  Current behaviour spec assumes atomic (exit on any error). Confirm before implementation.
+- What is the exact HTML structure of the source file? Based on the listening HTML sample,
+  the reading HTML likely uses the same WordPress LearnDash `wpProQuiz` format. Needs to be
+  confirmed against a real reading HTML sample. If so, the same selector patterns apply
+  (see listening-import.md §HTML structure) with `<img src>` replacing `<audio src>`.
+- How are PNG files matched to questions in the HTML? If the reading format mirrors the
+  listening format, the PNG filename will be embedded in an `<img src>` URL inside each
+  question element — same basename-matching approach as for MP3s. Confirm against a sample.
+- **Correct answers may not be in the HTML** (same issue as listening — answers are
+  server-side in wpProQuiz). Confirm whether a companion answer key file is needed, using
+  the same approach decided for listening-import.
 
 ## Revision history
 - 2026-06-04: Initial draft
-- 2026-06-04: Revised — corrected import model: one HTML file contains all 39 questions;
-  one PNG per question matched by q<NN>.png filename convention; one passage per question strictly.
+- 2026-06-05: Changed CLI from per-file flags to `--dir`; one HTML + multiple PNGs per directory
+- 2026-06-05: Updated open questions based on wpProQuiz HTML sample from listening section;
+  flagged likely absence of correct answers in HTML

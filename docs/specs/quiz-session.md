@@ -64,20 +64,20 @@ persistence. UI specifics for each section are covered in their own specs.
 ## Data model changes
 ```
 sessions
-  id           integer primary key
+  id           serial primary key
   section      text not null check (section in ('reading', 'listening'))
   mode         text not null check (mode in ('learning', 'real'))
-  started_at   integer not null    -- unix timestamp
-  completed_at integer             -- null if abandoned
-  elapsed_ms   integer             -- real mode only; null in learning mode
+  started_at   timestamptz not null default now()
+  completed_at timestamptz          -- null if abandoned
+  elapsed_ms   integer              -- real mode only; null in learning mode
 
 question_results
-  id          integer primary key
-  session_id  integer not null references sessions(id)
-  question_id integer not null references questions(id)
+  id           serial primary key
+  session_id   integer not null references sessions(id)
+  question_id  integer not null references questions(id)
   chosen_label text not null check (chosen_label in ('A', 'B', 'C', 'D'))
-  is_correct  integer not null check (is_correct in (0, 1))
-  answered_at integer not null     -- unix timestamp
+  is_correct   boolean not null
+  answered_at  timestamptz not null default now()
 ```
 
 ## API contract

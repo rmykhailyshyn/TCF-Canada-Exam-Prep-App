@@ -4,7 +4,7 @@
 **Status:** not started
 
 - [ ] Initialise monorepo: `client/` (React + Vite + Tailwind + TS), `server/` (Express + TS)
-- [ ] Configure Drizzle ORM with SQLite
+- [ ] Configure Drizzle ORM with PostgreSQL (`DATABASE_URL` in `.env`)
 - [ ] Define initial schema (passages, questions, options, answer keys)
 - [ ] Run first migration
 - [ ] `npm run dev` starts both client and server concurrently
