@@ -81,7 +81,8 @@ matching local file is found.
 ## Data model changes
 ```
 -- questions table already defined in reading-import spec.
--- section = 'listening'; passage_id is null for listening questions.
+-- section = 'listening'; passage_id is null; sequence = question number from HTML;
+-- source_file = path to the HTML file; UNIQUE(source_file, sequence) enforces idempotency.
 
 audio_files
   id           serial primary key
@@ -117,3 +118,4 @@ None — CLI script only.
 - 2026-06-05: Changed CLI from per-file flags to `--dir`; one HTML + multiple MP3s per directory
 - 2026-06-05: Documented wpProQuiz HTML parsing structure; resolved MP3 matching (filename
   from audio src URL); flagged that correct answers are absent from this HTML format
+- 2026-06-05: Updated data model note to reference `sequence` column and composite unique key

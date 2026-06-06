@@ -87,15 +87,34 @@ Start a new session.
 ```
 Request:  { "section": "reading" | "listening", "mode": "learning" | "real" }
 Response: { "data": { "sessionId": number, "questions": Question[], "timeLimitMs": number | null }, "error": null }
+Error (no answer key): { "data": null, "error": { "code": "ANSWER_KEY_MISSING", "message": "..." } }
 ```
+The endpoint returns `ANSWER_KEY_MISSING` if any question in the requested section has
+`is_correct = false` for all of its options (i.e. no answer key has been imported yet).
+This prevents learning-mode sessions from starting in an indeterminate state.
 
 ### POST /api/sessions/:id/answers
 Submit an answer for a question within a session.
 ```
 Request:  { "questionId": number, "chosenLabel": "A" | "B" | "C" | "D" }
-Response (learning): { "data": { "isCorrect": boolean, "correctLabel": "A"|"B"|"C"|"D", "explanation": string | null }, "error": null }
-Response (real):     { "data": { "recorded": true }, "error": null }
+Response (learning): {
+  "data": {
+    "isCorrect": boolean,
+    "correctLabel": "A" | "B" | "C" | "D",
+    "explanation": {
+      "correctReason": string,
+      "optionAreason": string,
+      "optionBReason": string,
+      "optionCReason": string,
+      "optionDReason": string
+    } | null   -- null when no LLM explanation has been generated yet
+  },
+  "error": null
+}
+Response (real): { "data": { "recorded": true }, "error": null }
 ```
+The `explanation` shape mirrors the `explanations` table defined in the llm-enrichment spec.
+The backend fetches it in a single JOIN rather than requiring a separate client request.
 
 ### POST /api/sessions/:id/complete
 Mark a session as completed (real mode manual submit or timer expiry signal).
@@ -111,3 +130,6 @@ Response: { "data": { "score": number, "correct": number, "total": number }, "er
 
 ## Revision history
 - 2026-06-04: Initial draft
+- 2026-06-05: POST /api/sessions now returns ANSWER_KEY_MISSING if section has no answer key
+- 2026-06-05: POST /api/sessions/:id/answers explanation field changed from `string | null`
+  to the full Explanation object shape (aligned with llm-enrichment spec)

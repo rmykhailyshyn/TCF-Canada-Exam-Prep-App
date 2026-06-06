@@ -29,11 +29,14 @@ passage text. Once imported, questions are available for quiz sessions.
 2. The script scans the directory, locates the single HTML file and all PNG files; it exits
    with an error if no HTML file is found, more than one HTML file is found, or no PNG files
    are found.
-3. The script parses the HTML to extract all questions, each with: question text, options
-   A/B/C/D, and correct answer identifier.
+3. The script parses the HTML to extract all questions, each with: question text and options
+   A/B/C/D. The correct answer identifier is extracted if present; if absent (as is common
+   in the wpProQuiz format — see Open questions), `is_correct` is set to `false` for all
+   options and must be supplied via a separate answer-key import before quiz sessions can start.
 4. Each question is matched to its corresponding PNG file by the defined convention.
 5. For each PNG, the script runs Tesseract OCR and stores the extracted text as a passage.
-6. Each question is linked to its passage and persisted with its options and correct answer.
+6. Each question is linked to its passage and persisted with its options. `is_correct` reflects
+   the extracted answer if available, or defaults to `false` for all options if not.
 7. If a PNG with the same file path already exists in the DB, the script prints a duplicate
    warning for that file and skips it (and its linked question) without inserting new rows.
 8. If Tesseract returns a non-zero exit code for a PNG, the script logs stderr and skips
@@ -53,10 +56,12 @@ passages
 questions
   id           serial primary key
   passage_id   integer references passages(id)
-  source_file  text not null unique  -- original HTML path
+  source_file  text not null          -- original HTML path
+  sequence     integer not null       -- 1-based position within the HTML file
   text         text not null
   section      text not null check (section in ('reading', 'listening'))
   created_at   timestamptz not null default now()
+  UNIQUE (source_file, sequence)     -- idempotency key; composite because one HTML → many questions
 
 options
   id          serial primary key
@@ -86,3 +91,6 @@ None — CLI script only.
 - 2026-06-05: Changed CLI from per-file flags to `--dir`; one HTML + multiple PNGs per directory
 - 2026-06-05: Updated open questions based on wpProQuiz HTML sample from listening section;
   flagged likely absence of correct answers in HTML
+- 2026-06-05: Added `sequence` column to questions; changed `source_file` from `unique` to
+  composite `UNIQUE(source_file, sequence)` to support one HTML → many questions; updated
+  Behaviour.3 and Behaviour.6 to make correct-answer extraction conditional

@@ -60,13 +60,28 @@ explanations
 ```
 
 ## API contract
-None — CLI script only. Explanation data is consumed by the quiz-session and review-mode
-API endpoints already defined in those specs.
+None for the CLI script itself. Explanation data is surfaced through two routes:
+
+1. **Bundled in the quiz-session answer response** — `POST /api/sessions/:id/answers` in
+   learning mode returns the full explanation object alongside `isCorrect` and `correctLabel`.
+   The backend JOINs the `explanations` table; no separate client request is needed.
+
+2. **Standalone endpoint** — used by review mode to fetch explanations for past sessions
+   without re-submitting answers.
 
 ### GET /api/questions/:id/explanation
-Return the explanation for a question (used by quiz-session and review-mode UIs).
 ```
 Response: { "data": { "explanation": Explanation | null }, "error": null }
+```
+where `Explanation` is:
+```typescript
+{
+  correctReason: string
+  optionAReason: string
+  optionBReason: string
+  optionCReason: string
+  optionDReason: string
+}
 ```
 
 ## Open questions
@@ -79,3 +94,6 @@ Response: { "data": { "explanation": Explanation | null }, "error": null }
 
 ## Revision history
 - 2026-06-04: Initial draft
+- 2026-06-05: Clarified two consumption patterns: bundled in quiz-session answer response
+  (learning mode) and standalone GET /api/questions/:id/explanation (review mode); added
+  explicit TypeScript shape for Explanation type

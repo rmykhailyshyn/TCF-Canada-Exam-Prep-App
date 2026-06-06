@@ -45,8 +45,10 @@ No new tables — relies on `sessions` and `question_results` defined in quiz-se
 ### GET /api/sessions
 Return all completed sessions, newest first.
 ```
-Response: { "data": { "sessions": [{ "id": number, "section": string, "mode": string, "completedAt": number, "correct": number, "total": number, "score": number, "elapsedMs": number | null }] }, "error": null }
+Response: { "data": { "sessions": [{ "id": number, "section": string, "mode": string, "completedAt": string, "correct": number, "total": number, "score": number, "elapsedMs": number | null }] }, "error": null }
 ```
+`completedAt` is an ISO 8601 string (e.g. `"2026-06-05T14:23:00Z"`). All timestamp fields
+in API responses use ISO 8601 strings, not unix integers.
 
 ### GET /api/sessions/:id
 Return a single session with per-question results.
@@ -59,3 +61,5 @@ Response: { "data": { "session": Session, "results": QuestionResult[] }, "error"
 
 ## Revision history
 - 2026-06-04: Initial draft
+- 2026-06-05: Changed `completedAt` from `number` to ISO 8601 `string`; added timestamp
+  serialisation rule for all API responses
