@@ -128,18 +128,28 @@ question_results
 ### POST /api/sessions
 Start a new session.
 ```
-Request:  { "section": "reading" | "listening", "mode": "learning" | "real", "difficulty"?: DifficultySlug }
+Request:  { "section": "reading" | "listening", "mode": "learning" | "real", "difficulty"?: DifficultySlug, "questionIds"?: number[] }
 Response: { "data": { "sessionId": number, "questions": Question[], "timeLimitMs": number | null }, "error": null }
 Error (no answer key):    { "data": null, "error": { "code": "ANSWER_KEY_MISSING", "message": "..." } }
 Error (bad difficulty):   { "data": null, "error": { "code": "INVALID_DIFFICULTY", "message": "..." } }
+Error (band mismatch):    { "data": null, "error": { "code": "QUESTIONS_OUT_OF_BAND", "message": "..." } }
 ```
 `difficulty` is required when `mode` is `"learning"` and must be one of: `"beginner"`,
 `"elementary"`, `"intermediate"`, `"upper-intermediate"`, `"advanced"`, `"expert"`.
 It is ignored (and may be omitted) when `mode` is `"real"`.
 The returned `questions` array is filtered to the selected difficulty band's sequence range.
-The endpoint returns `ANSWER_KEY_MISSING` if any question in the requested section has
+
+`questionIds` is an optional filter used by the review-mode retry flow (see review-mode spec).
+When provided in learning mode it further restricts the session to that subset, and **every
+id must belong to the selected difficulty band** — otherwise the endpoint returns
+`QUESTIONS_OUT_OF_BAND`. (This is why retry sessions are grouped per band: one retry session
+per band, each carrying that band's `difficulty`.)
+
+The endpoint returns `ANSWER_KEY_MISSING` if any question **in the resolved question set**
+(the selected difficulty band in learning mode, or the whole section in real mode) has
 `is_correct = false` for all of its options (i.e. no answer key has been imported yet).
-This prevents learning-mode sessions from starting in an indeterminate state.
+This prevents sessions from starting in an indeterminate state, while still allowing a user
+to practise a band whose answer key is ready even if other bands have not been imported.
 
 ### POST /api/sessions/:id/answers
 Submit an answer for a question within a session.
@@ -151,7 +161,7 @@ Response (learning): {
     "correctLabel": "A" | "B" | "C" | "D",
     "explanation": {
       "correctReason": string,
-      "optionAreason": string,
+      "optionAReason": string,
       "optionBReason": string,
       "optionCReason": string,
       "optionDReason": string
@@ -165,13 +175,16 @@ The `explanation` shape mirrors the `explanations` table defined in the llm-enri
 The backend fetches it in a single JOIN rather than requiring a separate client request.
 
 ### POST /api/sessions/:id/complete
-Mark a session as completed (real mode manual submit or timer expiry signal).
+Mark a session as completed (real mode manual submit or timer expiry signal, or learning
+mode when the last question is answered / the user quits).
 ```
-Request:  { "elapsedMs": number }
-Response: { "data": { "correct": number, "total": number, "pointsScored": number, "pointsPossible": number }, "error": null }
+Request:  { "elapsedMs": number | null }
+Response: { "data": { "correct": number, "total": number, "pointsScored": number | null, "pointsPossible": number | null }, "error": null }
 ```
-`pointsPossible` is always 699 for a full 39-question section. `pointsScored` is the sum
-of point values for correctly answered questions, looked up by question `sequence`.
+`elapsedMs` is `null` in learning mode (no timer). In **real mode**, `pointsPossible` is
+always 699 for a full 39-question section and `pointsScored` is the sum of point values for
+correctly answered questions, looked up by question `sequence`. In **learning mode**,
+`pointsScored` and `pointsPossible` are both `null` (learning mode tracks correct/total only).
 
 ## Open questions
 - Should questions within a session be presented in a fixed order (by import order) or
@@ -188,3 +201,7 @@ of point values for correctly answered questions, looked up by question `sequenc
 - 2026-06-06: Added difficulty filter for learning mode (§Mode selection Behaviour.3);
   learning mode results show correct/total only, no points; `difficulty` column added to
   sessions table; POST /api/sessions gains optional `difficulty` field
+- 2026-06-07: Consistency pass — fixed `optionAReason` typo; made `elapsedMs` and points
+  nullable in POST /complete (learning mode); added `questionIds` filter + band-subset rule
+  (`QUESTIONS_OUT_OF_BAND`) to POST /api/sessions; scoped `ANSWER_KEY_MISSING` to the
+  resolved question set (selected band in learning mode)

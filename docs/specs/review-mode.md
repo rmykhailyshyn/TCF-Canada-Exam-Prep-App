@@ -44,9 +44,15 @@ focused post-session learning loop.
 ### Retry
 7. A "Retry incorrect questions" button is shown if the session contains at least one
    incorrect answer.
-8. Clicking it starts a new learning-mode session containing only the incorrectly
-   answered questions from the reviewed session, in the same section.
-9. The retry session is recorded as a normal session in history.
+8. Incorrect questions are **grouped by difficulty band** (using each question's `sequence`,
+   per quiz-session spec §Scoring). Retry produces **one learning-mode session per band**
+   that has at least one incorrect answer — each session contains only the incorrect
+   questions from that band and carries that band's `difficulty`.
+9. If the wrong answers span more than one band, the user is shown the list of affected
+   bands (e.g. "Intermediate (3), Advanced (1)") and starts them one at a time; a single
+   affected band starts its retry session directly.
+10. Each retry session is recorded as a normal learning-mode session in history, labelled
+    with its band's difficulty like any other learning session.
 
 ## Data model changes
 None — relies on `sessions`, `question_results`, `questions`, `options`, and
@@ -56,12 +62,15 @@ None — relies on `sessions`, `question_results`, `questions`, `options`, and
 Consumes `GET /api/sessions/:id` defined in progress-tracking spec.
 
 ### POST /api/sessions (retry)
-Reuses the session creation endpoint from quiz-session spec with an additional
-optional `questionIds` filter:
+Reuses the session creation endpoint from quiz-session spec. Because retries are grouped
+per band (Behaviour.8), each retry call carries both the band's `difficulty` and the
+`questionIds` for that band's incorrect answers. Every id in `questionIds` must belong to
+the given `difficulty` band, or the endpoint returns `QUESTIONS_OUT_OF_BAND`.
 ```
-Request:  { "section": "reading" | "listening", "mode": "learning", "questionIds": number[] }
+Request:  { "section": "reading" | "listening", "mode": "learning", "difficulty": DifficultySlug, "questionIds": number[] }
 Response: { "data": { "sessionId": number, "questions": Question[], "timeLimitMs": null }, "error": null }
 ```
+Retrying wrong answers from multiple bands means issuing one such call per affected band.
 
 ## Open questions
 - Should the passage image be shown in review mode for reading questions, or is the
@@ -70,3 +79,6 @@ Response: { "data": { "sessionId": number, "questions": Question[], "timeLimitMs
 
 ## Revision history
 - 2026-06-04: Initial draft
+- 2026-06-07: Retry now groups incorrect questions by difficulty band — one learning-mode
+  session per affected band, each carrying that band's `difficulty`; retry API gains the
+  required `difficulty` field and the band-subset constraint (aligned with quiz-session spec)
