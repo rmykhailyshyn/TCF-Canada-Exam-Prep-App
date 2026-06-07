@@ -1,14 +1,14 @@
 # Milestones
 
 ## Milestone 1 — Project scaffold + DB setup
-**Status:** not started
+**Status:** complete
 
-- [ ] Initialise monorepo: `client/` (React + Vite + Tailwind + TS), `server/` (Express + TS)
-- [ ] Configure Drizzle ORM with PostgreSQL (`DATABASE_URL` in `.env`)
-- [ ] Define initial schema (passages, questions, options, audio_files, transcript_segments, sessions, question_results, explanations)
-- [ ] Run first migration
-- [ ] `npm run dev` starts both client and server concurrently
-- [ ] `npm run typecheck`, `npm run lint` pass clean
+- [x] Initialise monorepo: `client/` (React 18 + Vite 6 + Tailwind 3 + TS), `server/` (Express + TS) via npm workspaces
+- [x] Configure Drizzle ORM with PostgreSQL (`DATABASE_URL` in `.env`)
+- [x] Define initial schema (passages, questions, options, audio_files, transcript_segments, sessions, question_results, explanations)
+- [x] Run first migration (verified against a Postgres 16 container — all 8 tables created)
+- [x] `npm run dev` starts both client and server concurrently (verified: server `/api/health`, client proxy, 404 envelope)
+- [x] `npm run typecheck`, `npm run lint` pass clean (plus `npm test` and `npm run build`)
 
 **Specs:** none (scaffold only)
 

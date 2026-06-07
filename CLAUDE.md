@@ -183,6 +183,10 @@ npm install
 # Start dev servers (client + server concurrently)
 npm run dev
 
+# Start / stop local PostgreSQL (Docker)
+npm run db:up
+npm run db:down
+
 # Run DB migrations
 npm run db:migrate
 
