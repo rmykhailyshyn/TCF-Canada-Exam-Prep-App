@@ -17,7 +17,7 @@
 ## Milestone 2 — Reading section: import pipeline + quiz UI
 **Status:** not started
 
-- [ ] OCR import script: `npm run ocr -- --dir <path>` — discovers one HTML + PNGs in directory, OCRs passages, persists questions
+- [ ] PDF import script: `npm run ocr -- --dir <path>` — discovers one results PDF (+ passage PNGs if needed), parses questions/options/correct answers, persists questions
 - [ ] Reading quiz UI: passage display, 4-option multiple-choice, submit answer
 - [ ] Learning mode: immediate feedback after each answer
 - [ ] Real mode: timed session (60 min / 39 questions), no feedback during session
@@ -32,7 +32,7 @@
 ## Milestone 3 — Listening section: import pipeline + player + quiz UI
 **Status:** not started
 
-- [ ] Audio import script: `npm run transcribe -- --dir <path>` — discovers one HTML + MP3s in directory, transcribes via Whisper, persists questions + segments
+- [ ] Audio import script: `npm run transcribe -- --dir <path>` — discovers one results PDF + MP3s in directory, parses questions/options/correct answers from PDF, transcribes via Whisper, persists questions + segments
 - [ ] Listening player: audio playback with phrase-level subtitle overlay and moving highlight marker
 - [ ] Clicking a subtitle segment seeks audio to that point
 - [ ] Listening quiz UI: player + 4-option multiple-choice, learning and real modes (35 min / 39 questions)
