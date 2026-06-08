@@ -1,7 +1,7 @@
 # Spec: LLM Enrichment
 
 ## Status
-draft
+approved
 
 ## Goal
 Generate per-question explanations that tell the user why the correct answer is right and
@@ -84,6 +84,19 @@ where `Explanation` is:
 }
 ```
 
+## Acceptance criteria
+Testable pass/fail conditions. Each maps back to the behaviours above.
+
+- [ ] `npm run enrich` iterates over questions without an explanation and generates one explanation record per question. (Behaviour.1, 3, 5)
+- [ ] Provider config is read from `.env` (`LLM_PROVIDER`, `LLM_MODEL`, plus `ANTHROPIC_API_KEY` for claude or `OLLAMA_BASE_URL` for ollama); a missing required variable produces a descriptive error. (Behaviour.2)
+- [ ] For reading questions the passage text is included in the prompt; for listening questions it is not. (Behaviour.3b)
+- [ ] A generated `explanations` row has a non-empty `correct_reason` and a reason for each of A–D, with `generated_by` recording provider/model and `generated_at` set. (Behaviour.4, 5; Data model)
+- [ ] `--question-id <id>` enriches only that question; `--section <reading|listening>` limits processing to that section. (Scope)
+- [ ] `--dry-run` prints the prompt (and response) to stdout and writes nothing to the DB. (Behaviour.8)
+- [ ] A question that already has an explanation is skipped and logged as "skipped (exists)". (Behaviour.6)
+- [ ] An LLM/API error on one question is logged and skipped, and the remaining queue continues. (Behaviour.7)
+- [ ] `GET /api/questions/:id/explanation` returns the `Explanation` object, or `null` when none exists, in the documented envelope. (API contract)
+
 ## Open questions
 - What language should the explanations be in — English, French, or both? TCF Canada is
   a French-language test, so explanations in French may be more useful for study. Needs
@@ -97,3 +110,5 @@ where `Explanation` is:
 - 2026-06-05: Clarified two consumption patterns: bundled in quiz-session answer response
   (learning mode) and standalone GET /api/questions/:id/explanation (review mode); added
   explicit TypeScript shape for Explanation type
+- 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
+- 2026-06-08: Status moved draft → approved.

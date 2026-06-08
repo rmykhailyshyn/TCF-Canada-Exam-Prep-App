@@ -1,7 +1,7 @@
 # Spec: Reading Quiz UI
 
 ## Status
-draft
+approved
 
 ## Goal
 Provide a quiz interface for the reading comprehension section. The user reads a passage and answers multiple-choice questions linked to it. The UI supports both learning mode (immediate feedback) and real mode (timed, no feedback), as defined in the quiz-session spec.
@@ -66,9 +66,25 @@ None — handled by quiz-session spec.
 ## API contract
 Consumes endpoints defined in quiz-session spec.
 
+## Acceptance criteria
+Testable pass/fail conditions. Each maps back to the behaviours above.
+
+- [ ] The setup screen lets the user pick mode (Learning / Real); in learning mode the six labelled difficulty bands are presented. (Behaviour.1)
+- [ ] The Start button is disabled until a difficulty is selected (learning) or the mode is confirmed (real). (Behaviour.2)
+- [ ] The layout splits passage (left, or top on narrow viewports) and question panel (right, or bottom), and the passage scrolls independently of the question panel. (Behaviour.3, 4)
+- [ ] The question counter shows the filtered band size in learning mode (e.g. "Question 3 of 9") and "Question N of 39" in real mode. (Behaviour.5)
+- [ ] A countdown timer is shown in the header in real mode. (Behaviour.6)
+- [ ] Selecting one of A–D marks a pending selection without recording an answer; "Confirm answer" becomes active and finalises the choice, which cannot be undone. (Behaviour.7, 8, 9, 10)
+- [ ] Learning mode: after confirming, the correct option is highlighted green and a wrong pick red; an explanation (when present) appears below the options; a "Next question" button advances manually. (Behaviour.11, 12, 13)
+- [ ] Real mode: no per-answer feedback is shown and the app auto-advances after confirming. (Behaviour.14, 15)
+- [ ] Real mode: the timer reaching zero auto-submits the session, and "Submit exam" shows a confirmation dialog before ending early. (Behaviour.16, 17)
+- [ ] After the final question, manual submit, or timer expiry, the results screen (quiz-session §Behaviour.13) is shown. (Behaviour.18)
+
 ## Open questions
 - None at this time.
 
 ## Revision history
 - 2026-06-04: Initial draft
 - 2026-06-06: Added session setup screen with difficulty picker (learning mode); question counter now reflects filtered band size in learning mode
+- 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
+- 2026-06-08: Status moved draft → approved.

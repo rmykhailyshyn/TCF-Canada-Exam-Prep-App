@@ -1,7 +1,7 @@
 # Spec: Quiz Session
 
 ## Status
-draft
+approved
 
 ## Goal
 Define the shared session model that underpins both reading and listening quiz modes.
@@ -186,6 +186,21 @@ always 699 for a full 39-question section and `pointsScored` is the sum of point
 correctly answered questions, looked up by question `sequence`. In **learning mode**,
 `pointsScored` and `pointsPossible` are both `null` (learning mode tracks correct/total only).
 
+## Acceptance criteria
+Testable pass/fail conditions. Each maps back to the behaviours above.
+
+- [ ] Starting a session requires a section and mode; in learning mode a valid difficulty slug is also required. (Behaviour.1, 3)
+- [ ] `POST /api/sessions` returns `sessionId`, the `questions` filtered to the difficulty band (learning) or the full section (real), and `timeLimitMs` (null in learning, the configured value in real). (Behaviour.3, 18; API contract)
+- [ ] `POST /api/sessions` returns `INVALID_DIFFICULTY` for an unknown slug and `QUESTIONS_OUT_OF_BAND` when any supplied `questionId` falls outside the selected band. (API contract)
+- [ ] `POST /api/sessions` returns `ANSWER_KEY_MISSING` when any question in the resolved set lacks a correct option, yet starts normally when the resolved band's key is present even if other bands are not imported. (API contract)
+- [ ] Learning mode: `POST /api/sessions/:id/answers` returns `isCorrect`, `correctLabel`, and the `explanation` object (or null), and the correct option is revealed after the answer is confirmed. (Behaviour.5, 6; API contract)
+- [ ] Real mode: `POST /api/sessions/:id/answers` returns `{ recorded: true }` with no correctness feedback, and a countdown timer runs from the configured limit. (Behaviour.8, 9; API contract)
+- [ ] Real mode: the timer reaching zero ends the session and routes to results; the user can also submit manually; `elapsed_ms` is recorded on the session row. (Behaviour.10, 11, 12)
+- [ ] Scoring uses the documented sequence→points map; a full real-mode section has `pointsPossible = 699`; incorrect or unanswered questions contribute 0. (Behaviour.15, 16, 17)
+- [ ] `POST /api/sessions/:id/complete` returns `correct`, `total`, and `pointsScored`/`pointsPossible` — both points fields and `elapsedMs` are null in learning mode. (Behaviour.13; API contract)
+- [ ] Exam time limits are read from `exam.config.json` (Reading 60 min, Listening 35 min) rather than hardcoded. (Behaviour.18)
+- [ ] Each `question_results` row records `chosen_label` (A–D), `is_correct`, and links to its session and question. (Data model)
+
 ## Open questions
 - Should questions within a session be presented in a fixed order (by import order) or
   randomised? TCF Canada uses a fixed order, so fixed is the safe default — confirm before
@@ -205,3 +220,5 @@ correctly answered questions, looked up by question `sequence`. In **learning mo
   nullable in POST /complete (learning mode); added `questionIds` filter + band-subset rule
   (`QUESTIONS_OUT_OF_BAND`) to POST /api/sessions; scoped `ANSWER_KEY_MISSING` to the
   resolved question set (selected band in learning mode)
+- 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
+- 2026-06-08: Status moved draft → approved.

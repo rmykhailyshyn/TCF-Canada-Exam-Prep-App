@@ -68,6 +68,10 @@ Drizzle schema additions or modifications.
 ## API contract (if any)
 Endpoint, request shape, response shape, error cases.
 
+## Acceptance criteria
+Checklist of concrete, testable pass/fail conditions that verify the spec is implemented.
+Each item references the behaviour or API item it covers, e.g. `(Behaviour.3)` or `(API contract)`.
+
 ## Open questions
 Unresolved decisions that need an answer before implementation begins.
 
