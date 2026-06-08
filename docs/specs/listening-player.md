@@ -1,7 +1,7 @@
 # Spec: Listening Player
 
 ## Status
-draft
+approved
 
 ## Goal
 Provide an audio player component for the listening quiz that plays an MP3 question clip
@@ -93,3 +93,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 ## Revision history
 - 2026-06-04: Initial draft
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
+- 2026-06-08: Status moved draft → approved.

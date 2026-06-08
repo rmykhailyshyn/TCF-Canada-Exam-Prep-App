@@ -1,7 +1,7 @@
 # Spec: Progress Tracking + Session History
 
 ## Status
-draft
+approved
 
 ## Goal
 Give the user visibility into their past quiz sessions and overall progress. After
@@ -90,3 +90,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - 2026-06-06: Learning mode shows correct/total only (no points); difficulty label shown
   in results summary and history row; `difficulty` and nullable points fields added to API
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
+- 2026-06-08: Status moved draft → approved.

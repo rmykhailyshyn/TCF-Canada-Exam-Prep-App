@@ -1,7 +1,7 @@
 # Spec: Listening Quiz UI
 
 ## Status
-draft
+approved
 
 ## Goal
 Provide a quiz interface for the listening comprehension section. The user listens to an
@@ -95,3 +95,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - 2026-06-06: Added session setup screen with difficulty picker (learning mode); question
   counter now reflects filtered band size in learning mode
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
+- 2026-06-08: Status moved draft → approved.

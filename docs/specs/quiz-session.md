@@ -1,7 +1,7 @@
 # Spec: Quiz Session
 
 ## Status
-draft
+approved
 
 ## Goal
 Define the shared session model that underpins both reading and listening quiz modes.
@@ -221,3 +221,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   (`QUESTIONS_OUT_OF_BAND`) to POST /api/sessions; scoped `ANSWER_KEY_MISSING` to the
   resolved question set (selected band in learning mode)
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
+- 2026-06-08: Status moved draft → approved.

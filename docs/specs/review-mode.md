@@ -1,7 +1,7 @@
 # Spec: Review Mode
 
 ## Status
-draft
+approved
 
 ## Goal
 After completing a session, allow the user to review every question they answered,
@@ -95,3 +95,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   session per affected band, each carrying that band's `difficulty`; retry API gains the
   required `difficulty` field and the band-subset constraint (aligned with quiz-session spec)
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
+- 2026-06-08: Status moved draft → approved.

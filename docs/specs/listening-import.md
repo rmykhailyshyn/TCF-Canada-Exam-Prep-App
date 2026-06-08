@@ -1,7 +1,7 @@
 # Spec: Listening Question Import
 
 ## Status
-draft
+approved
 
 ## Goal
 Allow a developer to import listening comprehension questions from a source directory into the
@@ -179,3 +179,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   positionally instead of by audio src URL. Added score cross-check (Behaviour.10) and
   indeterminate-answer handling (Behaviour.13). `source_file` now refers to the PDF path.
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
+- 2026-06-08: Status moved draft → approved.

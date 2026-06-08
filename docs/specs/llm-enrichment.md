@@ -1,7 +1,7 @@
 # Spec: LLM Enrichment
 
 ## Status
-draft
+approved
 
 ## Goal
 Generate per-question explanations that tell the user why the correct answer is right and
@@ -111,3 +111,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   (learning mode) and standalone GET /api/questions/:id/explanation (review mode); added
   explicit TypeScript shape for Explanation type
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
+- 2026-06-08: Status moved draft → approved.

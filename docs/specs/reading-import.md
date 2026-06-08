@@ -1,7 +1,7 @@
 # Spec: Reading Question Import
 
 ## Status
-draft
+approved
 
 ## Goal
 Allow a developer to import reading comprehension questions from a source directory into the
@@ -152,3 +152,4 @@ on the passage-embedding question are phrased to cover both the embedded-text an
   indeterminate-answer handling. Flagged passage embedding vs. image+OCR as the key open
   question pending a real reading PDF sample.
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
+- 2026-06-08: Status moved draft → approved.
