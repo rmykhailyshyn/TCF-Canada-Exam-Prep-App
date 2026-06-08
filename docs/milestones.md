@@ -15,17 +15,29 @@
 ---
 
 ## Milestone 2 — Reading section: import pipeline + quiz UI
-**Status:** not started
+**Status:** complete
 
-- [ ] PDF import script: `npm run ocr -- --dir <path>` — discovers one results PDF (+ passage PNGs if needed), parses questions/options/correct answers, persists questions
-- [ ] Reading quiz UI: passage display, 4-option multiple-choice, submit answer
-- [ ] Learning mode: immediate feedback after each answer
-- [ ] Real mode: timed session (60 min / 39 questions), no feedback during session
+- [x] PDF import script: `npm run ocr -- --dir <path>` — discovers one results PDF + one passage image per question (filename carries the sequence number), parses options/answer key via the Python pdfplumber parser, OCRs each image into passage + question prompt (split at the footer), cross-checks the score, idempotently persists passages + questions + options. Validated against a **real reading** results PDF (reproduces 19/39 correct, 266/699 pts) and a real Q39 passage image (and earlier against a real listening PDF, 27/437).
+- [x] Reading quiz UI: passage display, 4-option multiple-choice, confirm answer
+- [x] Learning mode: immediate feedback after each answer (+ explanation slot)
+- [x] Real mode: timed session (60 min / 39 questions), countdown, no feedback, auto/manual submit
+- [x] Backend session API (`POST /api/sessions`, `/answers`, `/complete`) with weighted scoring (max 699), difficulty bands, `exam.config.json` timing
+- [x] `npm run typecheck`, `npm run lint`, `npm test` (21 tests), `npm run build` all pass
+
+**Spec corrections during implementation (SDD Rule 4):** real PDFs revealed two things the specs
+got wrong/unknown. (1) The green/red answer fills are bezier `curves` (rounded-rect backgrounds),
+not `rects`; exact RGB values recorded. (2) The reading PDF has no `"N. Question"` header and no
+question text in its text layer — each question's passage **and** prompt live in a per-question
+image (filename carries the sequence number), OCR'd and split at the `reussir-tcfcanada.com`
+footer; the PDF supplies only options + answer key + score. Parser refactored to order-based
+detection and re-validated against both real reading (19/266) and listening (27/437) PDFs. See
+`docs/sdd-learnings.md`. A dev seed (`npm run seed:dev`) provides a full 39-question reading
+section for exercising the UI without a full import.
 
 **Specs:**
-- `docs/specs/reading-import.md`
-- `docs/specs/quiz-session.md`
-- `docs/specs/reading-quiz-ui.md`
+- `docs/specs/reading-import.md` (implemented)
+- `docs/specs/quiz-session.md` (implemented)
+- `docs/specs/reading-quiz-ui.md` (implemented)
 
 ---
 

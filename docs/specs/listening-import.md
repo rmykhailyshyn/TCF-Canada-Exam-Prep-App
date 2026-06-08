@@ -65,12 +65,23 @@ rectangle:
 - **No fill → a non-selected, non-correct option.**
 
 The importer reads the **green** option as `is_correct = true` and ignores red entirely. The
-colours are vector fill rectangles (a CSS background), not scanned pixels, so detection is a
-stable RGB match within a small tolerance — not fuzzy OCR.
+colours are vector fills (a CSS background), not scanned pixels, so detection is a stable RGB
+match within a small tolerance — not fuzzy OCR.
 
-Recommended parser: a library that exposes both text bounding boxes and rectangle fill colours
-(e.g. Python `pdfplumber`'s `words` + `rects[].non_stroking_color`; Python is already in the
-toolchain via `mlx-whisper`). For each option, the importer finds the fill rectangle whose
+**Validated against a real results PDF (2026-06-08).** The colour-coded option backgrounds are
+rounded rectangles, which print-to-PDF emits as bezier **`curves`, not `rects`** — `page.rects`
+contains no green fills. The parser must inspect `page.curves` (`non_stroking_color`). Confirmed
+fill colours (RGB 0–1, ±0.06 tolerance): correct/green `(0.0, 0.737, 0.271)`; wrong-pick/red
+`(0.839, 0.114, 0.114)` (also a darker `(0.886, 0.051, 0.051)`); default-row/grey
+`(0.941, 0.953, 0.965)`. Each question contributes four answer-row curves (`x0 ≈ 898`, w ≈ 746,
+h ≈ 58); one rounded rect is drawn as several overlapping curves, so de-duplicate by
+`(page, top, x0)`. Option rows carry a leading icon glyph extracted as the literal token `88`
+between the A–D label and the text (e.g. `A 88 D'aller…`); strip it. Audio-only/image questions
+(e.g. Q1–6) have empty text after `88`.
+
+Recommended parser: a library that exposes both text bounding boxes and vector fill colours
+(e.g. Python `pdfplumber`'s `extract_words()` + `curves[].non_stroking_color`; Python is already
+in the toolchain via `mlx-whisper`). For each option, the importer finds the fill curve whose
 bounding box contains the option-row text and classifies it by colour.
 
 The list of timestamp pairs near the bottom of each page (e.g. `00:21 00:22`) is the original
@@ -156,8 +167,10 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   script auto-detect or read from an env var (`WHISPER_CMD`)?
 - Does Whisper output segments as JSON directly, or does the script need to parse a text
   format? Confirm the `--output_format json` flag is available in both CLI variants.
-- **Exact green/red RGB values.** Need to sample the PDF's success/danger fill colours and
-  set a tolerance. Confirm they are consistent across exports (they should be — fixed CSS).
+- ~~**Exact green/red RGB values.** Need to sample the PDF's success/danger fill colours and
+  set a tolerance.~~ Resolved 2026-06-08 against a real PDF (see §PDF structure). Green
+  `(0.0, 0.737, 0.271)`, red `(0.839, 0.114, 0.114)`, grey `(0.941, 0.953, 0.965)`, ±0.06
+  tolerance; fills are `curves`, not `rects`.
 - **Media naming convention.** This spec assumes `q<NN>.mp3`. If exported MP3s use the site's
   native names (e.g. `20Q7.mp3`), the importer must either rename on ingest or match the Nth
   sorted file to question N. Confirm the naming the user will actually provide.
@@ -180,3 +193,9 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   indeterminate-answer handling (Behaviour.13). `source_file` now refers to the PDF path.
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
 - 2026-06-08: Status moved draft → approved.
+- 2026-06-08: **Spec defect fix (SDD Rule 4).** During Milestone 2 a real results PDF was
+  inspected (the shared PDF parser is used by both reading and listening import). Answer-row
+  backgrounds are vector `curves` (rounded rects), not `rects`; resolved the exact green/red/grey
+  RGB values (open question); documented the `88` icon-glyph artifact and the four-curves-per-
+  question de-duplication. Confirmed by reproducing the PDF's "27/39 correct" and "437/699
+  points" cross-check. Whisper-related open questions are unaffected and remain open.

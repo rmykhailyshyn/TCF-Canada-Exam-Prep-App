@@ -197,8 +197,16 @@ npm run db:migrate
 # Generate migration after schema change
 npm run db:generate
 
+# Seed a full 39-question reading section for local UI/dev (not part of any spec)
+npm run seed:dev
+
+# One-time setup for the import pipeline: Python venv with pdfplumber (+ Tesseract for OCR)
+python3 -m venv scripts/.venv && scripts/.venv/bin/pip install -r scripts/requirements.txt
+# brew install tesseract tesseract-lang   # required for the passage-image OCR path
+
 # Import reading questions from a directory (Apple Silicon only)
-# Directory must contain one results PDF and (if passages are not embedded) up to 39 PNG files
+# Directory must contain one results PDF and one passage image per question
+# (filename contains the question's sequence number, e.g. comprehension-ecrite-25Q39.png)
 npm run ocr -- --dir <path>
 
 # Import listening questions from a directory (Apple Silicon only)
