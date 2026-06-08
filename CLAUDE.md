@@ -183,6 +183,10 @@ npm install
 # Start dev servers (client + server concurrently)
 npm run dev
 
+# Start / stop local PostgreSQL (Docker)
+npm run db:up
+npm run db:down
+
 # Run DB migrations
 npm run db:migrate
 
@@ -190,11 +194,11 @@ npm run db:migrate
 npm run db:generate
 
 # Import reading questions from a directory (Apple Silicon only)
-# Directory must contain one HTML file and up to 39 PNG files
+# Directory must contain one results PDF and (if passages are not embedded) up to 39 PNG files
 npm run ocr -- --dir <path>
 
 # Import listening questions from a directory (Apple Silicon only)
-# Directory must contain one HTML file and up to 39 MP3 files
+# Directory must contain one results PDF and up to 39 MP3 files
 npm run transcribe -- --dir <path>
 
 # Type-check without emitting (runs both client and server)

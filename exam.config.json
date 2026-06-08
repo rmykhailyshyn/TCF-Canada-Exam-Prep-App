@@ -1,0 +1,10 @@
+{
+  "reading": {
+    "timeLimitMinutes": 60,
+    "questionCount": 39
+  },
+  "listening": {
+    "timeLimitMinutes": 35,
+    "questionCount": 39
+  }
+}
