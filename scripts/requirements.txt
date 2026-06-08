@@ -1,0 +1,6 @@
+# Python dependencies for the import pipeline (reading + listening).
+# Create the venv and install with:
+#   python3 -m venv scripts/.venv
+#   scripts/.venv/bin/pip install -r scripts/requirements.txt
+# The TS orchestrators invoke scripts/.venv/bin/python3 (override with PYTHON_BIN).
+pdfplumber==0.11.9

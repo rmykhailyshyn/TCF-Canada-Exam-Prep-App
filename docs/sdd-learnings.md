@@ -30,3 +30,47 @@ that tend to get hardcoded silently without a spec step.
 
 Open question: will the approval gate feel like useful friction or a bottleneck on a
 solo project where the developer and the approver are the same person?
+
+### 2026-06-08 — Milestone 2 implementation (reading import + session API + quiz UI)
+
+**The spec was wrong in a way only the real artifact could reveal (Rule 4 in action).**
+Both import specs asserted the correct-answer highlight was a vector **`rect`** fill and even
+named the parser call (`rects[].non_stroking_color`). Against a real results PDF this finds
+*nothing*: the rounded-corner option backgrounds are emitted by print-to-PDF as bezier
+**`curves`**. A faithful implementation of the approved spec would have produced an importer that
+silently detected zero correct answers. SDD didn't prevent this error (the spec was confidently
+wrong), but the discipline shaped the response well: the divergence was treated as a *spec
+defect* — specs corrected first (mechanism + the previously-open RGB values + the `88` icon-glyph
+artifact), flagged in revision history, then code written against the corrected spec. The
+acceptance-criteria score cross-check (recompute weighted points from the answer key and compare
+to the PDF's "X of 699") turned out to be the perfect oracle: reproducing 27/39 and 437/699
+proved the colour detection without a hand-labelled fixture. **Lesson:** specs that encode an
+*independent integrity check* (not just behaviour) pay for themselves the moment reality diverges.
+
+**Approved ≠ validated.** `reading-import` was approved while carrying an explicit "needs a real
+sample before implementation" caveat (passages embedded as text vs. separate images). At
+implementation time no real *reading* PDF existed — only a listening one — so that open question
+could not be closed; the importer shipped as a deliberately *partial* implementation with the gap
+named in the spec status rather than hidden as an untested branch.
+
+When a real reading PDF + image finally arrived (later the same day), the spec turned out to be
+wrong about reading in **three** ways the listening sample could never have revealed: (1) reading
+PDFs have **no `"N. Question"` header** at all — questions are delimited only by their option block
+and result label; (2) the question prompt is **not in the PDF text layer** — it lives in a
+per-question image alongside the passage; (3) those images are **separate files keyed by a
+sequence number in the filename**, OCR'd and split at a footer line. None of this was guessable;
+all of it was a five-minute confirmation against the artifact. This is the same lesson as the
+`curves`-vs-`rects` defect, one level up: *the spec's confident description of a format it had
+never seen was wrong in structural, not cosmetic, ways.* The order-based parser that resulted is
+strictly simpler and now serves **both** sections (re-validated: reading 19/266, listening
+27/437). **Meta-lesson:** for spec items that describe an external artifact, "approved" should be
+read as "approved pending first contact with reality" — the integrity cross-check, not the prose,
+is what actually pins the behaviour down.
+
+**Traceability comments earned their keep.** Writing `// spec: …§Behaviour.N` forced re-reading
+the exact clause while coding (e.g. real-mode "auto-advance, no feedback" vs. learning-mode
+"reveal + explanation") and caught a couple of would-be divergences before they were typed.
+
+**Friction verdict (solo):** the approval gate was useful, not a bottleneck — the one place it
+mattered was forcing a deliberate scope decision (defer import vs. build against a sample) up
+front rather than discovering the sample problem mid-build.

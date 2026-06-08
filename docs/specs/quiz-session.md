@@ -1,7 +1,7 @@
 # Spec: Quiz Session
 
 ## Status
-approved
+implemented
 
 ## Goal
 Define the shared session model that underpins both reading and listening quiz modes.
@@ -222,3 +222,8 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   resolved question set (selected band in learning mode)
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
 - 2026-06-08: Status moved draft → approved.
+- 2026-06-08: Implemented in Milestone 2 — session service + routes, weighted scoring (max 699),
+  difficulty bands, `exam.config.json` timing. Verified end-to-end against PostgreSQL (real-mode
+  all-correct = 699/699, all-wrong = 0/699; learning-mode correct/total with null points; all
+  error codes). Status approved → implemented. Open question (fixed vs. random order) resolved as
+  fixed import order per TCF.

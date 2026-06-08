@@ -1,7 +1,7 @@
 # Spec: Reading Quiz UI
 
 ## Status
-approved
+implemented
 
 ## Goal
 Provide a quiz interface for the reading comprehension section. The user reads a passage and answers multiple-choice questions linked to it. The UI supports both learning mode (immediate feedback) and real mode (timed, no feedback), as defined in the quiz-session spec.
@@ -88,3 +88,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - 2026-06-06: Added session setup screen with difficulty picker (learning mode); question counter now reflects filtered band size in learning mode
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
 - 2026-06-08: Status moved draft → approved.
+- 2026-06-08: Implemented in Milestone 2 — setup screen (mode + difficulty), split passage/question
+  layout, confirm-answer flow, learning feedback + explanation slot, real-mode countdown with
+  auto/manual submit + confirmation dialog, and the results hand-off. Covered by render smoke
+  tests; typecheck/lint/build green. Status approved → implemented.

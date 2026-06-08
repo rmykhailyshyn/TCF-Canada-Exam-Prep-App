@@ -9,6 +9,8 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/node_modules/**',
+      '**/.venv/**',
+      '**/.venv-inspect/**',
       'server/db/migrations/**',
       'client/vite.config.ts',
     ],

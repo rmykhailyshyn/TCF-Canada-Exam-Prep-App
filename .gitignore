@@ -13,6 +13,12 @@ logs/
 *.log
 npm-debug.log*
 
+# Python virtualenv for the import pipeline (scripts/)
+.venv/
+.venv-inspect/
+scripts/.venv/
+__pycache__/
+
 # Editor / OS
 .DS_Store
 .idea/

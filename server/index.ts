@@ -2,11 +2,13 @@ import express from 'express';
 import { getPort } from './config/env';
 import { fail } from './lib/envelope';
 import { healthRouter } from './routes/health';
+import { sessionsRouter } from './routes/sessions';
 
 const app = express();
 app.use(express.json());
 
 app.use('/api/health', healthRouter);
+app.use('/api/sessions', sessionsRouter);
 
 // Fallback 404 in the standard envelope shape for unknown API routes.
 app.use('/api', (_req, res) => {

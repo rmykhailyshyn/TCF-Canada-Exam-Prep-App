@@ -20,7 +20,9 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx server/db/migrate.ts"
+    "db:migrate": "tsx server/db/migrate.ts",
+    "seed:dev": "tsx scripts/seed-dev.ts",
+    "ocr": "tsx scripts/ocr.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
