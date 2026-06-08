@@ -135,6 +135,22 @@ transcript_segments
 ## API contract
 None — CLI script only.
 
+## Acceptance criteria
+Testable pass/fail conditions. Each maps back to the behaviours above.
+
+- [ ] Running `npm run transcribe -- --dir <path>` on a directory holding exactly one PDF and at least one MP3 completes and prints a final summary line. (Behaviour.1, 15)
+- [ ] The script exits non-zero with a descriptive error — and writes no rows — when the directory has no PDF, more than one PDF, or zero MP3 files. (Behaviour.2)
+- [ ] For a valid sample PDF, every imported question row has `section = 'listening'`, the sequence number from the PDF, and `source_file` set to the PDF path. (Behaviour.4, 8)
+- [ ] For each imported question, exactly one option has `is_correct = true` and it matches the green-highlighted option in the PDF; the other three are `is_correct = false`. (Behaviour.4, 8)
+- [ ] A question whose option set has zero or more than one green fill is skipped with a descriptive error naming that question, and the remaining questions still import. (Behaviour.13)
+- [ ] Each imported question with a matching `q<NN>.mp3` has one `audio_files` row (with `file_path`) and at least one `transcript_segments` row; segments are ordered by `sequence` and every row satisfies `start_ms <= end_ms`. (Behaviour.5, 7, 9)
+- [ ] A question with no matching MP3 file is skipped with a warning while other questions continue to import. (Behaviour.6)
+- [ ] An MP3 whose Whisper invocation exits non-zero is skipped with its stderr logged, without aborting the run. (Behaviour.12)
+- [ ] Re-running the import on the same directory adds no new rows and prints a duplicate warning for each already-imported file — `UNIQUE(source_file, sequence)` and `audio_files.file_path` uniqueness both hold. (Behaviour.11)
+- [ ] The recomputed weighted score (point map vs. the PDF's per-question Correcte/Incorrecte labels) is compared to the parsed "<P> of 699" value, and a mismatch emits a warning. (Behaviour.3, 10)
+- [ ] A PDF with no parseable question blocks or a missing score summary produces a descriptive error and leaves the DB unchanged. (Behaviour.14)
+- [ ] The success summary reports the number of questions imported, transcript segments stored, questions skipped, and whether the score cross-check matched. (Behaviour.15)
+
 ## Open questions
 - Which Whisper CLI variant takes priority: `mlx-whisper` or `whisper.cpp`? Should the
   script auto-detect or read from an env var (`WHISPER_CMD`)?
@@ -162,3 +178,4 @@ None — CLI script only.
   from the green-highlighted option (resolves the long-standing answer-key gap). MP3s matched
   positionally instead of by audio src URL. Added score cross-check (Behaviour.10) and
   indeterminate-answer handling (Behaviour.13). `source_file` now refers to the PDF path.
+- 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).

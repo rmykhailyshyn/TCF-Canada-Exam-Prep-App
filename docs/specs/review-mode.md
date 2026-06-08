@@ -72,6 +72,18 @@ Response: { "data": { "sessionId": number, "questions": Question[], "timeLimitMs
 ```
 Retrying wrong answers from multiple bands means issuing one such call per affected band.
 
+## Acceptance criteria
+Testable pass/fail conditions. Each maps back to the behaviours above.
+
+- [ ] Review mode is reachable from the results summary "Review answers" button and from a history session row, and is read-only — no answer can be changed. (Behaviour.1, 2)
+- [ ] All questions from the session are shown in order, each with its text (plus passage excerpt for reading), all four options, the user's chosen option (red if wrong, green if correct), and the correct option marked green. (Behaviour.3, 4)
+- [ ] Learning-mode sessions show the LLM explanation below a question when one exists; real-mode sessions never show explanations. (Behaviour.5, 6)
+- [ ] A "Retry incorrect questions" button is shown only when the session has at least one incorrect answer. (Behaviour.7)
+- [ ] Incorrect questions are grouped by difficulty band, and retry produces one learning-mode session per affected band containing only that band's incorrect questions and carrying that band's `difficulty`. (Behaviour.8)
+- [ ] When wrong answers span multiple bands, the affected bands and counts are listed and started one at a time; a single affected band starts its retry directly. (Behaviour.9)
+- [ ] Each retry `POST /api/sessions` carries the band's `difficulty` and that band's `questionIds`; any id outside the band yields `QUESTIONS_OUT_OF_BAND`. (Behaviour.8; API contract)
+- [ ] Each retry session is recorded in history as a normal learning-mode session labelled with its band's difficulty. (Behaviour.10)
+
 ## Open questions
 - Should the passage image be shown in review mode for reading questions, or is the
   OCR-extracted text sufficient? Showing the image requires serving the original PNG,
@@ -82,3 +94,4 @@ Retrying wrong answers from multiple bands means issuing one such call per affec
 - 2026-06-07: Retry now groups incorrect questions by difficulty band — one learning-mode
   session per affected band, each carrying that band's `difficulty`; retry API gains the
   required `difficulty` field and the band-subset constraint (aligned with quiz-session spec)
+- 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).

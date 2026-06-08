@@ -70,6 +70,21 @@ Return phrase-level segments for a question.
 Response: { "data": { "segments": [{ "sequence": number, "text": string, "startMs": number, "endMs": number }] }, "error": null }
 ```
 
+## Acceptance criteria
+Testable pass/fail conditions. Each maps back to the behaviours above.
+
+- [ ] The audio for the current question finishes loading before the question options become interactive. (Behaviour.1)
+- [ ] Play and Pause controls are visible at all times and the player starts in a paused state. (Behaviour.2)
+- [ ] The scrubber reflects elapsed time and total duration, and clicking or dragging it seeks playback to that position. (Behaviour.3)
+- [ ] Adjusting the volume slider changes audio volume, and the chosen level persists across questions within the same session but resets on a new session / reload. (Behaviour.4)
+- [ ] All transcript segments render as a subtitle list. (Behaviour.5)
+- [ ] As playback advances, the segment satisfying `start_ms <= currentTime*1000 < next start_ms` is highlighted and the list auto-scrolls to keep it in view. (Behaviour.6, 7, 8)
+- [ ] Clicking a subtitle segment seeks audio to that segment's start time, begins playback, and immediately moves the highlight to that segment. (Behaviour.9, 10)
+- [ ] When the clip ends, playback stops and the player resets to paused at position 0. (Behaviour.11)
+- [ ] The clip can be replayed an unlimited number of times before an answer is confirmed. (Behaviour.12)
+- [ ] `GET /api/questions/:id/audio` returns the MP3 (stream or 302) and supports range requests for seeking; an unknown id returns a `NOT_FOUND` error envelope. (API contract)
+- [ ] `GET /api/questions/:id/transcript` returns segments with `sequence`, `text`, `startMs`, `endMs` in the documented envelope. (API contract)
+
 ## Open questions
 - Should the MP3 be served as a static file (Express `static` middleware) or streamed
   through a dedicated route? Streaming supports range requests which HTML `<audio>` relies
@@ -77,3 +92,4 @@ Response: { "data": { "segments": [{ "sequence": number, "text": string, "startM
 
 ## Revision history
 - 2026-06-04: Initial draft
+- 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).

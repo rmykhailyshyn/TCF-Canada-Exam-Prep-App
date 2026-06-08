@@ -64,6 +64,20 @@ Return a single session with per-question results.
 Response: { "data": { "session": Session, "results": QuestionResult[] }, "error": null }
 ```
 
+## Acceptance criteria
+Testable pass/fail conditions. Each maps back to the behaviours above.
+
+- [ ] The results summary appears immediately when a session ends — timer expiry, manual submit, or the last learning-mode question answered. (Behaviour.1)
+- [ ] The learning-mode summary shows the difficulty label and a correct/total count, and shows no point score. (Behaviour.2)
+- [ ] The real-mode summary shows `pointsScored` / `pointsPossible`, a correct/total count, and the time taken. (Behaviour.2)
+- [ ] The summary offers "Review answers" and "Back to home" actions. (Behaviour.3)
+- [ ] The history page lists every completed session, most recent first. (Behaviour.4, 5)
+- [ ] Each history row shows date, section, mode, and the mode-specific score (difficulty + correct/total for learning; points + correct/total + time for real). (Behaviour.6)
+- [ ] Clicking a history row opens that session's detail / review mode. (Behaviour.7)
+- [ ] Sessions with `completed_at` null (abandoned) never appear in the history list. (Behaviour.8)
+- [ ] `GET /api/sessions` returns completed sessions newest-first, with ISO 8601 timestamp strings, `difficulty` null for real-mode rows, and `pointsScored`/`pointsPossible` null for learning-mode rows. (API contract)
+- [ ] `GET /api/sessions/:id` returns the session together with its per-question results. (API contract)
+
 ## Open questions
 - None at this time.
 
@@ -75,3 +89,4 @@ Response: { "data": { "session": Session, "results": QuestionResult[] }, "error"
   kept correct/total count as secondary display; updated API shapes accordingly
 - 2026-06-06: Learning mode shows correct/total only (no points); difficulty label shown
   in results summary and history row; `difficulty` and nullable points fields added to API
+- 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).

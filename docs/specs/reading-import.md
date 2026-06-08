@@ -112,6 +112,21 @@ options
 ## API contract
 None — CLI script only.
 
+## Acceptance criteria
+Testable pass/fail conditions. Each maps back to the behaviours above. (Criteria that depend
+on the passage-embedding question are phrased to cover both the embedded-text and image+OCR paths.)
+
+- [ ] Running `npm run ocr -- --dir <path>` on a directory holding exactly one PDF completes and prints a final summary line. (Behaviour.1, 12)
+- [ ] The script exits non-zero with a descriptive error — and writes no rows — when the directory has no PDF or more than one PDF. (Behaviour.2)
+- [ ] For a valid sample PDF, every imported question row has `section = 'reading'`, the sequence number from the PDF, `source_file` set to the PDF path, and a non-null `passage_id`. (Behaviour.4, 5, 6)
+- [ ] For each imported question, exactly one option has `is_correct = true` and it matches the green-highlighted option in the PDF; the other three are `is_correct = false`. (Behaviour.4, 6)
+- [ ] A question whose option set has zero or more than one green fill is skipped with a descriptive error naming that question, and the remaining questions still import. (Behaviour.10)
+- [ ] Passage text is acquired from the PDF when embedded, otherwise via Tesseract OCR on the positionally matched `q<NN>.png`; a non-zero Tesseract exit skips that question with stderr logged and does not abort the run. (Behaviour.5, 9)
+- [ ] Re-running the import on the same directory creates no duplicate rows — `UNIQUE(source_file, sequence)` and `passages.source_file` uniqueness both hold; a duplicate passage path prints a warning and the question is skipped. (Behaviour.8)
+- [ ] The recomputed weighted score (point map vs. the PDF's per-question Correcte/Incorrecte labels) is compared to the parsed "<P> of 699" value, and a mismatch emits a warning. (Behaviour.3, 7)
+- [ ] A PDF with no parseable question blocks or a missing score summary produces a descriptive error and leaves the DB unchanged. (Behaviour.11)
+- [ ] The success summary reports passages imported, questions imported, questions skipped, and whether the score cross-check matched. (Behaviour.12)
+
 ## Open questions
 - **Are reading passages embedded as text in the results PDF, or supplied as separate images?**
   This is the primary unknown and changes Behaviour.5 substantially. Needs a real reading PDF
@@ -136,3 +151,4 @@ None — CLI script only.
   answers are now extracted from the green-highlighted option. Added score cross-check and
   indeterminate-answer handling. Flagged passage embedding vs. image+OCR as the key open
   question pending a real reading PDF sample.
+- 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
