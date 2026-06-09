@@ -75,6 +75,15 @@ async function request<T>(path: string, body: unknown): Promise<T> {
   return envelope.data;
 }
 
+async function get<T>(path: string): Promise<T> {
+  const res = await fetch(path);
+  const envelope = (await res.json()) as Envelope<T>;
+  if (envelope.error) {
+    throw new ApiError(envelope.error.code, envelope.error.message);
+  }
+  return envelope.data;
+}
+
 export type CreateSessionInput = {
   section: Section;
   mode: Mode;
@@ -102,4 +111,23 @@ export function submitAnswer(
 // spec: docs/specs/quiz-session.md §API contract POST /api/sessions/:id/complete
 export function completeSession(sessionId: number, elapsedMs: number | null): Promise<CompleteResult> {
   return request<CompleteResult>(`/api/sessions/${sessionId}/complete`, { elapsedMs });
+}
+
+// spec: docs/specs/listening-player.md §API contract
+export type TranscriptSegment = {
+  sequence: number;
+  text: string;
+  startMs: number;
+  endMs: number;
+};
+
+// spec: docs/specs/listening-player.md §API contract GET /api/questions/:id/audio
+// The <audio> element's src; the server streams the MP3 with range support for seeking.
+export function audioUrl(questionId: number): string {
+  return `/api/questions/${questionId}/audio`;
+}
+
+// spec: docs/specs/listening-player.md §API contract GET /api/questions/:id/transcript
+export function fetchTranscript(questionId: number): Promise<{ segments: TranscriptSegment[] }> {
+  return get<{ segments: TranscriptSegment[] }>(`/api/questions/${questionId}/transcript`);
 }

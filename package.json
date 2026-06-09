@@ -22,10 +22,14 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx server/db/migrate.ts",
     "seed:dev": "tsx scripts/seed-dev.ts",
-    "ocr": "tsx scripts/ocr.ts"
+    "seed:listening-dev": "tsx scripts/seed-listening-dev.ts",
+    "ocr": "tsx scripts/ocr.ts",
+    "transcribe": "tsx scripts/transcribe.ts",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@playwright/test": "^1.60.0",
     "@types/node": "^22.10.2",
     "concurrently": "^9.1.0",
     "drizzle-kit": "^0.30.1",

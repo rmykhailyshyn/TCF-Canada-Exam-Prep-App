@@ -19,6 +19,18 @@ npm-debug.log*
 scripts/.venv/
 __pycache__/
 
+# Playwright e2e artifacts (the suite is committed; its outputs are not)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Generated listening dev clips (e2e global-setup regenerates them with ffmpeg)
+scripts/dev-audio/
+
+# Local Claude Code settings (machine-specific permission grants)
+.claude/
+
 # Editor / OS
 .DS_Store
 .idea/

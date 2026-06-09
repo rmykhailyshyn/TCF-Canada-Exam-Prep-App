@@ -14,6 +14,8 @@ type Props = {
   onSelect: (label: OptionLabel) => void;
   onConfirm: () => void;
   onNext: () => void;
+  // spec: docs/specs/listening-player.md §Behaviour.1 — options stay locked until audio loads.
+  locked?: boolean;
 };
 
 function optionState(
@@ -38,6 +40,7 @@ export function QuestionPanel({
   onSelect,
   onConfirm,
   onNext,
+  locked = false,
 }: Props): JSX.Element {
   const answered = feedback !== null;
 
@@ -55,7 +58,7 @@ export function QuestionPanel({
             label={opt.label}
             text={opt.text}
             state={optionState(opt.label, selectedLabel, feedback)}
-            disabled={answered || submitting}
+            disabled={answered || submitting || locked}
             onClick={() => onSelect(opt.label)}
           />
         ))}
@@ -83,7 +86,7 @@ export function QuestionPanel({
         ) : (
           <button
             type="button"
-            disabled={selectedLabel === null || submitting}
+            disabled={selectedLabel === null || submitting || locked}
             onClick={onConfirm}
             className="rounded-xl bg-sky-600 px-6 py-2.5 font-medium text-white transition enabled:hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >

@@ -42,17 +42,30 @@ section for exercising the UI without a full import.
 ---
 
 ## Milestone 3 — Listening section: import pipeline + player + quiz UI
-**Status:** not started
+**Status:** complete
 
-- [ ] Audio import script: `npm run transcribe -- --dir <path>` — discovers one results PDF + MP3s in directory, parses questions/options/correct answers from PDF, transcribes via Whisper, persists questions + segments
-- [ ] Listening player: audio playback with phrase-level subtitle overlay and moving highlight marker
-- [ ] Clicking a subtitle segment seeks audio to that point
-- [ ] Listening quiz UI: player + 4-option multiple-choice, learning and real modes (35 min / 39 questions)
+- [x] Audio import script: `npm run transcribe -- --dir <path>` — discovers one results PDF + MP3s in directory, parses questions/options/correct answers from the PDF (shared parser, green-fill answer key), matches each MP3 to its question by the sequence number in its filename, transcribes via `mlx_whisper` (`WHISPER_CMD`/`WHISPER_MODEL` overridable), persists questions + options + audio path + transcript segments. Idempotent; score cross-check; per-question skip on indeterminate answer / missing MP3 / Whisper failure
+- [x] Listening player: audio playback (play/pause/scrubber/volume) with phrase-level subtitle overlay, a moving highlight synced to playback, and auto-scroll
+- [x] Clicking a subtitle segment seeks audio to that point and plays
+- [x] Listening quiz UI: player above the 4-option multiple-choice, learning and real modes (35 min / 39 questions), options gated until audio loads; reuses the shared session hook + results screen
+- [x] Backend player API: range-aware `GET /api/questions/:id/audio` stream + `GET /api/questions/:id/transcript`
+- [x] `npm run typecheck`, `npm run lint`, `npm test` (42 tests), `npm run build` all pass
+
+**Implementation notes (SDD Rule 4):** all four import open questions were resolved at
+implementation time and recorded in `docs/specs/listening-import.md` — Whisper variant
+(`mlx_whisper`, env-overridable), JSON output shape (seconds → ms via pure `parseWhisperJson`),
+media naming (reuse `extractSequenceFromFilename`, handles both `q07.mp3` and `20Q7.mp3`), and
+score mismatch (non-fatal warning). The player's static-vs-stream open question resolved to a
+dedicated range-aware streaming route. Image-bearing questions (sample Q1–6) remain out of scope.
+No DB migration was needed — `audio_files` and `transcript_segments` shipped in the Milestone 1
+schema. The listening import was not run end-to-end here (Whisper requires Apple Silicon), but the
+pure transform and the range/answer-key logic are unit-tested, and the shared PDF parser was
+already validated against a real listening PDF (27/437).
 
 **Specs:**
-- `docs/specs/listening-import.md`
-- `docs/specs/listening-player.md`
-- `docs/specs/listening-quiz-ui.md`
+- `docs/specs/listening-import.md` (implemented)
+- `docs/specs/listening-player.md` (implemented)
+- `docs/specs/listening-quiz-ui.md` (implemented)
 
 ---
 

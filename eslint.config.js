@@ -32,7 +32,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['server/**/*.ts', 'scripts/**/*.ts', '*.config.ts', 'drizzle.config.ts'],
+    files: ['server/**/*.ts', 'scripts/**/*.ts', 'e2e/**/*.ts', '*.config.ts', 'drizzle.config.ts'],
     languageOptions: {
       globals: globals.node,
     },

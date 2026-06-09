@@ -223,11 +223,21 @@ npm run typecheck:server
 # Lint
 npm run lint
 
-# Run all tests
+# Run all unit / render tests (vitest)
 npm test
 
 # Run a single test file
 npm test -- <path/to/file.test.ts>
+
+# Run the end-to-end regression suite (Playwright; specs in e2e/).
+# Uses Playwright's bundled Chromium and reuses a running `npm run dev`, else starts one.
+# global-setup seeds reading + listening dev data (generating the listening MP3s with ffmpeg),
+# so the suite is self-contained. One-time browser install: `npx playwright install chromium`.
+npm run test:e2e
+
+# Seed a 4-question listening band (Beginner) with generated audio + authored transcripts, for
+# exercising the listening UI without the Whisper import (not part of any spec; needs ffmpeg)
+npm run seed:listening-dev
 ```
 
 ---
