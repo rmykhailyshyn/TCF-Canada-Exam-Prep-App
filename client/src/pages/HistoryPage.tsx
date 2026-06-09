@@ -1,0 +1,83 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { type SessionSummary, fetchSessions } from '../lib/api';
+import { bandName } from '../lib/bands';
+import { formatClock } from '../lib/format';
+import type { DifficultySlug } from '../lib/api';
+
+// spec: docs/specs/progress-tracking.md §Behaviour.4–8
+
+function scoreLabel(s: SessionSummary): string {
+  if (s.mode === 'real') {
+    const points =
+      s.pointsScored !== null && s.pointsPossible !== null
+        ? `${s.pointsScored} / ${s.pointsPossible} pts · `
+        : '';
+    const time = s.elapsedMs !== null ? ` · ${formatClock(s.elapsedMs)}` : '';
+    return `${points}${s.correct} / ${s.total} correct${time}`;
+  }
+  const diff = s.difficulty ? `${bandName(s.difficulty as DifficultySlug)} · ` : '';
+  return `${diff}${s.correct} / ${s.total} correct`;
+}
+
+export function HistoryPage(): JSX.Element {
+  const navigate = useNavigate();
+  const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchSessions()
+      .then(({ sessions: rows }) => setSessions(rows))
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed to load history'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <main className="min-h-screen bg-slate-50">
+      <header className="border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="text-slate-500 hover:text-slate-900 transition text-sm"
+        >
+          ← Back
+        </button>
+        <span className="font-semibold text-slate-900">Session History</span>
+      </header>
+
+      <div className="mx-auto max-w-2xl p-6">
+        {loading && <p className="text-slate-500">Loading…</p>}
+        {error && <p className="text-red-600">{error}</p>}
+        {!loading && !error && sessions.length === 0 && (
+          <p className="text-slate-500">No completed sessions yet.</p>
+        )}
+        {!loading && !error && sessions.length > 0 && (
+          <ul className="space-y-2">
+            {sessions.map((s) => (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/history/${s.id}`)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-5 py-4 text-left shadow-sm transition hover:border-sky-400 hover:shadow-md"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <span className="font-medium text-slate-900 capitalize">{s.section}</span>
+                      <span className="mx-2 text-slate-300">·</span>
+                      <span className="text-slate-600 capitalize">{s.mode}</span>
+                    </div>
+                    <span className="text-xs text-slate-400 whitespace-nowrap">
+                      {new Date(s.completedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-500">{scoreLabel(s)}</p>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </main>
+  );
+}

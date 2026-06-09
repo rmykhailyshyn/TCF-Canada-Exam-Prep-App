@@ -1,7 +1,7 @@
 # Spec: Progress Tracking + Session History
 
 ## Status
-approved
+implemented
 
 ## Goal
 Give the user visibility into their past quiz sessions and overall progress. After
