@@ -1,15 +1,22 @@
 import { useState } from 'react';
-import type { DifficultySlug, Mode } from '../../lib/api';
+import type { DifficultySlug, Mode, Section } from '../../lib/api';
 import { DIFFICULTY_BANDS } from '../../lib/bands';
 import type { SessionConfig } from './types';
 
-// spec: docs/specs/reading-quiz-ui.md §Session setup.1–2
+// spec: docs/specs/reading-quiz-ui.md §Session setup.1–2 + docs/specs/listening-quiz-ui.md §1–2
 // Choose section + mode (+ difficulty in learning). Start is disabled until the selection is
-// complete. Only Reading is wired up in Milestone 2; Listening is shown but disabled.
+// complete. Both Reading and Listening sections are wired up as of Milestone 3.
 
 type Props = { onStart: (config: SessionConfig) => void };
 
+// Real-mode timing differs per section (reading 60 min, listening 35 min) — exam.config.json.
+const REAL_SUBTITLE: Record<Section, string> = {
+  reading: '60 min · 39 questions · no feedback',
+  listening: '35 min · 39 questions · no feedback',
+};
+
 export function SetupScreen({ onStart }: Props): JSX.Element {
+  const [section, setSection] = useState<Section>('reading');
   const [mode, setMode] = useState<Mode | null>(null);
   const [difficulty, setDifficulty] = useState<DifficultySlug | null>(null);
 
@@ -17,7 +24,7 @@ export function SetupScreen({ onStart }: Props): JSX.Element {
 
   function start(): void {
     if (!mode) return;
-    onStart({ section: 'reading', mode, difficulty: mode === 'learning' ? difficulty! : undefined });
+    onStart({ section, mode, difficulty: mode === 'learning' ? difficulty! : undefined });
   }
 
   return (
@@ -27,8 +34,18 @@ export function SetupScreen({ onStart }: Props): JSX.Element {
       <section className="mt-6">
         <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Section</h2>
         <div className="mt-2 grid grid-cols-2 gap-3">
-          <Card selected title="Reading" subtitle="Compréhension écrite" />
-          <Card disabled title="Listening" subtitle="Coming soon" />
+          <Card
+            selected={section === 'reading'}
+            onClick={() => setSection('reading')}
+            title="Reading"
+            subtitle="Compréhension écrite"
+          />
+          <Card
+            selected={section === 'listening'}
+            onClick={() => setSection('listening')}
+            title="Listening"
+            subtitle="Compréhension orale"
+          />
         </div>
       </section>
 
@@ -48,7 +65,7 @@ export function SetupScreen({ onStart }: Props): JSX.Element {
               setDifficulty(null);
             }}
             title="Real"
-            subtitle="60 min · 39 questions · no feedback"
+            subtitle={REAL_SUBTITLE[section]}
           />
         </div>
       </section>

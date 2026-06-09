@@ -1,7 +1,7 @@
 # Spec: Listening Question Import
 
 ## Status
-approved
+implemented
 
 ## Goal
 Allow a developer to import listening comprehension questions from a source directory into the
@@ -163,23 +163,36 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] The success summary reports the number of questions imported, transcript segments stored, questions skipped, and whether the score cross-check matched. (Behaviour.15)
 
 ## Open questions
-- Which Whisper CLI variant takes priority: `mlx-whisper` or `whisper.cpp`? Should the
-  script auto-detect or read from an env var (`WHISPER_CMD`)?
-- Does Whisper output segments as JSON directly, or does the script need to parse a text
-  format? Confirm the `--output_format json` flag is available in both CLI variants.
+- ~~Which Whisper CLI variant takes priority: `mlx-whisper` or `whisper.cpp`? Should the
+  script auto-detect or read from an env var (`WHISPER_CMD`)?~~ Resolved 2026-06-09 at
+  implementation: the importer targets **`mlx_whisper`** (the Apple-Silicon, pip-installable
+  variant, aligned with the existing Python toolchain), invoked via `runWhisper` in
+  `scripts/lib/whisper.ts`. The binary is overridable with **`WHISPER_CMD`** and the model with
+  `WHISPER_MODEL` (default `mlx-community/whisper-large-v3-turbo`) — mirroring the `TESSERACT_BIN`
+  / `PYTHON_BIN` pattern. `whisper.cpp` is not wired up; substituting a CLI that emits the same
+  `--output-format json` shape via `WHISPER_CMD` would work, otherwise it needs its own wrapper.
+- ~~Does Whisper output segments as JSON directly, or does the script need to parse a text
+  format? Confirm the `--output_format json` flag is available in both CLI variants.~~ Resolved:
+  `mlx_whisper --output-format json --output-dir <dir>` writes `<name>.json` with a `segments`
+  array of `{ start, end, text }` (timestamps in **seconds**). `parseWhisperJson` converts these
+  to ordered ms segments (dropping blanks, clamping `end ≥ start`) and reports the clip duration
+  as the last segment's end.
 - ~~**Exact green/red RGB values.** Need to sample the PDF's success/danger fill colours and
   set a tolerance.~~ Resolved 2026-06-08 against a real PDF (see §PDF structure). Green
   `(0.0, 0.737, 0.271)`, red `(0.839, 0.114, 0.114)`, grey `(0.941, 0.953, 0.965)`, ±0.06
   tolerance; fills are `curves`, not `rects`.
-- **Media naming convention.** This spec assumes `q<NN>.mp3`. If exported MP3s use the site's
+- ~~**Media naming convention.** This spec assumes `q<NN>.mp3`. If exported MP3s use the site's
   native names (e.g. `20Q7.mp3`), the importer must either rename on ingest or match the Nth
-  sorted file to question N. Confirm the naming the user will actually provide.
+  sorted file to question N.~~ Resolved 2026-06-09: matching reuses
+  `extractSequenceFromFilename`, which reads the digits after a `Q` (or the last number in the
+  name). That handles **both** `q07.mp3` and the native `20Q7.mp3` form with no rename step, so
+  the importer accepts either convention.
 - **Image-bearing questions** (Q1–6 in the sample: "choisissez celle qui correspond à
   l'image"). The PDF embeds an image and the options are audio-only (empty text). How should
   the image be stored and shown in the quiz UI? Out of scope for this iteration; flagged for
-  a follow-up spec.
-- Should a score-cross-check mismatch (Behaviour.10) be a hard failure (abort, no writes) or
-  a non-fatal warning? Currently specced as a warning.
+  a follow-up spec. (Still open — these questions import with empty option text and no image.)
+- ~~Should a score-cross-check mismatch (Behaviour.10) be a hard failure (abort, no writes) or
+  a non-fatal warning?~~ Resolved: a **non-fatal warning**, matching the reading importer.
 
 ## Revision history
 - 2026-06-04: Initial draft
@@ -199,3 +212,8 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   RGB values (open question); documented the `88` icon-glyph artifact and the four-curves-per-
   question de-duplication. Confirmed by reproducing the PDF's "27/39 correct" and "437/699
   points" cross-check. Whisper-related open questions are unaffected and remain open.
+- 2026-06-09: Implemented (Milestone 3). Added `scripts/lib/whisper.ts` (`runWhisper` +
+  pure `parseWhisperJson`) and the `scripts/transcribe.ts` orchestrator (`npm run transcribe`).
+  Resolved the Whisper-variant, JSON-format, media-naming, and score-mismatch open questions
+  (see §Open questions). Image-bearing questions (Q1–6) remain out of scope. Status
+  approved → implemented.

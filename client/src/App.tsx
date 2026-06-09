@@ -1,18 +1,25 @@
 import { useState } from 'react';
 import { SetupScreen } from './features/quiz/SetupScreen';
 import type { SessionConfig } from './features/quiz/types';
+import { ListeningQuizPage } from './pages/ListeningQuizPage';
 import { ReadingQuizPage } from './pages/ReadingQuizPage';
 
-// spec: docs/specs/reading-quiz-ui.md
-// Top-level flow: the setup screen until a session is configured, then the reading quiz page.
-// "Back to home" / completion clears the config and returns to setup. A router will replace this
-// when session history (Milestone 4) and review mode (Milestone 5) add real navigation.
+// spec: docs/specs/reading-quiz-ui.md + docs/specs/listening-quiz-ui.md
+// Top-level flow: the setup screen until a session is configured, then the reading or listening
+// quiz page (by chosen section). "Back to home" / completion clears the config and returns to
+// setup. A router will replace this when session history (Milestone 4) and review mode
+// (Milestone 5) add real navigation.
 
 function App(): JSX.Element {
   const [config, setConfig] = useState<SessionConfig | null>(null);
 
   if (config) {
-    return <ReadingQuizPage config={config} onExit={() => setConfig(null)} />;
+    const onExit = () => setConfig(null);
+    return config.section === 'listening' ? (
+      <ListeningQuizPage config={config} onExit={onExit} />
+    ) : (
+      <ReadingQuizPage config={config} onExit={onExit} />
+    );
   }
 
   return (

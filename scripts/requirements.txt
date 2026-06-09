@@ -4,3 +4,6 @@
 #   scripts/.venv/bin/pip install -r scripts/requirements.txt
 # The TS orchestrators invoke scripts/.venv/bin/python3 (override with PYTHON_BIN).
 pdfplumber==0.11.9
+# Listening transcription (Apple Silicon only). `npm run transcribe` invokes the `mlx_whisper`
+# CLI; override the binary with WHISPER_CMD and the model with WHISPER_MODEL.
+mlx-whisper==0.4.2

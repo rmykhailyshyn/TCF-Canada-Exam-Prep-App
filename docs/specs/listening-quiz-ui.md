@@ -1,7 +1,7 @@
 # Spec: Listening Quiz UI
 
 ## Status
-approved
+implemented
 
 ## Goal
 Provide a quiz interface for the listening comprehension section. The user listens to an
@@ -96,3 +96,8 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   counter now reflects filtered band size in learning mode
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
 - 2026-06-08: Status moved draft → approved.
+- 2026-06-09: Implemented (Milestone 3). `ListeningQuizScreen` (player above question/options,
+  options gated until audio loads) + `ListeningQuizPage`, reusing the shared `useQuizSession`
+  hook, `QuestionPanel` (new optional `locked` prop), `CountdownTimer`, `ConfirmDialog`, and
+  `ResultsScreen` (now section-aware). The setup screen's Listening section is enabled and
+  `App` routes by section. Status approved → implemented.

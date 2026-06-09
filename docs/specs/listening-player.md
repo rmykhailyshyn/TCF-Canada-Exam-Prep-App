@@ -1,7 +1,7 @@
 # Spec: Listening Player
 
 ## Status
-approved
+implemented
 
 ## Goal
 Provide an audio player component for the listening quiz that plays an MP3 question clip
@@ -86,11 +86,19 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] `GET /api/questions/:id/transcript` returns segments with `sequence`, `text`, `startMs`, `endMs` in the documented envelope. (API contract)
 
 ## Open questions
-- Should the MP3 be served as a static file (Express `static` middleware) or streamed
-  through a dedicated route? Streaming supports range requests which HTML `<audio>` relies
-  on for seeking — this should be confirmed before implementation.
+- ~~Should the MP3 be served as a static file (Express `static` middleware) or streamed
+  through a dedicated route?~~ Resolved 2026-06-09: a **dedicated streaming route**
+  (`GET /api/questions/:id/audio`) that honours the `Range` header (206 + `Content-Range`,
+  `Accept-Ranges: bytes`). The route resolves the path through the questions service and streams
+  the bytes itself; a static mount would expose the filesystem layout and couldn't return the
+  `NOT_FOUND` envelope for an unknown question id. Range parsing is unit-tested (`parseRange`).
 
 ## Revision history
 - 2026-06-04: Initial draft
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
 - 2026-06-08: Status moved draft → approved.
+- 2026-06-09: Implemented (Milestone 3). Server: `getAudioFile`/`getTranscript` in
+  `server/services/questions.ts`, `server/routes/questions.ts` (range-aware audio stream +
+  transcript envelope). Client: `useListeningPlayer` hook (with pure `activeSegmentIndex`),
+  `ListeningPlayer` + `SubtitleList` components. Resolved the static-vs-stream open question.
+  Status approved → implemented.

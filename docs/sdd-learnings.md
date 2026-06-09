@@ -74,3 +74,38 @@ the exact clause while coding (e.g. real-mode "auto-advance, no feedback" vs. le
 **Friction verdict (solo):** the approval gate was useful, not a bottleneck — the one place it
 mattered was forcing a deliberate scope decision (defer import vs. build against a sample) up
 front rather than discovering the sample problem mid-build.
+
+### 2026-06-09 — Milestone 3 implementation (listening import + player + quiz UI)
+
+**The spec investment from earlier milestones paid out as reuse, not rework.** Three structural
+decisions made for reading turned out to carry listening almost for free: (1) the PDF parser was
+already order-based and section-agnostic (it parses `"N. Question"` headers when present and is
+silent when they aren't), so listening import needed *zero* parser changes — `transcribe.ts` is a
+near-mirror of `ocr.ts` swapping Tesseract-on-images for Whisper-on-MP3s; (2) `useQuizSession` was
+written section-agnostic in M2, so the entire listening quiz lifecycle (create/answer/complete,
+real-mode timer, learning feedback) is the *same hook* — only the screen chrome (player instead of
+passage) differs; (3) the answer-key cross-check (`crossCheckScore`) and `extractSequenceFromFilename`
+were reused verbatim. **Lesson:** specs that name a *shared* artifact (the results PDF, the session
+model) and resist section-specific special-casing compound across milestones. The cost was paid in
+M2; M3 collected the dividend.
+
+**Open questions are cheaper to resolve at implementation than at spec time — when the decision is
+reversible and local.** `listening-import` shipped to "approved" carrying four unresolved open
+questions (Whisper variant, JSON shape, MP3 naming, score-mismatch policy). None blocked approval
+because each had an obvious default and a narrow blast radius. At implementation all four resolved
+in minutes, and one resolved *better* than the spec assumed: the spec proposed `q<NN>.mp3` and
+flagged that native `20Q7.mp3` names might need a rename step — but reusing the existing
+`extractSequenceFromFilename` (digits-after-Q, last-number fallback) handles *both* with no new
+code. **Lesson:** the approval gate doesn't require *zero* open questions — it requires that each
+open question is either (a) decision-forcing and therefore worth blocking on, or (b) reversible and
+local and therefore safe to defer with a named default. Conflating the two would turn the gate into
+a bottleneck. The image-bearing-questions item was correctly held in the *third* category: out of
+scope, named in the spec, not silently dropped.
+
+**Testability shaped the seam.** The "no DOM in the test env" constraint (tests run under
+`renderToStaticMarkup` in node) pushed two clean separations that are good design independently of
+testing: the Whisper seconds→ms transform is a pure `parseWhisperJson` split from the CLI call, and
+the subtitle highlight math is a pure `activeSegmentIndex` split from the audio element. Both are
+unit-tested without a browser; the side-effecting shells (`runWhisper`, the `useEffect` listeners)
+stay thin. **Lesson:** an awkward test environment is a useful forcing function — it makes you name
+the pure core that the spec's behaviours actually describe.

@@ -15,13 +15,14 @@ type Props = {
 
 export function ResultsScreen({ results, elapsedMs, config, onHome }: Props): JSX.Element {
   const isReal = config.mode === 'real';
+  const sectionLabel = config.section === 'listening' ? 'Listening' : 'Reading';
 
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center p-6 text-center">
       <div className="w-full rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <h1 className="text-xl font-semibold text-slate-900">Session complete</h1>
         <p className="mt-1 text-slate-500">
-          Reading · {isReal ? 'Real' : 'Learning'}
+          {sectionLabel} · {isReal ? 'Real' : 'Learning'}
           {!isReal && config.difficulty && <> · {bandName(config.difficulty)}</>}
         </p>
 
