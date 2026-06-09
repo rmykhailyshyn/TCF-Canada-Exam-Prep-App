@@ -113,9 +113,13 @@ describe('render smoke tests', () => {
         onHome={vi.fn()}
       />,
     );
-    expect(html).toContain('387 / 699 points');
-    expect(html).toContain('28 / 39 correct');
-    expect(html).toContain('Completed in 43:12');
+    // Presentation: points are the hero figure (387 / 699 + "points scored"); correct count and
+    // time appear in the stats row beneath. All three spec-required values are present.
+    expect(html).toContain('387');
+    expect(html).toContain('699');
+    expect(html).toContain('points scored');
+    expect(html).toContain('28 / 39');
+    expect(html).toContain('43:12');
   });
 
   // spec: docs/specs/quiz-session.md §Results.13 (learning) — correct/total + band, no points
@@ -134,7 +138,8 @@ describe('render smoke tests', () => {
         onHome={vi.fn()}
       />,
     );
-    expect(html).toContain('7 / 9 correct');
+    // Learning shows correct/total (hero + stats row) and the band; never a points figure.
+    expect(html).toContain('7 / 9');
     expect(html).toContain('Intermediate (Q11–19, 15 pts)');
     expect(html).not.toContain('points');
   });

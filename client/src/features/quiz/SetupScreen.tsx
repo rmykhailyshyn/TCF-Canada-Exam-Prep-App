@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { DifficultySlug, Mode, Section } from '../../lib/api';
 import { DIFFICULTY_BANDS } from '../../lib/bands';
 import type { SessionConfig } from './types';
@@ -28,33 +29,39 @@ export function SetupScreen({ onStart }: Props): JSX.Element {
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-6">
-      <h1 className="text-2xl font-semibold text-slate-900">Start a session</h1>
+    <div className="mx-auto max-w-2xl animate-fade-in-up px-6 py-10 sm:py-14">
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900">Start a session</h1>
+      <p className="mt-2 text-slate-500">
+        Pick a section and a mode, then practise at your own pace or under exam conditions.
+      </p>
 
-      <section className="mt-6">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Section</h2>
-        <div className="mt-2 grid grid-cols-2 gap-3">
+      <section className="mt-9">
+        <SectionLabel>Section</SectionLabel>
+        <div className="mt-3 grid grid-cols-2 gap-3">
           <Card
             selected={section === 'reading'}
             onClick={() => setSection('reading')}
+            icon="📖"
             title="Reading"
             subtitle="Compréhension écrite"
           />
           <Card
             selected={section === 'listening'}
             onClick={() => setSection('listening')}
+            icon="🎧"
             title="Listening"
             subtitle="Compréhension orale"
           />
         </div>
       </section>
 
-      <section className="mt-6">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Mode</h2>
-        <div className="mt-2 grid grid-cols-2 gap-3">
+      <section className="mt-7">
+        <SectionLabel>Mode</SectionLabel>
+        <div className="mt-3 grid grid-cols-2 gap-3">
           <Card
             selected={mode === 'learning'}
             onClick={() => setMode('learning')}
+            icon="🧠"
             title="Learning"
             subtitle="No timer · feedback after each question"
           />
@@ -64,6 +71,7 @@ export function SetupScreen({ onStart }: Props): JSX.Element {
               setMode('real');
               setDifficulty(null);
             }}
+            icon="⏱️"
             title="Real"
             subtitle={REAL_SUBTITLE[section]}
           />
@@ -71,66 +79,97 @@ export function SetupScreen({ onStart }: Props): JSX.Element {
       </section>
 
       {mode === 'learning' && (
-        <section className="mt-6">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">Difficulty</h2>
-          <div className="mt-2 space-y-2">
-            {DIFFICULTY_BANDS.map((band) => (
-              <button
-                key={band.slug}
-                type="button"
-                onClick={() => setDifficulty(band.slug)}
-                className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition ${
-                  difficulty === band.slug
-                    ? 'border-sky-500 bg-sky-50 ring-1 ring-sky-500'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
-              >
-                <span className="font-medium text-slate-900">{band.name}</span>
-                <span className="text-sm text-slate-500">
-                  {band.range} · {band.points} pts
-                </span>
-              </button>
-            ))}
+        <section className="mt-7 animate-fade-in">
+          <SectionLabel>Difficulty</SectionLabel>
+          <div className="mt-3 space-y-2">
+            {DIFFICULTY_BANDS.map((band) => {
+              const selected = difficulty === band.slug;
+              return (
+                <button
+                  key={band.slug}
+                  type="button"
+                  onClick={() => setDifficulty(band.slug)}
+                  className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition ${
+                    selected
+                      ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500'
+                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="flex items-center gap-3">
+                    <span
+                      className={`flex h-6 w-6 flex-none items-center justify-center rounded-full border text-[11px] font-bold transition ${
+                        selected
+                          ? 'border-brand-500 bg-brand-500 text-white'
+                          : 'border-slate-300 text-transparent'
+                      }`}
+                      aria-hidden
+                    >
+                      ✓
+                    </span>
+                    <span className="font-medium text-slate-900">{band.name}</span>
+                  </span>
+                  <span className="text-sm tabular-nums text-slate-500">
+                    {band.range} · {band.points} pts
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </section>
       )}
 
-      <div className="mt-8 flex justify-end">
+      <div className="mt-10 flex justify-end">
         <button
           type="button"
           disabled={!canStart}
           onClick={start}
-          className="rounded-xl bg-sky-600 px-6 py-2.5 font-medium text-white transition enabled:hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="rounded-xl bg-brand-600 px-7 py-3 font-semibold text-white shadow-brand-glow transition enabled:hover:bg-brand-700 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
         >
-          Start
+          Start session
         </button>
       </div>
     </div>
   );
 }
 
+function SectionLabel({ children }: { children: ReactNode }): JSX.Element {
+  return (
+    <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">{children}</h2>
+  );
+}
+
 type CardProps = {
   title: string;
   subtitle: string;
+  icon?: string;
   selected?: boolean;
   disabled?: boolean;
   onClick?: () => void;
 };
 
-function Card({ title, subtitle, selected, disabled, onClick }: CardProps): JSX.Element {
+function Card({ title, subtitle, icon, selected, disabled, onClick }: CardProps): JSX.Element {
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`rounded-xl border px-4 py-3 text-left transition ${
+      className={`group relative overflow-hidden rounded-2xl border px-4 py-4 text-left transition ${
         selected
-          ? 'border-sky-500 bg-sky-50 ring-1 ring-sky-500'
-          : 'border-slate-200 bg-white hover:border-slate-300'
-      } ${disabled ? 'cursor-not-allowed opacity-50 hover:border-slate-200' : ''}`}
+          ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500'
+          : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-card'
+      } ${disabled ? 'cursor-not-allowed opacity-50 hover:translate-y-0 hover:border-slate-200 hover:shadow-none' : ''}`}
     >
-      <div className="font-medium text-slate-900">{title}</div>
-      <div className="text-sm text-slate-500">{subtitle}</div>
+      <div className="flex items-center gap-2">
+        {icon && <span aria-hidden className="text-lg">{icon}</span>}
+        <span
+          className={`font-semibold ${selected ? 'text-brand-900' : 'text-slate-900'}`}
+        >
+          {title}
+        </span>
+      </div>
+      <div className={`mt-1 text-sm ${selected ? 'text-brand-700/80' : 'text-slate-500'}`}>
+        {subtitle}
+      </div>
     </button>
   );
 }

@@ -34,10 +34,10 @@ export function SubtitleList({ segments, activeIndex, onSeek }: Props): JSX.Elem
               type="button"
               onClick={() => onSeek(index)}
               aria-current={active ? 'true' : undefined}
-              className={`w-full rounded-lg px-3 py-1.5 text-left text-sm transition ${
+              className={`w-full rounded-lg px-3 py-1.5 text-left text-sm leading-relaxed transition ${
                 active
-                  ? 'bg-sky-100 font-semibold text-sky-900'
-                  : 'text-slate-600 hover:bg-slate-100'
+                  ? 'bg-brand-100 font-semibold text-brand-900 ring-1 ring-brand-200'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
               }`}
             >
               {seg.text}

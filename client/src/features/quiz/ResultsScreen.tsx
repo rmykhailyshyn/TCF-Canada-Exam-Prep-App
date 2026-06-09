@@ -17,46 +17,75 @@ export function ResultsScreen({ results, elapsedMs, config, onHome }: Props): JS
   const isReal = config.mode === 'real';
   const sectionLabel = config.section === 'listening' ? 'Listening' : 'Reading';
 
+  const accuracy = results.total > 0 ? Math.round((results.correct / results.total) * 100) : 0;
+
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center p-6 text-center">
-      <div className="w-full rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-xl font-semibold text-slate-900">Session complete</h1>
-        <p className="mt-1 text-slate-500">
-          {sectionLabel} · {isReal ? 'Real' : 'Learning'}
-          {!isReal && config.difficulty && <> · {bandName(config.difficulty)}</>}
-        </p>
-
-        <div className="mt-6 space-y-1">
-          {isReal && results.pointsScored !== null && results.pointsPossible !== null && (
-            <p className="text-3xl font-bold text-slate-900">
-              {results.pointsScored} / {results.pointsPossible} points
+      <div className="w-full animate-fade-in-up overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-card-hover">
+        <div className="bg-gradient-to-br from-brand-600 to-brand-800 px-8 pb-8 pt-9 text-white">
+          <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] ring-1 ring-white/20">
+            ✓ Session complete
+          </span>
+          <p className="mt-4 text-sm font-medium text-brand-100">
+            {sectionLabel} · {isReal ? 'Real' : 'Learning'}
+            {!isReal && config.difficulty && <> · {bandName(config.difficulty)}</>}
+          </p>
+          {isReal && results.pointsScored !== null && results.pointsPossible !== null ? (
+            <p className="mt-3 text-5xl font-extrabold tracking-tight">
+              {results.pointsScored}
+              <span className="text-2xl font-bold text-brand-200">
+                {' '}
+                / {results.pointsPossible}
+              </span>
+            </p>
+          ) : (
+            <p className="mt-3 text-5xl font-extrabold tracking-tight">
+              {results.correct}
+              <span className="text-2xl font-bold text-brand-200"> / {results.total}</span>
             </p>
           )}
-          <p className={isReal ? 'text-lg text-slate-700' : 'text-3xl font-bold text-slate-900'}>
-            {results.correct} / {results.total} correct
+          <p className="mt-1 text-sm font-medium text-brand-200">
+            {isReal ? 'points scored' : 'correct answers'}
           </p>
-          {isReal && elapsedMs !== null && (
-            <p className="text-slate-500">Completed in {formatClock(elapsedMs)}</p>
-          )}
         </div>
 
-        <div className="mt-8 flex justify-center gap-3">
+        <div className="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100">
+          <Stat label="Correct" value={`${results.correct} / ${results.total}`} />
+          <Stat label="Accuracy" value={`${accuracy}%`} />
+          <Stat
+            label="Time"
+            value={isReal && elapsedMs !== null ? formatClock(elapsedMs) : '—'}
+          />
+        </div>
+
+        <div className="flex justify-center gap-3 p-6">
           <button
             type="button"
             disabled
             title="Review mode arrives in a later milestone"
-            className="rounded-xl border border-slate-200 px-4 py-2 font-medium text-slate-400"
+            className="rounded-xl border border-slate-200 px-5 py-2.5 font-medium text-slate-400"
           >
             Review answers
           </button>
           <button
             type="button"
             onClick={onHome}
-            className="rounded-xl bg-sky-600 px-4 py-2 font-medium text-white transition hover:bg-sky-700"
+            className="rounded-xl bg-brand-600 px-5 py-2.5 font-semibold text-white shadow-brand-glow transition hover:bg-brand-700 active:scale-[0.98]"
           >
             Back to home
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }): JSX.Element {
+  return (
+    <div className="px-3 py-4">
+      <div className="text-lg font-bold tabular-nums text-slate-900">{value}</div>
+      <div className="mt-0.5 text-xs font-medium uppercase tracking-wide text-slate-400">
+        {label}
       </div>
     </div>
   );
