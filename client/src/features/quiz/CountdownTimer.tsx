@@ -7,10 +7,15 @@ export function CountdownTimer({ remainingMs }: Props): JSX.Element {
   const urgent = remainingMs <= 60_000;
   return (
     <span
-      className={`tabular-nums font-medium ${urgent ? 'text-red-600' : 'text-slate-700'}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold tabular-nums ring-1 transition ${
+        urgent
+          ? 'animate-pulse bg-red-50 text-red-700 ring-red-200'
+          : 'bg-slate-100 text-slate-700 ring-slate-200'
+      }`}
       aria-label="Time remaining"
     >
-      ⏱ {formatClock(remainingMs)}
+      <span aria-hidden>⏱</span>
+      {formatClock(remainingMs)}
     </span>
   );
 }

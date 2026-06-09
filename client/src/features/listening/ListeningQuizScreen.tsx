@@ -1,4 +1,6 @@
 import { useCallback, useState } from 'react';
+import { BrandMark } from '../../components/BrandMark';
+import { ProgressCounter } from '../../components/ProgressCounter';
 import { CountdownTimer } from '../quiz/CountdownTimer';
 import { ConfirmDialog } from '../quiz/ConfirmDialog';
 import { QuestionPanel } from '../quiz/QuestionPanel';
@@ -32,17 +34,13 @@ export function ListeningQuizScreen({ session, config }: Props): JSX.Element {
 
   return (
     <div className="flex h-screen flex-col">
-      <header className="flex items-center gap-4 border-b border-slate-200 bg-white px-6 py-3">
-        <span className="font-semibold text-slate-900">TCF Prep</span>
-        <span className="text-slate-400">·</span>
-        <span className="text-slate-600">Listening · {modeLabel}</span>
-        <div className="ml-auto flex items-center gap-6">
+      <header className="flex items-center gap-4 border-b border-slate-200/70 bg-white/80 px-6 py-3 backdrop-blur-md">
+        <BrandMark context={`Listening · ${modeLabel}`} />
+        <div className="ml-auto flex items-center gap-5">
           {config.mode === 'real' && session.remainingMs !== null && (
             <CountdownTimer remainingMs={session.remainingMs} />
           )}
-          <span className="text-sm font-medium text-slate-500">
-            Question {session.index + 1} of {session.total}
-          </span>
+          <ProgressCounter index={session.index} total={session.total} />
         </div>
       </header>
 
@@ -70,11 +68,11 @@ export function ListeningQuizScreen({ session, config }: Props): JSX.Element {
       </main>
 
       {config.mode === 'real' && (
-        <footer className="flex justify-end border-t border-slate-200 bg-white px-6 py-3">
+        <footer className="flex justify-end border-t border-slate-200/70 bg-white/80 px-6 py-3 backdrop-blur-md">
           <button
             type="button"
             onClick={() => setConfirmOpen(true)}
-            className="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50"
+            className="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 active:scale-[0.98]"
           >
             Submit exam
           </button>

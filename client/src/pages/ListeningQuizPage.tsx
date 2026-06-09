@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Spinner } from '../components/Spinner';
 import { ListeningQuizScreen } from '../features/listening/ListeningQuizScreen';
 import { ResultsScreen } from '../features/quiz/ResultsScreen';
 import type { SessionConfig } from '../features/quiz/types';
@@ -14,7 +15,11 @@ export function ListeningQuizPage({ config, onExit }: Props): JSX.Element {
   const session = useQuizSession(config);
 
   if (session.status === 'loading') {
-    return <Centered>Starting session…</Centered>;
+    return (
+      <Centered>
+        <Spinner label="Starting session…" />
+      </Centered>
+    );
   }
 
   if (session.status === 'error') {
@@ -24,7 +29,7 @@ export function ListeningQuizPage({ config, onExit }: Props): JSX.Element {
         <button
           type="button"
           onClick={onExit}
-          className="mt-4 rounded-xl bg-sky-600 px-4 py-2 font-medium text-white transition hover:bg-sky-700"
+          className="mt-4 rounded-xl bg-brand-600 px-4 py-2 font-semibold text-white shadow-brand-glow transition hover:bg-brand-700 active:scale-[0.98]"
         >
           Back to home
         </button>

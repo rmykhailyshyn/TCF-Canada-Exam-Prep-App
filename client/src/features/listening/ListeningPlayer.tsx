@@ -52,17 +52,17 @@ export function ListeningPlayer({
   }, [player.ready, onReadyChange]);
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-white">
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-card">
       {/* preload metadata so the scrubber has a duration and `canplay` fires early */}
       <audio ref={audioRef} src={audioUrl(questionId)} preload="auto" className="hidden" />
 
-      <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
+      <div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50/60 px-4 py-3">
         <button
           type="button"
           onClick={player.toggle}
           disabled={!player.ready}
           aria-label={player.isPlaying ? 'Pause' : 'Play'}
-          className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-sky-600 text-white transition enabled:hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-brand-600 text-white shadow-brand-glow transition enabled:hover:bg-brand-700 enabled:active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
         >
           {player.isPlaying ? '❚❚' : '▶'}
         </button>
@@ -75,14 +75,14 @@ export function ListeningPlayer({
           onChange={(e) => player.seekMs(Number(e.target.value))}
           disabled={!player.ready}
           aria-label="Seek"
-          className="flex-1 accent-sky-600"
+          className="h-1.5 flex-1 cursor-pointer accent-brand-600"
         />
 
-        <span className="flex-none tabular-nums text-xs text-slate-500">
+        <span className="flex-none tabular-nums text-xs font-medium text-slate-500">
           {formatClock(player.currentMs)} / {formatClock(player.durationMs)}
         </span>
 
-        <label className="flex flex-none items-center gap-1 text-slate-400" title="Volume">
+        <label className="flex flex-none items-center gap-1.5 text-slate-400" title="Volume">
           <span aria-hidden>🔊</span>
           <input
             type="range"
@@ -92,7 +92,7 @@ export function ListeningPlayer({
             value={volume}
             onChange={(e) => onVolumeChange(Number(e.target.value))}
             aria-label="Volume"
-            className="w-20 accent-sky-600"
+            className="h-1.5 w-20 cursor-pointer accent-brand-600"
           />
         </label>
       </div>
@@ -110,7 +110,8 @@ export function ListeningPlayer({
       </div>
 
       {!player.ready && (
-        <p className="border-t border-slate-100 px-4 py-2 text-xs italic text-slate-400">
+        <p className="flex items-center gap-2 border-t border-slate-100 px-4 py-2 text-xs font-medium text-slate-400">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-brand-400" aria-hidden />
           Loading audio…
         </p>
       )}

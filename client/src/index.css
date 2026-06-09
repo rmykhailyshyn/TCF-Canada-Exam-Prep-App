@@ -1,3 +1,33 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply text-slate-900;
+    background-color: #f6f7fb;
+    /* Soft ambient gradient: a warm brand glow top-right, a cool one top-left. */
+    background-image:
+      radial-gradient(1100px 620px at 100% -10%, rgba(99, 102, 241, 0.1), transparent 60%),
+      radial-gradient(900px 520px at -10% 0%, rgba(56, 189, 248, 0.07), transparent 55%);
+    background-attachment: fixed;
+  }
+
+  /* Consistent, accessible focus ring across all interactive elements. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500/60 ring-offset-2 ring-offset-white;
+  }
+}
+
+@layer components {
+  /* Surface card: the standard elevated white panel used across the app. */
+  .surface {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-card;
+  }
+}

@@ -45,13 +45,13 @@ export function QuestionPanel({
   const answered = feedback !== null;
 
   return (
-    <div className="flex h-full flex-col">
-      <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
+    <div className="flex h-full flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card sm:p-6">
+      <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
         Question {question.sequence}
       </h2>
-      <p className="mt-1 text-lg text-slate-900">{question.text}</p>
+      <p className="mt-1.5 text-lg font-medium leading-snug text-slate-900">{question.text}</p>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-5 space-y-2.5">
         {question.options.map((opt) => (
           <OptionRow
             key={opt.label}
@@ -65,11 +65,23 @@ export function QuestionPanel({
       </div>
 
       {feedback && (
-        <p
-          className={`mt-4 font-medium ${feedback.isCorrect ? 'text-green-700' : 'text-red-700'}`}
+        <div
+          className={`mt-5 flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-medium animate-scale-in ${
+            feedback.isCorrect
+              ? 'border-green-200 bg-green-50 text-green-800'
+              : 'border-red-200 bg-red-50 text-red-800'
+          }`}
         >
+          <span
+            className={`flex h-6 w-6 flex-none items-center justify-center rounded-full text-sm font-bold text-white ${
+              feedback.isCorrect ? 'bg-green-600' : 'bg-red-600'
+            }`}
+            aria-hidden
+          >
+            {feedback.isCorrect ? '✓' : '✗'}
+          </span>
           {feedback.isCorrect ? 'Correct!' : `Incorrect — the answer is ${feedback.correctLabel}.`}
-        </p>
+        </div>
       )}
 
       {feedback?.explanation && <Explanation explanation={feedback.explanation} />}
@@ -79,7 +91,7 @@ export function QuestionPanel({
           <button
             type="button"
             onClick={onNext}
-            className="rounded-xl bg-sky-600 px-6 py-2.5 font-medium text-white transition hover:bg-sky-700"
+            className="rounded-xl bg-brand-600 px-6 py-2.5 font-semibold text-white shadow-brand-glow transition hover:bg-brand-700 active:scale-[0.98]"
           >
             Next question
           </button>
@@ -88,7 +100,7 @@ export function QuestionPanel({
             type="button"
             disabled={selectedLabel === null || submitting || locked}
             onClick={onConfirm}
-            className="rounded-xl bg-sky-600 px-6 py-2.5 font-medium text-white transition enabled:hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="rounded-xl bg-brand-600 px-6 py-2.5 font-semibold text-white shadow-brand-glow transition enabled:hover:bg-brand-700 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
           >
             {mode === 'real' ? 'Confirm & next' : 'Confirm answer'}
           </button>
@@ -111,12 +123,16 @@ function Explanation({
     { label: 'D', text: explanation.optionDReason },
   ];
   return (
-    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
-      <p className="font-medium text-slate-900">{explanation.correctReason}</p>
-      <ul className="mt-2 space-y-1 text-slate-600">
+    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm animate-fade-in">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-600">Explanation</p>
+      <p className="mt-2 font-medium text-slate-900">{explanation.correctReason}</p>
+      <ul className="mt-3 space-y-1.5 text-slate-600">
         {reasons.map((r) => (
-          <li key={r.label}>
-            <span className="font-semibold">{r.label}:</span> {r.text}
+          <li key={r.label} className="flex gap-2">
+            <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-slate-200 text-[11px] font-bold text-slate-600">
+              {r.label}
+            </span>
+            <span>{r.text}</span>
           </li>
         ))}
       </ul>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BrandMark } from './components/BrandMark';
 import { SetupScreen } from './features/quiz/SetupScreen';
 import type { SessionConfig } from './features/quiz/types';
 import { ListeningQuizPage } from './pages/ListeningQuizPage';
@@ -23,9 +24,9 @@ function App(): JSX.Element {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white px-6 py-3">
-        <span className="font-semibold text-slate-900">TCF Canada Prep</span>
+    <main className="min-h-screen">
+      <header className="sticky top-0 z-10 border-b border-slate-200/70 bg-white/80 px-6 py-3 backdrop-blur-md">
+        <BrandMark />
       </header>
       <SetupScreen onStart={setConfig} />
     </main>
