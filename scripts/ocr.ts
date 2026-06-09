@@ -1,5 +1,5 @@
-import { existsSync, readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { closeSync, existsSync, openSync, readSync, readdirSync } from 'node:fs';
+import { basename, resolve } from 'node:path';
 import { and, eq } from 'drizzle-orm';
 import { db, pool } from '../server/db';
 import { options, passages, questions } from '../server/db/schema';
@@ -7,10 +7,23 @@ import { runPdfParser } from './lib/parse';
 import {
   crossCheckScore,
   extractSequenceFromFilename,
+  hasImageMagic,
   resolveCorrectLabel,
   splitStimulus,
 } from './lib/results';
 import { TesseractError, runTesseract } from './lib/tesseract';
+
+// Reads the first bytes of a file to sniff its real type (cheap; avoids loading whole images).
+function readMagic(path: string): Uint8Array {
+  const fd = openSync(path, 'r');
+  try {
+    const buf = Buffer.alloc(8);
+    readSync(fd, buf, 0, 8, 0);
+    return buf;
+  } finally {
+    closeSync(fd);
+  }
+}
 
 // spec: docs/specs/reading-import.md
 // Reading import CLI: `npm run ocr -- --dir <path>`. The folder holds the single results PDF and
@@ -119,6 +132,19 @@ async function main(): Promise<void> {
       .where(eq(passages.sourceFile, imagePath));
     if (existingPassage.length > 0) {
       console.warn(`• Passage for question ${q.sequence} already imported — skipping.`);
+      skipped += 1;
+      continue;
+    }
+
+    // Guard against files that carry an image extension but aren't images (e.g. an HTML page
+    // saved as `.png` — a real export hazard). Gives a clear message instead of a cryptic
+    // Tesseract/leptonica error.
+    if (!hasImageMagic(readMagic(imagePath))) {
+      console.error(
+        `✗ Skipping question ${q.sequence}: ${basename(imagePath)} is not a PNG/JPEG image ` +
+          `(its content is not image data — likely an HTML page saved with an image extension). ` +
+          `Re-export the passage images as real PNG/JPEG files.`,
+      );
       skipped += 1;
       continue;
     }

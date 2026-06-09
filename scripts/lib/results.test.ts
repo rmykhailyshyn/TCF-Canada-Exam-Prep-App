@@ -4,6 +4,7 @@ import {
   type ParsedResults,
   crossCheckScore,
   extractSequenceFromFilename,
+  hasImageMagic,
   resolveCorrectLabel,
   splitStimulus,
 } from './results';
@@ -133,5 +134,17 @@ describe('splitStimulus', () => {
     const { passage, question } = splitStimulus('Un passage court.\nQue dit le texte ?');
     expect(passage).toBe('Un passage court.');
     expect(question).toBe('Que dit le texte ?');
+  });
+});
+
+describe('hasImageMagic', () => {
+  it('accepts PNG and JPEG signatures', () => {
+    expect(hasImageMagic(Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))).toBe(true);
+    expect(hasImageMagic(Uint8Array.from([0xff, 0xd8, 0xff, 0xe0]))).toBe(true);
+  });
+
+  it('rejects HTML/text masquerading as an image', () => {
+    // "<!DOCTYPE" — an HTML page saved with a .png extension (a real export hazard).
+    expect(hasImageMagic(Uint8Array.from([0x3c, 0x21, 0x44, 0x4f, 0x43, 0x54, 0x59, 0x50]))).toBe(false);
   });
 });
