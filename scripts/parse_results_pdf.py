@@ -63,9 +63,11 @@ def _collect(pdf):
             width = c["x1"] - c["x0"]
             height = c["bottom"] - c["top"]
             cls = _classify(c.get("non_stroking_color"))
-            # Option rows: width ~ 746, height ~ 58. x0 differs by section (~898 listening,
-            # ~844 reading), so accept a wide band.
-            if 300 < width and 40 < height < 80 and 780 < c["x0"] < 940 and cls:
+            # Option rows are wide (≥ ~300pt), short (≈ 58pt) colour fills. Their absolute x0
+            # and width vary with the export's page width (e.g. x0≈349/w≈806 on a 1512pt page vs
+            # x0≈844/w≈746 on a 2434pt page), so we do NOT constrain x0 — colour is matched to an
+            # option by vertical overlap (`_color_for`), so fills elsewhere on the page are inert.
+            if 300 < width and 40 < height < 80 and cls:
                 rows.append({"page": pi, "top": c["top"], "bottom": c["bottom"], "x0": c["x0"], "color": cls})
         for w in page.extract_words():
             raw_words.append((pi, w["top"], w["x0"], w["text"]))

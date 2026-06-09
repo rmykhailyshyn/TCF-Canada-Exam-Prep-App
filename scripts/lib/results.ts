@@ -95,6 +95,16 @@ export function extractSequenceFromFilename(filename: string): number | null {
   return null;
 }
 
+// Verifies a file's leading bytes are a PNG or JPEG signature. Guards against "images" that are
+// actually HTML/text saved with an image extension (a real export hazard) — they would otherwise
+// fail deep inside Tesseract with a cryptic leptonica error.
+export function hasImageMagic(header: Uint8Array): boolean {
+  const isPng =
+    header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4e && header[3] === 0x47;
+  const isJpeg = header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff;
+  return isPng || isJpeg;
+}
+
 // spec: docs/specs/reading-import.md §Behaviour.5 — the per-question image holds the passage,
 // then the `www.reussir-tcfcanada.com` footer, then the question text (prefixed by the badge
 // number). Split OCR output at the footer; strip the leading badge number from the question.

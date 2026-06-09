@@ -79,9 +79,12 @@ reading them from `page.rects` finds nothing. The parser must inspect `page.curv
 | Test-taker's wrong pick (red, ignored) | `(0.839, 0.114, 0.114)` (also a darker `(0.886, 0.051, 0.051)`) | `#D61D1D` |
 | Default option row (grey) | `(0.941, 0.953, 0.965)` | `#F0F3F6` |
 
-Each question contributes four answer-row curves (`x0 ≈ 844` reading / `≈ 898` listening, width
-≈ 746, height ≈ 58); a single rounded rect is drawn as several overlapping curves, so de-duplicate
-by `(page, top, x0)`. Option rows carry a leading icon glyph that `pdfplumber` extracts as the
+Each question contributes four answer-row curves. Their absolute `x0`/width **vary with the
+export's page width** (e.g. `x0 ≈ 844`, width ≈ 746 on a 2434pt-wide page; `x0 ≈ 349`, width ≈ 806
+on a 1512pt-wide page), so the parser must **not** constrain `x0` — it identifies rows by colour +
+height (≈ 58) + a generous width, and matches a colour to an option by vertical overlap, so fills
+elsewhere on the page are inert. A single rounded rect is drawn as several overlapping curves, so
+de-duplicate by `(page, top, x0)`. Option rows carry a leading icon glyph that `pdfplumber` extracts as the
 literal token `88` between the A–D label and the option text (e.g. `A 88 Pour préparer son
 voyage.`); the mandatory `88` is required by the option regex, which both strips it and prevents
 passage text starting with A–D from matching. (In listening, audio-only questions have empty text
@@ -107,7 +110,8 @@ after `88`.)
    labels and compares it to the "<P> of 699" value. A mismatch is reported as a warning.
 8. If a passage PNG is required but the matching file already exists in the DB (same path),
    the script prints a duplicate warning and skips that question without inserting new rows.
-9. If Tesseract returns a non-zero exit code for a PNG, the script logs stderr and skips that
+9. If a passage image is not actually an image (e.g. an HTML page saved with an image extension)
+   or Tesseract returns a non-zero exit code, the script logs a descriptive message and skips that
    question; remaining questions continue to be processed.
 10. If a question has zero green options or more than one green option, the script logs a
     descriptive error identifying the question and skips it (the answer is indeterminate).
@@ -219,3 +223,11 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   end-to-end against the real PDF + the real Q39 image (passage + prompt + 4 options, correct = the
   green option; idempotent). Removed the embedded-text caveat; status now fully **implemented**.
   Goal/Scope/PDF structure/Behaviour.4–5/Data model/Open questions updated to match.
+- 2026-06-08: **Robustness fixes from a third real export (test 7).** (a) The answer-row `x0`/width
+  scale with the export's page width (test 7 is 1512pt wide → `x0 ≈ 349` vs ≈ 844), so the
+  hard-coded `x0` band wrongly rejected every row and detected no green ("no green option" for all
+  39). Fixed by dropping the `x0` constraint (colour is matched by vertical overlap). Re-validated
+  cross-check across three real PDFs: test 7 23/301, test 25 19/266, listening 27/437. (b) Added a
+  PNG/JPEG magic-byte guard (Behaviour.9) so passage "images" that are actually HTML (a real export
+  hazard — saved web pages with a `.png` extension) are skipped with a clear message instead of a
+  cryptic Tesseract/leptonica error.
