@@ -82,6 +82,50 @@ export type CreateSessionInput = {
   questionIds?: number[];
 };
 
+// spec: docs/specs/progress-tracking.md §API contract GET /api/sessions
+export type SessionSummary = {
+  id: number;
+  section: string;
+  mode: string;
+  difficulty: string | null;
+  completedAt: string;
+  correct: number;
+  total: number;
+  pointsScored: number | null;
+  pointsPossible: number | null;
+  elapsedMs: number | null;
+};
+
+export type QuestionResultRow = {
+  id: number;
+  questionId: number;
+  chosenLabel: string;
+  isCorrect: boolean;
+  answeredAt: string;
+};
+
+export type SessionDetail = {
+  session: SessionSummary;
+  results: QuestionResultRow[];
+};
+
+async function get<T>(path: string): Promise<T> {
+  const res = await fetch(path);
+  const envelope = (await res.json()) as Envelope<T>;
+  if (envelope.error) {
+    throw new ApiError(envelope.error.code, envelope.error.message);
+  }
+  return envelope.data;
+}
+
+export function fetchSessions(): Promise<{ sessions: SessionSummary[] }> {
+  return get<{ sessions: SessionSummary[] }>('/api/sessions');
+}
+
+export function fetchSession(id: number): Promise<SessionDetail> {
+  return get<SessionDetail>(`/api/sessions/${id}`);
+}
+
 // spec: docs/specs/quiz-session.md §API contract POST /api/sessions
 export function createSession(input: CreateSessionInput): Promise<CreateSessionResult> {
   return request<CreateSessionResult>('/api/sessions', input);

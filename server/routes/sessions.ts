@@ -6,6 +6,8 @@ import {
   type OptionLabel,
   completeSession,
   createSession,
+  getSession,
+  listSessions,
   recordAnswer,
 } from '../services/sessions';
 
@@ -24,6 +26,30 @@ function handle(res: Response, error: unknown): void {
   console.error('Unexpected error in sessions route:', error);
   res.status(500).json(fail('INTERNAL', 'An unexpected error occurred.'));
 }
+
+// spec: docs/specs/progress-tracking.md §API contract GET /api/sessions
+sessionsRouter.get('/', async (_req: Request, res: Response) => {
+  try {
+    const sessions = await listSessions();
+    res.json(ok({ sessions }));
+  } catch (error) {
+    handle(res, error);
+  }
+});
+
+// spec: docs/specs/progress-tracking.md §API contract GET /api/sessions/:id
+sessionsRouter.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const sessionId = Number(req.params.id);
+    if (!Number.isInteger(sessionId)) {
+      throw new ApiError('BAD_REQUEST', 'Invalid session id.');
+    }
+    const detail = await getSession(sessionId);
+    res.json(ok(detail));
+  } catch (error) {
+    handle(res, error);
+  }
+});
 
 // spec: docs/specs/quiz-session.md §API contract POST /api/sessions
 sessionsRouter.post('/', async (req: Request, res: Response) => {

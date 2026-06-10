@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from 'drizzle-orm';
+import { asc, count, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { db } from '../db';
 import { explanations, options, passages, questionResults, questions, sessions } from '../db/schema';
 import { ApiError } from '../lib/errors';
@@ -267,4 +267,162 @@ export async function completeSession(
   }
 
   return { correct, total, pointsScored, pointsPossible };
+}
+
+// spec: docs/specs/progress-tracking.md §API contract GET /api/sessions
+export type SessionSummary = {
+  id: number;
+  section: string;
+  mode: string;
+  difficulty: string | null;
+  completedAt: string;
+  correct: number;
+  total: number;
+  pointsScored: number | null;
+  pointsPossible: number | null;
+  elapsedMs: number | null;
+};
+
+export async function listSessions(): Promise<SessionSummary[]> {
+  const completed = await db
+    .select()
+    .from(sessions)
+    .where(isNotNull(sessions.completedAt))
+    .orderBy(desc(sessions.completedAt));
+
+  if (completed.length === 0) return [];
+
+  const sessionIds = completed.map((s) => s.id);
+
+  // Aggregate correct counts per session in one query.
+  const correctRows = await db
+    .select({ sessionId: questionResults.sessionId, correct: count() })
+    .from(questionResults)
+    .where(inArray(questionResults.sessionId, sessionIds))
+    .groupBy(questionResults.sessionId);
+
+  // Aggregate total counts per session (all recorded answers).
+  const totalRows = await db
+    .select({ sessionId: questionResults.sessionId, total: count() })
+    .from(questionResults)
+    .where(inArray(questionResults.sessionId, sessionIds))
+    .groupBy(questionResults.sessionId);
+
+  // Points per session require per-question scoring; done per-session from recorded results.
+  const allResults = await db
+    .select({
+      sessionId: questionResults.sessionId,
+      isCorrect: questionResults.isCorrect,
+      sequence: questions.sequence,
+    })
+    .from(questionResults)
+    .innerJoin(questions, eq(questionResults.questionId, questions.id))
+    .where(inArray(questionResults.sessionId, sessionIds));
+
+  const correctBySession = new Map(correctRows.map((r) => [r.sessionId, Number(r.correct)]));
+  const totalBySession = new Map(totalRows.map((r) => [r.sessionId, Number(r.total)]));
+  const resultsBySession = new Map<number, typeof allResults>();
+  for (const r of allResults) {
+    const list = resultsBySession.get(r.sessionId) ?? [];
+    list.push(r);
+    resultsBySession.set(r.sessionId, list);
+  }
+
+  return completed.map((s) => {
+    const sessionResults = resultsBySession.get(s.id) ?? [];
+    let pointsScored: number | null = null;
+    let pointsPossible: number | null = null;
+    if (s.mode === 'real') {
+      pointsScored = sessionResults
+        .filter((r) => r.isCorrect)
+        .reduce((sum, r) => sum + pointsForSequence(r.sequence), 0);
+      pointsPossible = sessionResults.reduce(
+        (sum, r) => sum + pointsForSequence(r.sequence),
+        0,
+      );
+    }
+    return {
+      id: s.id,
+      section: s.section,
+      mode: s.mode,
+      difficulty: s.difficulty ?? null,
+      completedAt: s.completedAt!.toISOString(),
+      correct: correctBySession.get(s.id) ?? 0,
+      total: totalBySession.get(s.id) ?? 0,
+      pointsScored,
+      pointsPossible,
+      elapsedMs: s.elapsedMs ?? null,
+    };
+  });
+}
+
+// spec: docs/specs/progress-tracking.md §API contract GET /api/sessions/:id
+export type QuestionResultRow = {
+  id: number;
+  questionId: number;
+  chosenLabel: string;
+  isCorrect: boolean;
+  answeredAt: string;
+};
+
+export type SessionDetail = {
+  session: SessionSummary;
+  results: QuestionResultRow[];
+};
+
+export async function getSession(sessionId: number): Promise<SessionDetail> {
+  const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
+  if (!session || session.completedAt == null) {
+    throw new ApiError('SESSION_NOT_FOUND', `Session ${sessionId} not found.`, 404);
+  }
+
+  const rows = await db
+    .select({
+      sessionId: questionResults.sessionId,
+      isCorrect: questionResults.isCorrect,
+      sequence: questions.sequence,
+    })
+    .from(questionResults)
+    .innerJoin(questions, eq(questionResults.questionId, questions.id))
+    .where(eq(questionResults.sessionId, sessionId));
+
+  const correct = rows.filter((r) => r.isCorrect).length;
+  const total = rows.length;
+
+  let pointsScored: number | null = null;
+  let pointsPossible: number | null = null;
+  if (session.mode === 'real') {
+    pointsScored = rows
+      .filter((r) => r.isCorrect)
+      .reduce((sum, r) => sum + pointsForSequence(r.sequence), 0);
+    pointsPossible = rows.reduce((sum, r) => sum + pointsForSequence(r.sequence), 0);
+  }
+
+  const resultRows = await db
+    .select()
+    .from(questionResults)
+    .where(eq(questionResults.sessionId, sessionId))
+    .orderBy(asc(questionResults.answeredAt));
+
+  return {
+    session: {
+      id: session.id,
+      section: session.section,
+      mode: session.mode,
+      difficulty: session.difficulty ?? null,
+      completedAt: session.completedAt.toISOString(),
+      correct,
+      total,
+      pointsScored,
+      pointsPossible,
+      elapsedMs: session.elapsedMs ?? null,
+    },
+    results: resultRows.map((r) => ({
+      id: r.id,
+      questionId: r.questionId,
+      chosenLabel: r.chosenLabel,
+      isCorrect: r.isCorrect,
+      answeredAt: r.answeredAt.toISOString(),
+    })),
+  };
 }
