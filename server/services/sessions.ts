@@ -431,11 +431,11 @@ export async function getSession(sessionId: number): Promise<SessionDetail> {
   const passageRows = passageIds.length
     ? await db.select().from(passages).where(inArray(passages.id, passageIds))
     : [];
-  // Explanations are a learning-mode feature only (review-mode §Behaviour.6) — skip the query in real mode.
-  const explanationRows =
-    session.mode === 'learning' && reviewedQuestionIds.length
-      ? await db.select().from(explanations).where(inArray(explanations.questionId, reviewedQuestionIds))
-      : [];
+  // Explanations surface in review for BOTH learning and real sessions (llm-enrichment §Behaviour.10
+  // supersedes review-mode §Behaviour.6): they're shown after a real exam, never during it.
+  const explanationRows = reviewedQuestionIds.length
+    ? await db.select().from(explanations).where(inArray(explanations.questionId, reviewedQuestionIds))
+    : [];
 
   const questionById = new Map(questionRows.map((q) => [q.id, q]));
   const passageById = new Map(passageRows.map((p) => [p.id, p]));

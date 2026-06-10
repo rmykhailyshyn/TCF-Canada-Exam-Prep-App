@@ -38,8 +38,10 @@ focused post-session learning loop.
 5. In learning mode, if an LLM explanation exists for the question, it is displayed
    below the options. The explanation covers why the correct answer is right and why each
    incorrect option is wrong.
-6. In real mode, explanations are not shown (real mode simulates exam conditions;
-   explanations are a learning-mode feature).
+6. Explanations are never shown **during** a real exam (real mode simulates exam conditions with no
+   per-question feedback). **After** a real session completes, however, review mode shows every
+   question's explanation, the same as a learning session — see llm-enrichment §Behaviour.10, which
+   supersedes the original "real mode never shows explanations" rule.
 
 ### Retry
 7. A "Retry incorrect questions" button is shown if the session contains at least one
@@ -83,7 +85,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [x] Review mode is reachable from the results summary "Review answers" button and from a history session row, and is read-only — no answer can be changed. (Behaviour.1, 2)
 - [x] All questions from the session are shown in order, each with its text (plus passage excerpt for reading), all four options, the user's chosen option (red if wrong, green if correct), and the correct option marked green. (Behaviour.3, 4)
-- [x] Learning-mode sessions show the LLM explanation below a question when one exists; real-mode sessions never show explanations. (Behaviour.5, 6)
+- [x] Both learning- and real-mode review show the LLM explanation below a question when one exists; explanations are never shown *during* a real exam, only afterwards in review. (Behaviour.5, 6; llm-enrichment §Behaviour.10)
 - [x] A "Retry incorrect questions" button is shown only when the session has at least one incorrect answer. (Behaviour.7)
 - [x] Incorrect questions are grouped by difficulty band, and retry produces one learning-mode session per affected band containing only that band's incorrect questions and carrying that band's `difficulty`. (Behaviour.8)
 - [x] When wrong answers span multiple bands, the affected bands and counts are listed and started one at a time; a single affected band starts its retry directly. (Behaviour.9)
@@ -102,6 +104,9 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   required `difficulty` field and the band-subset constraint (aligned with quiz-session spec)
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
 - 2026-06-08: Status moved draft → approved.
+- 2026-06-10: Behaviour.6 amended by Milestone 7 — real-mode sessions now show explanations in
+  review after completion (never during the exam), per llm-enrichment §Behaviour.10; the M6
+  server-side learning-only gate on the explanations query was removed.
 - 2026-06-10: Implemented (Milestone 6). `GET /api/sessions/:id` results enriched in place with
   per-question review content (explanation gated to learning mode); new `/review/:id` page reachable
   from the results screen and the session-detail "Review answers" buttons; retry groups incorrect
