@@ -5,6 +5,7 @@ import { SetupScreen } from './features/quiz/SetupScreen';
 import type { SessionConfig } from './features/quiz/types';
 import { HistoryPage } from './pages/HistoryPage';
 import { ListeningQuizPage } from './pages/ListeningQuizPage';
+import { QuestionBankPage } from './pages/QuestionBankPage';
 import { ReadingQuizPage } from './pages/ReadingQuizPage';
 import { SessionDetailPage } from './pages/SessionDetailPage';
 
@@ -30,13 +31,22 @@ function Home(): JSX.Element {
     <main className="min-h-screen">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/70 bg-white/80 px-6 py-3 backdrop-blur-md">
         <BrandMark />
-        <button
-          type="button"
-          onClick={() => navigate('/history')}
-          className="text-sm text-sky-600 transition hover:text-sky-700"
-        >
-          History
-        </button>
+        <nav className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => navigate('/question-bank')}
+            className="text-sm text-sky-600 transition hover:text-sky-700"
+          >
+            Question Bank
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/history')}
+            className="text-sm text-sky-600 transition hover:text-sky-700"
+          >
+            History
+          </button>
+        </nav>
       </header>
       <SetupScreen onStart={setConfig} />
     </main>
@@ -48,6 +58,7 @@ function App(): JSX.Element {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/question-bank" element={<QuestionBankPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/history/:id" element={<SessionDetailPage />} />
       </Routes>

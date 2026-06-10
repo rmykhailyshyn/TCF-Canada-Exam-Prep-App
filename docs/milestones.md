@@ -84,17 +84,25 @@ already validated against a real listening PDF (27/437).
 ---
 
 ## Milestone 5 — Question bank export / import (web UI)
-**Status:** not started
+**Status:** complete
 
-- [ ] Question Bank page: Export panel filtering by section (reading/listening/both) and complexity (difficulty bands / all)
-- [ ] Export produces a versioned JSON document (options + answer key + passage / transcript + audio reference) downloaded by the browser
-- [ ] Import panel: upload a previously exported JSON file with an "override existing" toggle
-- [ ] Import matches on the `(source_file, sequence)` natural key — insert when absent, skip or overwrite in place (same `questions.id`, preserving session history)
-- [ ] Structural + answer-key validation before any write; failed validation leaves the DB unchanged
-- [ ] Backend API: `GET /api/questions/export`, `POST /api/questions/import`
+- [x] Question Bank page (`/question-bank`): Export panel filtering by section (reading/listening/both) and complexity (difficulty bands / all)
+- [x] Export produces a versioned JSON document (options + answer key + passage / transcript + audio reference) downloaded by the browser as `tcf-export-<section>-<complexity>-YYYYMMDD.json`
+- [x] Import panel: upload a previously exported JSON file with an "override existing" toggle, showing an `{ inserted, overridden, skipped, total, warnings }` summary
+- [x] Import matches on the `(source_file, sequence)` natural key — insert when absent, skip or overwrite in place (same `questions.id`, preserving session history)
+- [x] Structural + answer-key validation before any write, in a single transaction; failed validation leaves the DB unchanged
+- [x] Backend API: `GET /api/questions/export`, `POST /api/questions/import`
+- [x] `npm run typecheck`, `npm run lint`, `npm test` (64 tests), `npm run build` all pass
+
+**Implementation notes (SDD Rule 4):** the spec's "configured media directory" was unnamed; it is
+resolved by a new `MEDIA_DIR` env var (defaults to `<repo-root>/media`). Listening export carries
+the MP3 basename only; import joins it onto `MEDIA_DIR` and warns non-fatally when the file is
+absent on disk (the reference still imports). No schema change — override reuses the existing
+`UNIQUE(source_file, sequence)`. Verified end-to-end against the dev DB (export→import round trip,
+override-in-place preserves `questions.id`, all four error envelopes).
 
 **Specs:**
-- `docs/specs/question-export-import.md`
+- `docs/specs/question-export-import.md` (implemented)
 
 ---
 

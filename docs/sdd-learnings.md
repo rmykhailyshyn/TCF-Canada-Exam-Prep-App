@@ -109,3 +109,35 @@ the subtitle highlight math is a pure `activeSegmentIndex` split from the audio 
 unit-tested without a browser; the side-effecting shells (`runWhisper`, the `useEffect` listeners)
 stay thin. **Lesson:** an awkward test environment is a useful forcing function — it makes you name
 the pure core that the spec's behaviours actually describe.
+
+---
+
+## Milestone 5 — Question bank export / import
+
+**The spec's "no schema change" clause was a load-bearing design constraint, not a footnote.**
+`question-export-import` committed up front to keying override on the existing
+`UNIQUE(source_file, sequence)` rather than adding a portable UUID column. That one decision rippled
+through the whole implementation: override updates rows *in place* (same `questions.id`), so
+`question_results` — which stores `chosen_label`, not option ids — stays linked with zero migration,
+zero backfill, and zero risk to session history. The verification that mattered was a single
+assertion (`idStable: true` after override), and it held because the spec had already reasoned the
+identity through in §Data model. **Lesson:** a spec that names its *identity* and its *referential
+invariants* explicitly turns the riskiest part of an import feature (don't orphan history) into a
+one-line check.
+
+**The pure-core / DB-shell seam paid off a third time.** Same pattern as M2/M3: all structural and
+answer-key validation lives in `server/lib/export-import.ts` (DB-free, 22 unit tests covering every
+rejection in §Behaviour.14), and the service is a thin transactional shell. Because validation runs
+to completion *before* the transaction opens, "failed validation leaves the DB unchanged"
+(Behaviour.11) is true by construction rather than by careful rollback bookkeeping. **Lesson:** when
+a spec says "validate before any write," the cheapest way to be correct is to make validation a pure
+function that the write path calls first — the ordering becomes structural.
+
+**One genuine spec gap, resolved per Rule 4.** The spec referenced "the configured media directory"
+in three places but never named the mechanism. Implementation surfaced this immediately (import has
+to resolve an audio basename to *something*), and it was resolved by introducing a `MEDIA_DIR` env
+var with a `<repo-root>/media` default, recorded in the spec's revision history and `.env.example`.
+This is the textbook Rule 4 case: the gap was real, local, and reversible, so it was fixed in the
+spec + flagged rather than silently hard-coded. **Lesson:** "configured X" in a spec is a smell worth
+catching at review time — it defers a decision (where does config live, what's the default) that
+implementation cannot.

@@ -2,6 +2,8 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import { Router, type Request, type Response } from 'express';
 import { ApiError } from '../lib/errors';
 import { fail, ok } from '../lib/envelope';
+import { parseDifficultyFilter, parseSectionFilter } from '../lib/export-import';
+import { exportQuestions, importQuestions } from '../services/export-import';
 import { getAudioFile, getTranscript } from '../services/questions';
 
 export const questionsRouter = Router();
@@ -15,6 +17,36 @@ function handle(res: Response, error: unknown): void {
   console.error('Unexpected error in questions route:', error);
   res.status(500).json(fail('INTERNAL', 'An unexpected error occurred.'));
 }
+
+// spec: docs/specs/question-export-import.md §API contract GET /api/questions/export
+// Returns the filtered export document. Registered before the `:id` routes so the literal
+// `export` / `import` paths are not swallowed by the param matcher.
+questionsRouter.get('/export', async (req: Request, res: Response) => {
+  try {
+    const section = parseSectionFilter(
+      typeof req.query.section === 'string' ? req.query.section : undefined,
+    );
+    const difficulty = parseDifficultyFilter(
+      typeof req.query.difficulty === 'string' ? req.query.difficulty : undefined,
+    );
+    const document = await exportQuestions(section, difficulty);
+    res.json(ok(document));
+  } catch (error) {
+    handle(res, error);
+  }
+});
+
+// spec: docs/specs/question-export-import.md §API contract POST /api/questions/import
+questionsRouter.post('/import', async (req: Request, res: Response) => {
+  try {
+    const body = (req.body ?? {}) as { document?: unknown; override?: unknown };
+    const override = body.override === true;
+    const summary = await importQuestions(body.document, override);
+    res.json(ok(summary));
+  } catch (error) {
+    handle(res, error);
+  }
+});
 
 // spec: docs/specs/listening-player.md §API contract GET /api/questions/:id/audio (range support)
 // Parses an HTTP `Range: bytes=start-end` header against a known file size. Returns null for an

@@ -1,7 +1,7 @@
 # Spec: Question Bank Export / Import
 
 ## Status
-draft
+implemented
 
 ## Goal
 Let the user back up and share imported questions through the web app. From a dedicated
@@ -164,16 +164,16 @@ transaction is rolled back and the database is unchanged.
 ## Acceptance criteria
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
-- [ ] The Question Bank page exposes an Export panel with section (Reading/Listening/Both) and complexity (band subset / All) filters. (Behaviour.1, 2, 3)
-- [ ] `GET /api/questions/export` returns a `formatVersion`-stamped document whose `questions` are exactly those matching the section + complexity filter, each with four options (one `isCorrect`), and a passage (reading) or transcript + audio reference (listening). (Behaviour.4; Export document format)
-- [ ] `GET /api/questions/export` returns `INVALID_SECTION` / `INVALID_DIFFICULTY` for unknown filter values, and a document with `questions: []` when nothing matches (no file produced by the UI). (Behaviour.6; API contract)
-- [ ] The exported file downloads with a name encoding the section, complexity, and date. (Behaviour.5)
-- [ ] The Import panel accepts a JSON file and an "override existing" checkbox (default off). (Behaviour.7, 8)
-- [ ] `POST /api/questions/import` inserts questions whose `(source_file, sequence)` is absent, and with override OFF leaves existing ones untouched (counted as skipped). (Behaviour.10)
-- [ ] With override ON, an existing question is overwritten in place — same `questions.id`, options/passage/transcript/audio replaced — and a prior `question_results` row for that question still resolves. (Behaviour.10; Data model)
-- [ ] A document with a missing/unsupported `formatVersion`, a non-array `questions`, or a question failing the answer-key/shape rules is rejected (`INVALID_FORMAT` / `VALIDATION_FAILED`) and the database is left unchanged. (Behaviour.9, 11, 13, 14)
-- [ ] A successful import returns and displays `{ inserted, overridden, skipped, total, warnings }`. (Behaviour.12; API contract)
-- [ ] A round trip (export a band → import into an empty DB → the questions, options, answer key, and passages/transcripts match the originals) reproduces the source data. (Behaviour.4, 10)
+- [x] The Question Bank page exposes an Export panel with section (Reading/Listening/Both) and complexity (band subset / All) filters. (Behaviour.1, 2, 3)
+- [x] `GET /api/questions/export` returns a `formatVersion`-stamped document whose `questions` are exactly those matching the section + complexity filter, each with four options (one `isCorrect`), and a passage (reading) or transcript + audio reference (listening). (Behaviour.4; Export document format)
+- [x] `GET /api/questions/export` returns `INVALID_SECTION` / `INVALID_DIFFICULTY` for unknown filter values, and a document with `questions: []` when nothing matches (no file produced by the UI). (Behaviour.6; API contract)
+- [x] The exported file downloads with a name encoding the section, complexity, and date. (Behaviour.5)
+- [x] The Import panel accepts a JSON file and an "override existing" checkbox (default off). (Behaviour.7, 8)
+- [x] `POST /api/questions/import` inserts questions whose `(source_file, sequence)` is absent, and with override OFF leaves existing ones untouched (counted as skipped). (Behaviour.10)
+- [x] With override ON, an existing question is overwritten in place — same `questions.id`, options/passage/transcript/audio replaced — and a prior `question_results` row for that question still resolves. (Behaviour.10; Data model)
+- [x] A document with a missing/unsupported `formatVersion`, a non-array `questions`, or a question failing the answer-key/shape rules is rejected (`INVALID_FORMAT` / `VALIDATION_FAILED`) and the database is left unchanged. (Behaviour.9, 11, 13, 14)
+- [x] A successful import returns and displays `{ inserted, overridden, skipped, total, warnings }`. (Behaviour.12; API contract)
+- [x] A round trip (export a band → import into an empty DB → the questions, options, answer key, and passages/transcripts match the originals) reproduces the source data. (Behaviour.4, 10)
 
 ## Open questions
 - **Cross-machine portability of the natural key.** `(source_file, sequence)` embeds a local
@@ -193,3 +193,12 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 ## Revision history
 - 2026-06-09: Initial draft. Web-UI + API surface; transcript + audio-path reference (no binary);
   override keyed on the existing `(source_file, sequence)` natural key (no schema change).
+- 2026-06-09: Implemented (Milestone 5). Pure validation/filter core in
+  `server/lib/export-import.ts` (22 unit tests); DB read/write in `server/services/export-import.ts`;
+  routes on the existing `questionsRouter`; client `QuestionBankPage` at `/question-bank`. The
+  spec's "configured media directory" (§Export document format, Open questions) is resolved by a
+  new `MEDIA_DIR` env var (defaults to `<repo-root>/media`); import joins the exported audio
+  basename onto it and warns — non-fatally — when the MP3 is absent on disk. No schema change.
+  Verified end-to-end against the dev DB: export→import round trip, override-in-place preserves
+  `questions.id`, and the `INVALID_SECTION`/`INVALID_DIFFICULTY`/`INVALID_FORMAT`/`VALIDATION_FAILED`
+  error paths.

@@ -166,3 +166,52 @@ export function audioUrl(questionId: number): string {
 export function fetchTranscript(questionId: number): Promise<{ segments: TranscriptSegment[] }> {
   return get<{ segments: TranscriptSegment[] }>(`/api/questions/${questionId}/transcript`);
 }
+
+// spec: docs/specs/question-export-import.md §Export document format + API contract
+export type SectionFilter = 'reading' | 'listening' | 'all';
+export type DifficultyFilter = DifficultySlug[] | 'all';
+
+export type ExportQuestion = {
+  section: Section;
+  sourceFile: string;
+  sequence: number;
+  difficulty: DifficultySlug | null;
+  text: string;
+  options: { label: OptionLabel; text: string; isCorrect: boolean }[];
+  passage: { sourceFile: string; text: string } | null;
+  audio: { fileName: string; durationMs: number | null } | null;
+  transcript: { sequence: number; text: string; startMs: number; endMs: number }[];
+};
+
+export type ExportDocument = {
+  formatVersion: number;
+  exportedAt: string;
+  filter: { section: SectionFilter; difficulties: DifficultyFilter };
+  questions: ExportQuestion[];
+};
+
+export type ImportSummary = {
+  inserted: number;
+  overridden: number;
+  skipped: number;
+  total: number;
+  warnings: string[];
+};
+
+// spec: docs/specs/question-export-import.md §API contract GET /api/questions/export
+export function fetchExport(
+  section: SectionFilter,
+  difficulties: DifficultyFilter,
+): Promise<ExportDocument> {
+  const params = new URLSearchParams({ section });
+  params.set('difficulty', difficulties === 'all' ? 'all' : difficulties.join(','));
+  return get<ExportDocument>(`/api/questions/export?${params.toString()}`);
+}
+
+// spec: docs/specs/question-export-import.md §API contract POST /api/questions/import
+export function importQuestions(
+  document: ExportDocument,
+  override: boolean,
+): Promise<ImportSummary> {
+  return request<ImportSummary>('/api/questions/import', { document, override });
+}
