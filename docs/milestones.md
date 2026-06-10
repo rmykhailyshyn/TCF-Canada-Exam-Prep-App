@@ -107,15 +107,24 @@ override-in-place preserves `questions.id`, all four error envelopes).
 ---
 
 ## Milestone 6 — Review mode
-**Status:** not started
+**Status:** complete
 
-- [ ] After a session ends, user can enter review mode
-- [ ] Shows each question with user's answer, correct answer highlighted
-- [ ] In learning mode: LLM explanations visible (if generated)
-- [ ] Retry: start a new session with only the questions answered incorrectly
+- [x] After a session ends, user can enter review mode — from the results summary "Review answers" button and from a history session row (`/review/:id`); read-only
+- [x] Shows each question in order with the user's answer (red if wrong) and the correct answer (green), plus the passage excerpt for reading questions
+- [x] In learning mode: LLM explanations visible below a question when generated; real-mode sessions never show them (gated server-side)
+- [x] Retry: incorrect questions grouped by difficulty band → one learning-mode session per affected band (band's `difficulty` + that band's `questionIds`); multi-band shows the affected bands + counts, started one at a time
+- [x] `npm run typecheck`, `npm run lint`, `npm test` (68 tests), `npm run build` all pass
+
+**Implementation notes (SDD Rule 4):** no new endpoint — `GET /api/sessions/:id` per-question
+`results` were *additively enriched* with the review content (text, passage excerpt, options,
+`correctLabel`, derived `difficulty`, and the learning-mode-only `explanation`), so review mode
+reuses the single endpoint the spec says it consumes. Retry needed **zero** server change: the
+existing `POST /api/sessions` already accepts `questionIds` + `difficulty` and enforces the
+band-subset constraint (`QUESTIONS_OUT_OF_BAND`). The pure band-grouping (`groupIncorrectByBand`)
+is unit-tested; the `vitest` `include` was widened to pick up `client/**/*.test.ts`.
 
 **Specs:**
-- `docs/specs/review-mode.md`
+- `docs/specs/review-mode.md` (implemented)
 
 ---
 

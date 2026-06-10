@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import type { CompleteResult } from '../../lib/api';
 import { bandName } from '../../lib/bands';
 import { formatClock } from '../../lib/format';
@@ -5,15 +6,24 @@ import type { SessionConfig } from './types';
 
 // spec: docs/specs/quiz-session.md §Results.13 — learning shows correct/total + band;
 // real shows points/699, correct/39, and time taken.
+// spec: docs/specs/review-mode.md §Behaviour.1 — "Review answers" opens review mode for this session.
 
 type Props = {
   results: CompleteResult;
   elapsedMs: number | null;
   config: SessionConfig;
+  sessionId: number | null;
   onHome: () => void;
 };
 
-export function ResultsScreen({ results, elapsedMs, config, onHome }: Props): JSX.Element {
+export function ResultsScreen({
+  results,
+  elapsedMs,
+  config,
+  sessionId,
+  onHome,
+}: Props): JSX.Element {
+  const navigate = useNavigate();
   const isReal = config.mode === 'real';
   const sectionLabel = config.section === 'listening' ? 'Listening' : 'Reading';
 
@@ -61,9 +71,9 @@ export function ResultsScreen({ results, elapsedMs, config, onHome }: Props): JS
         <div className="flex justify-center gap-3 p-6">
           <button
             type="button"
-            disabled
-            title="Review mode arrives in a later milestone"
-            className="rounded-xl border border-slate-200 px-5 py-2.5 font-medium text-slate-400"
+            disabled={sessionId == null}
+            onClick={() => sessionId != null && navigate(`/review/${sessionId}`)}
+            className="rounded-xl border border-slate-200 px-5 py-2.5 font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
           >
             Review answers
           </button>

@@ -43,6 +43,7 @@ export function ListeningQuizPage({ config, onExit }: Props): JSX.Element {
         results={session.results}
         elapsedMs={session.elapsedMs}
         config={config}
+        sessionId={session.sessionId}
         onHome={onExit}
       />
     );

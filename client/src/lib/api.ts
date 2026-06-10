@@ -105,11 +105,21 @@ export type SessionSummary = {
   elapsedMs: number | null;
 };
 
+// spec: docs/specs/review-mode.md §Behaviour.4–6 — per-question review content carried on the
+// session-detail endpoint (question text + passage excerpt, all four options, chosen + correct
+// labels, the derived difficulty band for retry grouping, and the learning-mode-only explanation).
 export type QuestionResultRow = {
   id: number;
   questionId: number;
-  chosenLabel: string;
+  sequence: number;
+  text: string;
+  passage: { text: string } | null;
+  options: { label: OptionLabel; text: string }[];
+  chosenLabel: OptionLabel;
+  correctLabel: OptionLabel | null;
   isCorrect: boolean;
+  difficulty: DifficultySlug | null;
+  explanation: Explanation | null;
   answeredAt: string;
 };
 

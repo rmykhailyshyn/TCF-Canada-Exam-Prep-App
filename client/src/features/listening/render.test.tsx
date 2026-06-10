@@ -34,6 +34,7 @@ function fakeSession(overrides: Partial<QuizSession> = {}): QuizSession {
   return {
     status: 'active',
     error: null,
+    sessionId: 1,
     mode: 'real',
     question,
     index: 4,

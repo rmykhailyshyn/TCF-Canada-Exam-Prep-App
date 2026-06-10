@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import type { CompleteResult, SessionQuestion } from '../../lib/api';
 import { SetupScreen } from './SetupScreen';
@@ -29,6 +30,7 @@ function fakeSession(overrides: Partial<QuizSession> = {}): QuizSession {
   return {
     status: 'active',
     error: null,
+    sessionId: 1,
     mode: 'real',
     question,
     index: 2,
@@ -106,12 +108,15 @@ describe('render smoke tests', () => {
       pointsPossible: 699,
     };
     const html = renderToStaticMarkup(
-      <ResultsScreen
-        results={results}
-        elapsedMs={2_592_000}
-        config={{ section: 'reading', mode: 'real' }}
-        onHome={vi.fn()}
-      />,
+      <MemoryRouter>
+        <ResultsScreen
+          results={results}
+          elapsedMs={2_592_000}
+          config={{ section: 'reading', mode: 'real' }}
+          sessionId={1}
+          onHome={vi.fn()}
+        />
+      </MemoryRouter>,
     );
     // Presentation: points are the hero figure (387 / 699 + "points scored"); correct count and
     // time appear in the stats row beneath. All three spec-required values are present.
@@ -131,12 +136,15 @@ describe('render smoke tests', () => {
       pointsPossible: null,
     };
     const html = renderToStaticMarkup(
-      <ResultsScreen
-        results={results}
-        elapsedMs={null}
-        config={{ section: 'reading', mode: 'learning', difficulty: 'intermediate' }}
-        onHome={vi.fn()}
-      />,
+      <MemoryRouter>
+        <ResultsScreen
+          results={results}
+          elapsedMs={null}
+          config={{ section: 'reading', mode: 'learning', difficulty: 'intermediate' }}
+          sessionId={1}
+          onHome={vi.fn()}
+        />
+      </MemoryRouter>,
     );
     // Learning shows correct/total (hero + stats row) and the band; never a points figure.
     expect(html).toContain('7 / 9');

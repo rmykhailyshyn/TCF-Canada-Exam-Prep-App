@@ -141,3 +141,38 @@ This is the textbook Rule 4 case: the gap was real, local, and reversible, so it
 spec + flagged rather than silently hard-coded. **Lesson:** "configured X" in a spec is a smell worth
 catching at review time — it defers a decision (where does config live, what's the default) that
 implementation cannot.
+
+---
+
+## Milestone 6 — Review mode
+
+**The biggest win was a feature that needed almost no new code — because earlier specs over-built
+the seam.** Review-mode's retry (Behaviour.8) sounded like the hard part: group wrong answers by
+band, spin up a session per band, reject ids that don't belong. It turned out to be a *client-only*
+feature. `POST /api/sessions` already accepted `questionIds` + `difficulty` and already enforced
+`QUESTIONS_OUT_OF_BAND` — added in Milestone 2 for a quiz-session open question that hadn't shipped a
+consumer yet. The review-mode spec was written against that contract (its API section literally says
+"Reuses the session creation endpoint"), so retry reduced to one pure grouping function plus a
+`navigate('/', { state })`. **Lesson:** a spec that commits to a *parameterised* endpoint early
+(question-id subsets, band constraint) pays out two milestones later when a new feature turns out to
+be a new caller, not a new capability. The cost was a few unused branches in M2; the dividend was a
+zero-backend feature in M6.
+
+**"Consumes endpoint X" is a spec decision that still has an implementation fork.** The spec said
+review mode consumes `GET /api/sessions/:id` — but that endpoint returned only `{questionId,
+chosenLabel, isCorrect}`, nowhere near enough to render a question with its options and explanation.
+Two honest readings: (a) enrich the existing endpoint, or (b) add a `/review` endpoint. The spec's
+wording ("consumes … defined in progress-tracking") pointed at (a), so the per-question rows were
+*additively* enriched and the choice recorded in both specs' notes. Enriching also let the server
+own Behaviour.6 (no explanations in real mode) as a query condition rather than trusting the client
+to hide them. **Lesson:** "reuse endpoint X" reads like it removes a decision, but it only removes
+the *routing* decision — the payload-shape decision remains, and additive enrichment is the move
+that keeps the consumed spec's contract intact.
+
+**A test that silently never ran.** The first `groupByBand.test.ts` passed locally — because it
+never executed: the `vitest` `include` glob was `client/**/*.test.tsx` (the only client tests so far
+were `.tsx` render smokes), so a pure-logic `.test.ts` was invisible. The green run was a false
+negative until the total test count failed to move. **Lesson:** when adding the first test of a new
+*file-extension shape* to a suite, confirm the count changed, not just that it's green — an
+include-glob can quietly exclude a whole category, and "0 tests matched" still exits a per-file run
+non-silently but vanishes in a full run.

@@ -5,6 +5,11 @@ export default defineConfig({
   esbuild: { jsx: 'automatic' },
   test: {
     environment: 'node',
-    include: ['server/**/*.test.ts', 'scripts/**/*.test.ts', 'client/**/*.test.tsx'],
+    include: [
+      'server/**/*.test.ts',
+      'scripts/**/*.test.ts',
+      'client/**/*.test.ts',
+      'client/**/*.test.tsx',
+    ],
   },
 });

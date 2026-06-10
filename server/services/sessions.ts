@@ -4,6 +4,7 @@ import { explanations, options, passages, questionResults, questions, sessions }
 import { ApiError } from '../lib/errors';
 import {
   type DifficultySlug,
+  bandForSequence,
   bandForSlug,
   isDifficultySlug,
   pointsForSequence,
@@ -357,11 +358,24 @@ export async function listSessions(): Promise<SessionSummary[]> {
 }
 
 // spec: docs/specs/progress-tracking.md §API contract GET /api/sessions/:id
+// spec: docs/specs/review-mode.md §Behaviour.4–6 — review mode consumes this endpoint, so each
+// per-question result carries the full content needed to render the review (question text, passage
+// excerpt, all four options, the chosen + correct labels) plus the derived difficulty band (for
+// retry grouping) and the LLM explanation — the latter only in learning mode (Behaviour.6).
+export type ReviewOption = { label: OptionLabel; text: string };
+
 export type QuestionResultRow = {
   id: number;
   questionId: number;
+  sequence: number;
+  text: string;
+  passage: { text: string } | null;
+  options: ReviewOption[];
   chosenLabel: string;
+  correctLabel: OptionLabel | null;
   isCorrect: boolean;
+  difficulty: DifficultySlug | null;
+  explanation: Explanation | null;
   answeredAt: string;
 };
 
@@ -401,8 +415,71 @@ export async function getSession(sessionId: number): Promise<SessionDetail> {
   const resultRows = await db
     .select()
     .from(questionResults)
-    .where(eq(questionResults.sessionId, sessionId))
-    .orderBy(asc(questionResults.answeredAt));
+    .where(eq(questionResults.sessionId, sessionId));
+
+  // Enrich each recorded answer with its question content for review mode (review-mode §Behaviour.4).
+  const reviewedQuestionIds = resultRows.map((r) => r.questionId);
+  const questionRows = reviewedQuestionIds.length
+    ? await db.select().from(questions).where(inArray(questions.id, reviewedQuestionIds))
+    : [];
+  const optionRows = reviewedQuestionIds.length
+    ? await db.select().from(options).where(inArray(options.questionId, reviewedQuestionIds))
+    : [];
+  const passageIds = [
+    ...new Set(questionRows.map((q) => q.passageId).filter((id): id is number => id != null)),
+  ];
+  const passageRows = passageIds.length
+    ? await db.select().from(passages).where(inArray(passages.id, passageIds))
+    : [];
+  // Explanations are a learning-mode feature only (review-mode §Behaviour.6) — skip the query in real mode.
+  const explanationRows =
+    session.mode === 'learning' && reviewedQuestionIds.length
+      ? await db.select().from(explanations).where(inArray(explanations.questionId, reviewedQuestionIds))
+      : [];
+
+  const questionById = new Map(questionRows.map((q) => [q.id, q]));
+  const passageById = new Map(passageRows.map((p) => [p.id, p]));
+  const explanationByQuestion = new Map(explanationRows.map((e) => [e.questionId, e]));
+  const optionsByQuestion = new Map<number, typeof optionRows>();
+  for (const o of optionRows) {
+    const list = optionsByQuestion.get(o.questionId) ?? [];
+    list.push(o);
+    optionsByQuestion.set(o.questionId, list);
+  }
+
+  const reviewRows: QuestionResultRow[] = resultRows.map((r) => {
+    const q = questionById.get(r.questionId);
+    const opts = (optionsByQuestion.get(r.questionId) ?? [])
+      .slice()
+      .sort((a, b) => a.label.localeCompare(b.label));
+    const passage = q?.passageId != null ? passageById.get(q.passageId) : undefined;
+    const exp = explanationByQuestion.get(r.questionId);
+    return {
+      id: r.id,
+      questionId: r.questionId,
+      sequence: q?.sequence ?? 0,
+      text: q?.text ?? '',
+      passage: passage ? { text: passage.text } : null,
+      options: opts.map((o) => ({ label: o.label as OptionLabel, text: o.text })),
+      chosenLabel: r.chosenLabel,
+      correctLabel: (opts.find((o) => o.isCorrect)?.label as OptionLabel | undefined) ?? null,
+      isCorrect: r.isCorrect,
+      difficulty: q ? (bandForSequence(q.sequence)?.slug ?? null) : null,
+      explanation: exp
+        ? {
+            correctReason: exp.correctReason,
+            optionAReason: exp.optionAReason,
+            optionBReason: exp.optionBReason,
+            optionCReason: exp.optionCReason,
+            optionDReason: exp.optionDReason,
+          }
+        : null,
+      answeredAt: r.answeredAt.toISOString(),
+    };
+  });
+
+  // All questions shown in order (review-mode §Behaviour.3) — by import sequence, not answer time.
+  reviewRows.sort((a, b) => a.sequence - b.sequence);
 
   return {
     session: {
@@ -417,12 +494,6 @@ export async function getSession(sessionId: number): Promise<SessionDetail> {
       pointsPossible,
       elapsedMs: session.elapsedMs ?? null,
     },
-    results: resultRows.map((r) => ({
-      id: r.id,
-      questionId: r.questionId,
-      chosenLabel: r.chosenLabel,
-      isCorrect: r.isCorrect,
-      answeredAt: r.answeredAt.toISOString(),
-    })),
+    results: reviewRows,
   };
 }
