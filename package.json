@@ -25,6 +25,7 @@
     "seed:listening-dev": "tsx scripts/seed-listening-dev.ts",
     "ocr": "tsx scripts/ocr.ts",
     "transcribe": "tsx scripts/transcribe.ts",
+    "enrich": "tsx scripts/enrich.ts",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

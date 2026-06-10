@@ -1,114 +1,146 @@
 # Spec: LLM Enrichment
 
 ## Status
-approved
+implemented
 
 ## Goal
-Generate per-question explanations that tell the user why the correct answer is right and
-why each of the three incorrect options is wrong. Explanations are produced by a standalone
-CLI script (not during question import) and stored in the DB. They surface in learning mode
-after the user submits a final answer, and in review mode. The script supports Claude API
-and self-hosted models via Ollama, configured through environment variables.
+Generate per-question explanations that tell the user, in **English**, why the correct answer is
+right and why each of the three incorrect options is wrong — each reason **pointing to the specific
+clue** in the source material (the **passage** for reading questions, the **transcript** for
+listening questions). Explanations are produced ahead of time by a standalone CLI command that
+drives the **local Claude CLI** (not the Anthropic HTTP API, not Ollama) and are stored in the DB.
+They surface in learning mode immediately after the user confirms an answer (before the next
+question), and — for both learning and real sessions — in review mode after the session ends.
 
 ## Scope
 - In scope:
-  - CLI script `npm run enrich` that iterates over questions without explanations and
-    generates them via LLM
-  - Support for Claude API (Anthropic) and Ollama as providers, selected via `.env`
-  - Explanation stored per question (one explanation record covers all four options)
-  - Optional `--question-id <id>` flag to enrich a single question
-  - Optional `--section <reading|listening>` flag to enrich all questions in a section
-  - Dry-run flag `--dry-run` to print the prompt and response without writing to DB
-  - Skip questions that already have an explanation (idempotent)
+  - CLI command `npm run enrich` that iterates over questions without an explanation and generates
+    one via the **local `claude` CLI** invoked in non-interactive print mode.
+  - English explanations that **cite the clue** in the source: a short quoted snippet from the
+    passage (reading) or transcript (listening) that justifies the correct answer and, where
+    relevant, that rules out each wrong option.
+  - For reading questions the **passage text** is supplied to the model; for listening questions
+    the **transcript** (its segments concatenated in order) is supplied.
+  - Explanation stored per question (one record covers all four options), idempotently
+    (skip questions that already have one).
+  - `--question-id <id>` to enrich a single question; `--section <reading|listening>` to limit to
+    a section; `--dry-run` to print the prompt + raw model output without writing to the DB.
+  - Surfacing the stored explanation: bundled in the learning-mode answer response, and in the
+    review payload for **both** learning and real sessions.
 - Out of scope:
-  - Real-time generation during a quiz session
-  - Automatic enrichment triggered by import
-  - Translation or localisation of explanations
-  - Fine-tuning or model training
+  - The Anthropic HTTP API and Ollama providers (replaced by the local CLI).
+  - Real-time / on-the-fly generation during a live quiz session (explanations are pre-generated;
+    a question with no stored explanation simply shows none).
+  - Automatic enrichment triggered by import.
+  - French or bilingual explanations (English only — see Open questions, resolved).
+  - Any schema change — reuses the existing `explanations` table.
 
 ## Behaviour
 1. The user runs `npm run enrich` (optionally with `--question-id` or `--section` filters).
-2. The script loads LLM configuration from `.env`:
-   - `LLM_PROVIDER`: `claude` or `ollama`
-   - `LLM_MODEL`: model name (e.g. `claude-opus-4-8` or `llama3`)
-   - `ANTHROPIC_API_KEY`: required when `LLM_PROVIDER=claude`
-   - `OLLAMA_BASE_URL`: required when `LLM_PROVIDER=ollama` (e.g. `http://localhost:11434`)
-3. For each qualifying question (no existing explanation), the script:
-   a. Builds a prompt containing the question text, all four options, and the correct answer label.
-   b. For reading questions, the passage text is included in the prompt.
-   c. Sends the prompt to the configured LLM and receives a structured response.
-4. The response contains: one explanation of why the correct answer is right, and one
-   explanation per incorrect option of why it is wrong.
-5. The explanation is persisted to the DB linked to the question.
-6. The script prints progress: "Question 12: generated" or "Question 12: skipped (exists)".
-7. On any LLM API error, the script logs the error, skips that question, and continues
-   with the remaining queue.
-8. With `--dry-run`, the prompt is printed to stdout and no DB writes occur.
+2. The command reads its configuration from `.env`:
+   - `CLAUDE_CLI_BIN`: the Claude CLI binary name/path (default `claude`).
+   - `CLAUDE_CLI_MODEL` (optional): passed to the CLI as `--model` (e.g. `claude-opus-4-8`); when
+     unset the CLI's own default model is used.
+   No API key is read — the local CLI manages its own authentication.
+3. For each qualifying question (no existing explanation), the command:
+   a. Loads the question text, its four options, and the correct answer label.
+   b. **Reading:** loads the linked passage text. **Listening:** loads the transcript segments and
+      concatenates them in `sequence` order into a single transcript string.
+   c. Builds an English prompt instructing the model to return a **JSON object only** with a
+      `correctReason` and a reason for each of `A`–`D`, where every reason quotes or paraphrases the
+      relevant clue from the supplied passage/transcript.
+   d. Invokes the local CLI non-interactively (`claude -p <prompt>`, plus `--model` when configured),
+      captures stdout, and parses the JSON object out of the response.
+4. The parsed response yields: one explanation of why the correct answer is right (citing its clue),
+   and one explanation per option of why it is wrong (or, for the correct option, what confirms it).
+5. The explanation is persisted to the DB linked to the question, with `generated_by` recording the
+   CLI + model (e.g. `claude-cli/claude-opus-4-8`, or `claude-cli` when no model was pinned).
+6. The command prints progress: "Question 12: generated" or "Question 12: skipped (exists)".
+7. On any CLI failure for a question — a non-zero exit, or output from which no valid JSON object can
+   be parsed — the command logs the error (including captured stderr), skips that question, and
+   continues with the remaining queue.
+8. With `--dry-run`, the prompt and the raw model output are printed to stdout and no DB writes occur.
+
+### Surfacing (consumption)
+9. **Learning mode** — `POST /api/sessions/:id/answers` returns the full explanation object alongside
+   `isCorrect` and `correctLabel`, so it renders immediately after the user confirms, before the
+   next question. (Unchanged from the current implementation.)
+10. **Review mode** — `GET /api/sessions/:id` includes each question's explanation in its review
+    payload for **both** learning and real sessions, so a finished **real** exam shows every
+    question's explanation in review (reached from the results screen). This **supersedes**
+    review-mode spec §Behaviour.6 ("real mode never shows explanations"): explanations are still
+    never shown *during* a real exam, only afterwards in review.
 
 ## Data model changes
-```
-explanations
-  id               serial primary key
-  question_id      integer not null unique references questions(id)
-  correct_reason   text not null     -- why the correct answer is right
-  option_a_reason  text not null     -- why A is wrong (or reinforces why A is correct)
-  option_b_reason  text not null
-  option_c_reason  text not null
-  option_d_reason  text not null
-  generated_by     text not null     -- e.g. "claude/claude-opus-4-8" or "ollama/llama3"
-  generated_at     timestamptz not null default now()
-```
+None. Reuses the existing `explanations` table (question_id unique; `correct_reason` +
+`option_a_reason`..`option_d_reason`; `generated_by`; `generated_at`). Clue citations live inline in
+the reason prose, so no new column is needed.
 
 ## API contract
-None for the CLI script itself. Explanation data is surfaced through two routes:
+The CLI command has no HTTP surface. Stored explanations are surfaced through the two existing
+consumption paths:
 
-1. **Bundled in the quiz-session answer response** — `POST /api/sessions/:id/answers` in
-   learning mode returns the full explanation object alongside `isCorrect` and `correctLabel`.
-   The backend JOINs the `explanations` table; no separate client request is needed.
+1. **Bundled in the learning-mode answer response** — `POST /api/sessions/:id/answers` (learning)
+   returns the `Explanation` object with `isCorrect` and `correctLabel`. Real mode returns no
+   explanation during the exam.
+2. **In the review payload** — `GET /api/sessions/:id` carries each question's `explanation` (or
+   `null`) in its `results` rows, for both learning and real sessions.
 
-2. **Standalone endpoint** — used by review mode to fetch explanations for past sessions
-   without re-submitting answers.
-
-### GET /api/questions/:id/explanation
-```
-Response: { "data": { "explanation": Explanation | null }, "error": null }
-```
-where `Explanation` is:
 ```typescript
-{
-  correctReason: string
-  optionAReason: string
+type Explanation = {
+  correctReason: string   // why the correct answer is right, citing the passage/transcript clue
+  optionAReason: string   // why A is wrong (or, for the correct option, what confirms it)
   optionBReason: string
   optionCReason: string
   optionDReason: string
 }
 ```
+(There is no standalone `GET /api/questions/:id/explanation` endpoint — review mode reads
+explanations through `GET /api/sessions/:id`, so a separate route is unnecessary.)
 
 ## Acceptance criteria
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
-- [ ] `npm run enrich` iterates over questions without an explanation and generates one explanation record per question. (Behaviour.1, 3, 5)
-- [ ] Provider config is read from `.env` (`LLM_PROVIDER`, `LLM_MODEL`, plus `ANTHROPIC_API_KEY` for claude or `OLLAMA_BASE_URL` for ollama); a missing required variable produces a descriptive error. (Behaviour.2)
-- [ ] For reading questions the passage text is included in the prompt; for listening questions it is not. (Behaviour.3b)
-- [ ] A generated `explanations` row has a non-empty `correct_reason` and a reason for each of A–D, with `generated_by` recording provider/model and `generated_at` set. (Behaviour.4, 5; Data model)
-- [ ] `--question-id <id>` enriches only that question; `--section <reading|listening>` limits processing to that section. (Scope)
-- [ ] `--dry-run` prints the prompt (and response) to stdout and writes nothing to the DB. (Behaviour.8)
-- [ ] A question that already has an explanation is skipped and logged as "skipped (exists)". (Behaviour.6)
-- [ ] An LLM/API error on one question is logged and skipped, and the remaining queue continues. (Behaviour.7)
-- [ ] `GET /api/questions/:id/explanation` returns the `Explanation` object, or `null` when none exists, in the documented envelope. (API contract)
+- [x] `npm run enrich` iterates over questions without an explanation and generates one record per question by invoking the local `claude` CLI. (Behaviour.1, 3, 5)
+- [x] Config is read from `.env` (`CLAUDE_CLI_BIN`, optional `CLAUDE_CLI_MODEL`); no API key is required, and a missing binary produces a descriptive error. (Behaviour.2)
+- [x] For reading questions the passage text is supplied to the model; for listening questions the transcript (segments concatenated in order) is supplied. (Behaviour.3b)
+- [x] A generated `explanations` row has a non-empty English `correct_reason` and a reason for each of A–D, each citing a clue from the passage/transcript, with `generated_by` recording `claude-cli[/model]` and `generated_at` set. (Behaviour.4, 5; Data model)
+- [x] `--question-id <id>` enriches only that question; `--section <reading|listening>` limits processing to that section. (Scope)
+- [x] `--dry-run` prints the prompt and raw model output to stdout and writes nothing to the DB. (Behaviour.8)
+- [x] A question that already has an explanation is skipped and logged as "skipped (exists)". (Behaviour.6)
+- [x] A CLI failure (non-zero exit or unparseable output) on one question is logged with stderr and skipped, and the remaining queue continues. (Behaviour.7)
+- [x] Learning mode shows the explanation immediately after the answer is confirmed; real-mode sessions show every question's explanation in review after completion (and never during the exam). (Behaviour.9, 10)
+- [x] The JSON-parse step tolerates the model wrapping its object in prose or a code fence (extracts the first JSON object); a response with no JSON object is treated as a CLI failure. (Behaviour.3d, 7)
 
 ## Open questions
-- What language should the explanations be in — English, French, or both? TCF Canada is
-  a French-language test, so explanations in French may be more useful for study. Needs
-  confirmation before the prompt template is written.
-- Should the LLM response be structured (JSON schema enforced) or free-form prose parsed
-  by the script? Structured output is more reliable but requires model support for
-  tool/function calling or JSON mode.
+- ~~Explanation language (English / French / both).~~ **Resolved:** English only.
+- ~~Structured vs. free-form model output.~~ **Resolved:** the model is asked for a JSON object and
+  the command parses it (extracting the first `{…}` to tolerate fences/prose); unparseable output is
+  a per-question failure (Behaviour.7).
+- **Clue fidelity.** The prompt asks the model to quote the source, but the command does not verify a
+  quoted snippet actually appears in the passage/transcript. Light verification (substring check,
+  warn on miss) could be added later; deferred.
+- **Transcript size for listening.** Very long transcripts are sent whole; if a clip's transcript
+  ever exceeds a comfortable prompt budget, truncation/summarisation would be needed. Not a concern
+  at current clip lengths.
 
 ## Revision history
 - 2026-06-04: Initial draft
-- 2026-06-05: Clarified two consumption patterns: bundled in quiz-session answer response
-  (learning mode) and standalone GET /api/questions/:id/explanation (review mode); added
-  explicit TypeScript shape for Explanation type
+- 2026-06-05: Clarified two consumption patterns and added the explicit `Explanation` TS shape
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
 - 2026-06-08: Status moved draft → approved.
+- 2026-06-10: **Revised (Rule 4), status approved → draft pending re-approval.** Provider switched
+  from the Anthropic HTTP API / Ollama to the **local `claude` CLI** (`CLAUDE_CLI_BIN`,
+  `CLAUDE_CLI_MODEL`; no API key). Explanations are now **English** and must **cite the clue** in the
+  passage (reading) or **transcript** (listening) — listening prompts now include the transcript.
+  Real-mode sessions surface every question's explanation **in review mode** after completion,
+  superseding review-mode §Behaviour.6. Resolved the language and structured-output open questions;
+  removed the unused standalone explanation endpoint (review reads via `GET /api/sessions/:id`).
+- 2026-06-10: Re-approved and **implemented (Milestone 7).** `scripts/lib/claude.ts` wraps the local
+  CLI (`claude -p --output-format json`) with pure, unit-tested prompt/parse helpers;
+  `scripts/enrich.ts` (`npm run enrich`) iterates, filters, dry-runs, and persists idempotently. The
+  M6 review gate was removed so real-mode review surfaces explanations. Verified end-to-end against a
+  live `claude` CLI: a listening question generated an English, transcript-citing explanation;
+  a question with a mismatched seed passage triggered the graceful Behaviour.7 skip (model returned
+  prose, not JSON); re-run skipped as "exists"; and a completed **real** session's review carried the
+  explanation. Status approved → implemented.

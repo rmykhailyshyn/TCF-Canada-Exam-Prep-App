@@ -174,7 +174,7 @@ Track detailed status in `docs/milestones.md`. High-level order:
 4. Progress tracking + session history
 5. Question bank export / import (web UI: filter by section + complexity, JSON, override on re-import)
 6. Review mode (show wrong answers, retry)
-7. LLM enrichment pass (per-question explanations via local or API model)
+7. LLM enrichment pass (per-question English explanations citing passage/transcript clues, via the local Claude CLI)
 8. SDD retrospective + polish
 
 ---
@@ -213,6 +213,15 @@ npm run ocr -- --dir <path>
 # Import listening questions from a directory (Apple Silicon only)
 # Directory must contain one results PDF and up to 39 MP3 files
 npm run transcribe -- --dir <path>
+
+# Generate per-question explanations via the LOCAL Claude CLI (Milestone 7; needs `claude` on PATH).
+# Idempotent (skips questions that already have one). Reading uses the passage, listening the
+# transcript, as the clue source; explanations are in English. Configure CLAUDE_CLI_BIN /
+# CLAUDE_CLI_MODEL in .env (no API key).
+npm run enrich                        # all questions without an explanation
+npm run enrich -- --section reading   # limit to a section
+npm run enrich -- --question-id <id>  # a single question
+npm run enrich -- --dry-run           # print prompt + model output, write nothing
 
 # Type-check without emitting (runs both client and server)
 npm run typecheck

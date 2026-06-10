@@ -176,3 +176,45 @@ negative until the total test count failed to move. **Lesson:** when adding the 
 *file-extension shape* to a suite, confirm the count changed, not just that it's green — an
 include-glob can quietly exclude a whole category, and "0 tests matched" still exits a per-file run
 non-silently but vanishes in a full run.
+
+---
+
+## Milestone 7 — LLM enrichment (with a mid-stream spec pivot)
+
+**A spec is cheapest to change while it's still a spec — this is the SDD payoff, observed directly.**
+M7 was `approved` but unimplemented when the user asked for three changes at once: local CLI instead
+of the HTTP API, English clue-citing explanations, and real-mode explanations in results. Because no
+code existed yet, the "rework" was editing one spec file and answering three clarifying questions —
+not unwinding a provider abstraction, a prompt template, and a gating rule already wired across
+client and server. The approval gate (status → draft → re-approve) made the pivot a deliberate
+checkpoint rather than a silent drift. **Lesson:** the gate's value isn't bureaucratic; it's that it
+front-loads the expensive decisions (provider, language, where output surfaces) to the one moment
+they're cheap to revise. Had M7 shipped on the first draft, the same request would have been a
+refactor.
+
+**One feature's change rippled into a *different* implemented spec — and the specs caught it.** Making
+real-mode results show explanations directly contradicted review-mode §Behaviour.6 ("real mode never
+shows explanations"), an *already-implemented* milestone. Because the rule was written down, the
+conflict was visible at spec-edit time: the fix was an explicit "supersedes §Behaviour.6" note in
+both specs plus removing one `session.mode === 'learning'` gate in the M6 query — not a confused
+debugging session months later wondering why explanations leaked into real mode. **Lesson:**
+cross-spec supersession is a normal event in a multi-milestone codebase; the discipline that makes it
+safe is amending the *superseded* spec in the same change, so the two specs never silently disagree.
+
+**The model refusing to answer is a feature, not a bug — if the pipeline treats non-conforming output
+as a skip.** The live smoke test hit a seed row whose passage didn't match its question; the model
+declined to fabricate JSON and returned prose explaining the data mismatch. Behaviour.7 ("a CLI/parse
+failure skips just this question and continues") turned that into a clean `failed 1`, not a crash or
+a hallucinated explanation persisted to the bank. The "extract the first balanced JSON object, treat
+its absence as failure" parser was the load-bearing piece. **Lesson:** when an LLM is in the loop,
+"unparseable output" isn't an edge case to suppress — it's the channel through which the model signals
+low confidence, and a spec that makes it a per-item skip converts model honesty into data integrity.
+
+**CLI-as-provider slotted into the existing wrapper seam with no new shape.** The local `claude` CLI
+wrapper (`scripts/lib/claude.ts`) is structurally identical to the Whisper/Tesseract wrappers the
+project already had: pure prompt/parse helpers (unit-tested without spawning anything) plus one thin
+`spawnSync` shell that surfaces non-zero exits as a typed error. The "shell calls live in
+scripts/lib, pure transforms are exported and tested" convention — established in M2/M3 for OCR/audio
+— absorbed a third external tool with zero architectural change. **Lesson:** a convention earns its
+keep the third time you apply it without thinking; the LLM provider was "just another CLI" because
+the seam for CLIs already existed.

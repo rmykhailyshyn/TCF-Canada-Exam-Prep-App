@@ -34,7 +34,6 @@ export function ReviewPage(): JSX.Element {
 
   const { session, results } = detail;
   const section = session.section as Section;
-  const isLearning = session.mode === 'learning';
   const bands = groupIncorrectByBand(results);
 
   // spec: docs/specs/review-mode.md §Behaviour.8–10 — one learning-mode session per affected band,
@@ -70,8 +69,9 @@ export function ReviewPage(): JSX.Element {
       <div className="mx-auto max-w-2xl space-y-4 p-6">
         {bands.length > 0 && <RetryPanel bands={bands} onRetry={startRetry} />}
 
+        {/* spec: llm-enrichment §Behaviour.10 — explanations show in review for learning AND real. */}
         {results.map((r, i) => (
-          <ReviewQuestionCard key={r.id} index={i} result={r} showExplanation={isLearning} />
+          <ReviewQuestionCard key={r.id} index={i} result={r} showExplanation />
         ))}
       </div>
     </main>

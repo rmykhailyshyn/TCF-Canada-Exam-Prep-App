@@ -129,12 +129,21 @@ is unit-tested; the `vitest` `include` was widened to pick up `client/**/*.test.
 ---
 
 ## Milestone 7 — LLM enrichment
-**Status:** not started
+**Status:** complete
 
-- [ ] Standalone CLI script to generate per-question explanations (why correct answer is right, why others are wrong)
-- [ ] Supports Claude API and Ollama via `.env` configuration (`LLM_PROVIDER`, `LLM_MODEL`, `ANTHROPIC_API_KEY` / `OLLAMA_BASE_URL`)
-- [ ] Explanations stored in DB, linked to question
-- [ ] Explanations surface in learning mode after user submits a final answer
+- [x] `npm run enrich` CLI command generates per-question explanations (why the correct answer is right, why each other option is wrong), in **English**, citing the clue in the passage (reading) / transcript (listening)
+- [x] Driven by the **local Claude CLI** (`claude -p --output-format json`), configured via `.env` (`CLAUDE_CLI_BIN`, optional `CLAUDE_CLI_MODEL`; no API key) — replaces the original Claude API / Ollama plan
+- [x] Explanations stored in DB (existing `explanations` table, no schema change), idempotently; `--question-id` / `--section` / `--dry-run` flags; per-question skip + continue on CLI/parse failure
+- [x] Surface in learning mode immediately after the answer is confirmed (existing wiring), and in **review mode for both learning and real** sessions (real shown only after the exam)
+- [x] `npm run typecheck`, `npm run lint`, `npm test` (83 tests), `npm run build` all pass
+
+**Spec revision (SDD Rule 4):** the original M7 spec targeted the Anthropic HTTP API + Ollama and
+French-or-English/free-form output; the user redirected it to the **local CLI**, **English +
+clue-citing** explanations, and **real-mode explanations in review**. The spec was revised, moved
+approved → draft, re-approved, then implemented. The real-mode change **supersedes review-mode
+§Behaviour.6** (the M6 learning-only gate on the explanations query was removed). Verified live
+against a real `claude` CLI, including the graceful skip when the model declined to emit JSON for a
+mismatched seed row.
 
 **Specs:**
 - `docs/specs/llm-enrichment.md`
