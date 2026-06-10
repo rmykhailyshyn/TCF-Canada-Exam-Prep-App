@@ -38,7 +38,7 @@ the passage text and the question prompt.
   - Error reporting for unreadable images, malformed PDF, or ambiguous answer highlighting
 - Out of scope:
   - In-app import UI (CLI only for now)
-  - Automatic LLM explanation generation (separate script, Milestone 6)
+  - Automatic LLM explanation generation (separate script, Milestone 7)
   - Editing or deleting imported questions via CLI
 
 ## PDF structure (Réussir TCF Canada results export)
@@ -178,7 +178,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - ~~Whether the CLI verb should remain `ocr`~~ — kept as `ocr`: OCR is genuinely used (the passage
   images are OCR'd), so the verb is accurate.
 - **OCR quality.** Tesseract output has minor artifacts (drop-cap letters, accents, "L" → "| e").
-  Acceptable for self-study; a future LLM-enrichment or cleanup pass (Milestone 6) could normalise
+  Acceptable for self-study; a future LLM-enrichment or cleanup pass (Milestone 7) could normalise
   the text. The passage/prompt split relies on the `reussir-tcfcanada.com` footer being present in
   every image — confirmed across the sample, but a missing footer falls back to "last line = prompt".
 

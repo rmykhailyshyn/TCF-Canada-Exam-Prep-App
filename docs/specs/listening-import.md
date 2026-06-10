@@ -34,7 +34,7 @@ options, and the answer key. Media files are matched to questions by position, n
   - HTML parsing (removed — superseded by PDF parsing)
   - In-app import UI
   - Word-level timestamp granularity
-  - Automatic LLM explanation generation (Milestone 6)
+  - Automatic LLM explanation generation (Milestone 7)
   - Image-bearing listening questions (e.g. "choisissez celle qui correspond à l'image") —
     their associated image is not imported yet; see Open questions
 

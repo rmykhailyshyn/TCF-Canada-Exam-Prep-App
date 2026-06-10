@@ -172,9 +172,10 @@ Track detailed status in `docs/milestones.md`. High-level order:
 2. Reading section: question import (OCR pipeline), quiz UI
 3. Listening section: audio import (Whisper pipeline), player + quiz UI
 4. Progress tracking + session history
-5. Review mode (show wrong answers, retry)
-6. LLM enrichment pass (per-question explanations via local or API model)
-7. SDD retrospective + polish
+5. Question bank export / import (web UI: filter by section + complexity, JSON, override on re-import)
+6. Review mode (show wrong answers, retry)
+7. LLM enrichment pass (per-question explanations via local or API model)
+8. SDD retrospective + polish
 
 ---
 

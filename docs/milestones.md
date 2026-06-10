@@ -83,7 +83,22 @@ already validated against a real listening PDF (27/437).
 
 ---
 
-## Milestone 5 — Review mode
+## Milestone 5 — Question bank export / import (web UI)
+**Status:** not started
+
+- [ ] Question Bank page: Export panel filtering by section (reading/listening/both) and complexity (difficulty bands / all)
+- [ ] Export produces a versioned JSON document (options + answer key + passage / transcript + audio reference) downloaded by the browser
+- [ ] Import panel: upload a previously exported JSON file with an "override existing" toggle
+- [ ] Import matches on the `(source_file, sequence)` natural key — insert when absent, skip or overwrite in place (same `questions.id`, preserving session history)
+- [ ] Structural + answer-key validation before any write; failed validation leaves the DB unchanged
+- [ ] Backend API: `GET /api/questions/export`, `POST /api/questions/import`
+
+**Specs:**
+- `docs/specs/question-export-import.md`
+
+---
+
+## Milestone 6 — Review mode
 **Status:** not started
 
 - [ ] After a session ends, user can enter review mode
@@ -96,7 +111,7 @@ already validated against a real listening PDF (27/437).
 
 ---
 
-## Milestone 6 — LLM enrichment
+## Milestone 7 — LLM enrichment
 **Status:** not started
 
 - [ ] Standalone CLI script to generate per-question explanations (why correct answer is right, why others are wrong)
@@ -109,7 +124,7 @@ already validated against a real listening PDF (27/437).
 
 ---
 
-## Milestone 7 — SDD retrospective + polish
+## Milestone 8 — SDD retrospective + polish
 **Status:** not started
 
 - [ ] Complete `docs/sdd-learnings.md` retrospective
