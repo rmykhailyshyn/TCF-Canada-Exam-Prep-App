@@ -86,9 +86,8 @@ export function SessionDetailPage(): JSX.Element {
           <div className="mt-8 flex justify-center gap-3">
             <button
               type="button"
-              disabled
-              title="Review mode arrives in a later milestone"
-              className="rounded-xl border border-slate-200 px-4 py-2 font-medium text-slate-400"
+              onClick={() => navigate(`/review/${s.id}`)}
+              className="rounded-xl border border-slate-200 px-4 py-2 font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
             >
               Review answers
             </button>

@@ -21,6 +21,7 @@ export type QuizStatus = 'loading' | 'error' | 'active' | 'finished';
 export type QuizSession = {
   status: QuizStatus;
   error: string | null;
+  sessionId: number | null;
   mode: SessionConfig['mode'];
   question: SessionQuestion | undefined;
   index: number;
@@ -162,6 +163,7 @@ export function useQuizSession(config: SessionConfig): QuizSession {
   return {
     status,
     error,
+    sessionId,
     mode: config.mode,
     question: questions[index],
     index,
