@@ -55,6 +55,12 @@ export function pointsForSequence(sequence: number): number {
   return band ? band.points : 0;
 }
 
+// spec: docs/specs/question-export-import.md §Scope — complexity is derived from `sequence`,
+// not stored. Returns the band a 1-based sequence falls into, or undefined if out of range.
+export function bandForSequence(sequence: number): Band | undefined {
+  return BANDS.find((b) => sequence >= b.min && sequence <= b.max);
+}
+
 // spec: docs/specs/quiz-session.md §Mode selection.3 — band membership by sequence
 export function sequenceInBand(sequence: number, band: Band): boolean {
   return sequence >= band.min && sequence <= band.max;
