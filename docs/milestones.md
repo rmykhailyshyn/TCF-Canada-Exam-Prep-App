@@ -70,13 +70,13 @@ already validated against a real listening PDF (27/437).
 ---
 
 ## Milestone 4 — Progress tracking + session history
-**Status:** not started
+**Status:** complete
 
-- [ ] Session model: type (reading | listening), mode (learning | real), started/completed timestamps
-- [ ] Per-question result: question id, chosen answer, correct/incorrect
-- [ ] Score calculation and display at session end
-- [ ] Real mode: elapsed time tracked and stored
-- [ ] Session history list page
+- [x] Session model: type (reading | listening), mode (learning | real), started/completed timestamps
+- [x] Per-question result: question id, chosen answer, correct/incorrect
+- [x] Score calculation and display at session end
+- [x] Real mode: elapsed time tracked and stored
+- [x] Session history list page
 
 **Specs:**
 - `docs/specs/progress-tracking.md`
