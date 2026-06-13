@@ -1,11 +1,12 @@
 # Spec: Reading Quiz UI
 
 ## Status
-revised
+approved
 
 > The base UI (Milestone 2) is `implemented`. The **passage image + OCR text display**
 > (Behaviour.3a–3c, the `GET /api/questions/:id/passage-image` endpoint) is a Milestone 8
-> revision and is `draft` pending approval — do not implement it until the human approves.
+> revision, **approved 2026-06-13** and ready to implement; status returns to `implemented`
+> once the code ships.
 
 ## Goal
 Provide a quiz interface for the reading comprehension section. The user reads a passage and answers multiple-choice questions linked to it. The UI supports both learning mode (immediate feedback) and real mode (timed, no feedback), as defined in the quiz-session spec.
@@ -126,3 +127,5 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   `PASSAGE_IMAGE_NOT_FOUND`), graceful fallback to text-only when the image is missing, and
   matching acceptance criteria. No schema change (image path + OCR text already exist from
   reading-import). Status implemented → revised; the new behaviour is draft pending approval.
+- 2026-06-13: Passage image + OCR text display revision approved (Milestone 8). Status revised →
+  approved; ready to implement.

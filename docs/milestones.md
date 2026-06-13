@@ -162,8 +162,8 @@ mismatched seed row.
 - [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build` all pass
 
 **Specs:**
-- `docs/specs/quiz-session.md` (revised — §Question selection and ordering, Behaviour.19–22; draft pending approval)
-- `docs/specs/reading-quiz-ui.md` (revised — passage image + OCR text display, Behaviour.3a–3c + `GET /api/questions/:id/passage-image`; draft pending approval)
+- `docs/specs/quiz-session.md` (approved — §Question selection and ordering, Behaviour.19–22)
+- `docs/specs/reading-quiz-ui.md` (approved — passage image + OCR text display, Behaviour.3a–3c + `GET /api/questions/:id/passage-image`)
 
 ---
 

@@ -1,11 +1,11 @@
 # Spec: Quiz Session
 
 ## Status
-revised
+approved
 
 > The base session model (Milestone 2) is `implemented`. The **§Question selection and
-> ordering** behaviour (items 19–22) is a Milestone 8 revision and is `draft` pending
-> approval — do not implement it until the human approves.
+> ordering** behaviour (items 19–22) is a Milestone 8 revision, **approved 2026-06-13** and
+> ready to implement; status returns to `implemented` once the code ships.
 
 ## Goal
 Define the shared session model that underpins both reading and listening quiz modes.
@@ -273,3 +273,5 @@ _None._
   /api/sessions resolution + `ANSWER_KEY_MISSING` semantics for the per-position draw; reopened
   and re-resolved the order open question. Status implemented → revised; the new behaviour is
   draft pending approval before implementation.
+- 2026-06-13: §Question selection and ordering revision approved (Milestone 8). Status revised →
+  approved; ready to implement.
