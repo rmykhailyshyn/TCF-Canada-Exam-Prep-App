@@ -1,7 +1,11 @@
 # Spec: Quiz Session
 
 ## Status
-implemented
+revised
+
+> The base session model (Milestone 2) is `implemented`. The **§Question selection and
+> ordering** behaviour (items 19–22) is a Milestone 8 revision and is `draft` pending
+> approval — do not implement it until the human approves.
 
 ## Goal
 Define the shared session model that underpins both reading and listening quiz modes.
@@ -62,6 +66,27 @@ persistence. UI specifics for each section are covered in their own specs.
     the results screen.
 11. The user may also submit the session manually before the timer expires.
 12. Elapsed time is recorded in the session record.
+
+### Question selection and ordering
+A section may contain **more than one question at the same `sequence` position** — multiple
+imports can share a sequence, because the question bank's natural key is `(source_file,
+sequence)`, not `sequence` alone (see question-export-import spec). The following items define
+how a session resolves these per-position candidate pools into the set it presents.
+
+19. **Real mode** builds a single 39-question exam by selecting, independently for each occupied
+    sequence position 1–39, exactly **one** question at random from that position's candidate
+    pool. (E.g. if five questions exist at position 1, exactly one of them is chosen.)
+20. The 39 questions selected for a real-mode session are presented in ascending `sequence`
+    order (1 → 39), matching the real TCF exam. Real mode does **not** randomize presentation
+    order — only which question fills each position is random.
+21. **Learning mode** presents the questions of the selected difficulty band in **randomized
+    order**. Every question in the band is included — including multiple candidates that share a
+    sequence position — and only the presentation order is shuffled (no per-position pruning in
+    learning mode).
+22. Selection and ordering are resolved **per session** at creation time: re-entering a mode
+    reshuffles the learning-mode order and re-draws the real-mode per-position picks, so repeated
+    practice surfaces different questions and orders. A session's resolved set and order are
+    fixed for that session's lifetime (the same questions/order are used by review mode).
 
 ### Results
 13. At session end:
@@ -137,7 +162,13 @@ Error (band mismatch):    { "data": null, "error": { "code": "QUESTIONS_OUT_OF_B
 `difficulty` is required when `mode` is `"learning"` and must be one of: `"beginner"`,
 `"elementary"`, `"intermediate"`, `"upper-intermediate"`, `"advanced"`, `"expert"`.
 It is ignored (and may be omitted) when `mode` is `"real"`.
-The returned `questions` array is filtered to the selected difficulty band's sequence range.
+
+The returned `questions` array is resolved per §Question selection and ordering (Behaviour.19–22):
+- **Learning mode:** the selected difficulty band's questions, in **randomized order**.
+- **Real mode:** **one randomly chosen question per occupied sequence position 1–39**, ordered
+  ascending by `sequence`. The per-position draw is taken only from candidates that satisfy the
+  answer-key requirement below, so a position with multiple imports never starts an exam on a
+  question that has no key while a keyed sibling exists.
 
 `questionIds` is an optional filter used by the review-mode retry flow (see review-mode spec).
 When provided in learning mode it further restricts the session to that subset, and **every
@@ -145,9 +176,14 @@ id must belong to the selected difficulty band** — otherwise the endpoint retu
 `QUESTIONS_OUT_OF_BAND`. (This is why retry sessions are grouped per band: one retry session
 per band, each carrying that band's `difficulty`.)
 
-The endpoint returns `ANSWER_KEY_MISSING` if any question **in the resolved question set**
-(the selected difficulty band in learning mode, or the whole section in real mode) has
-`is_correct = false` for all of its options (i.e. no answer key has been imported yet).
+The endpoint returns `ANSWER_KEY_MISSING` when the resolved question set cannot be formed
+because of a missing answer key (a question with `is_correct = false` for all of its options,
+i.e. no answer key imported yet):
+- **Learning mode:** any question in the selected difficulty band lacks a key.
+- **Real mode:** an occupied sequence position has **no** keyed candidate (a position still
+  starts normally as long as at least one of its candidates is keyed — that keyed candidate is
+  what the per-position draw selects from).
+
 This prevents sessions from starting in an indeterminate state, while still allowing a user
 to practise a band whose answer key is ready even if other bands have not been imported.
 
@@ -200,11 +236,14 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] `POST /api/sessions/:id/complete` returns `correct`, `total`, and `pointsScored`/`pointsPossible` — both points fields and `elapsedMs` are null in learning mode. (Behaviour.13; API contract)
 - [ ] Exam time limits are read from `exam.config.json` (Reading 60 min, Listening 35 min) rather than hardcoded. (Behaviour.18)
 - [ ] Each `question_results` row records `chosen_label` (A–D), `is_correct`, and links to its session and question. (Data model)
+- [ ] Real mode: when a sequence position has multiple candidate questions, exactly one is selected at random for the session, and the session contains at most one question per occupied position 1–39. (Behaviour.19)
+- [ ] Real mode: the session's questions are returned in ascending `sequence` order and presentation order is not randomized. (Behaviour.20)
+- [ ] Learning mode: all questions in the selected band are included and presented in a randomized order (every band candidate appears; no per-position pruning). (Behaviour.21)
+- [ ] Re-creating a session for the same mode/band re-draws (real) / re-shuffles (learning); within a single session the resolved set and order are stable. (Behaviour.22)
+- [ ] Real mode: a position with one keyed and one unkeyed candidate still starts (drawing the keyed one); `ANSWER_KEY_MISSING` is returned only when an occupied position has no keyed candidate. (API contract)
 
 ## Open questions
-- Should questions within a session be presented in a fixed order (by import order) or
-  randomised? TCF Canada uses a fixed order, so fixed is the safe default — confirm before
-  implementing shuffle logic.
+_None._
 
 ## Revision history
 - 2026-06-04: Initial draft
@@ -227,3 +266,10 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   all-correct = 699/699, all-wrong = 0/699; learning-mode correct/total with null points; all
   error codes). Status approved → implemented. Open question (fixed vs. random order) resolved as
   fixed import order per TCF.
+- 2026-06-12: **Milestone 8 revision.** Added §Question selection and ordering (Behaviour.19–22):
+  learning mode now presents band questions in randomized order; real mode draws one random
+  question per occupied sequence position 1–39 (supports multiple imports per position via the
+  `(source_file, sequence)` key) and presents them in ascending sequence order. Updated POST
+  /api/sessions resolution + `ANSWER_KEY_MISSING` semantics for the per-position draw; reopened
+  and re-resolved the order open question. Status implemented → revised; the new behaviour is
+  draft pending approval before implementation.
