@@ -1,7 +1,11 @@
 # Spec: Reading Quiz UI
 
 ## Status
-implemented
+revised
+
+> The base UI (Milestone 2) is `implemented`. The **passage image + OCR text display**
+> (Behaviour.3a–3c, the `GET /api/questions/:id/passage-image` endpoint) is a Milestone 8
+> revision and is `draft` pending approval — do not implement it until the human approves.
 
 ## Goal
 Provide a quiz interface for the reading comprehension section. The user reads a passage and answers multiple-choice questions linked to it. The UI supports both learning mode (immediate feedback) and real mode (timed, no feedback), as defined in the quiz-session spec.
@@ -9,6 +13,7 @@ Provide a quiz interface for the reading comprehension section. The user reads a
 ## Scope
 - In scope:
   - Passage display alongside question and answer options
+  - Passage panel shows the **original passage image** with the **OCR'd passage text directly below it**
   - 4-option (A–D) single-select multiple-choice nteraction
   - Learning mode: confirm-answer step, correct/incorrect highlight, LLM explanation display
   - Real mode: countdown timer, no per-answer feedback
@@ -33,8 +38,11 @@ Provide a quiz interface for the reading comprehension section. The user reads a
 2. The "Start" button is disabled until a difficulty is selected (learning mode) or until  mode is confirmed (real mode).
 
 ### Layout
-3. The screen is split: passage text on the left (or top on narrow viewports), question panel on the right (or bottom).
-4. The passage text is scrollable independently of the question panel.
+3. The screen is split: the passage panel on the left (or top on narrow viewports), question panel on the right (or bottom).
+3a. Within the passage panel, the **original passage image is displayed on top** and the **OCR'd passage text directly below it** (image first, then text). The image is the source PNG that the passage was OCR'd from (reading-import spec — `passages.source_file`); the text is `passages.text`. Showing both lets the user read the authoritative original and fall back to the searchable/selectable OCR text.
+3b. The passage image is rendered scaled to the panel width (preserving aspect ratio); it is not cropped. Both the image and the text scroll together within the passage panel.
+3c. If the passage image cannot be loaded (file missing on disk — e.g. a question bank imported without its media), the panel degrades gracefully to **OCR text only**, with no broken-image placeholder.
+4. The passage panel is scrollable independently of the question panel.
 5. A question counter ("Question 3 of 9" — reflects the filtered band size in learning mode, or "Question 3 of 39" in real mode) is visible at all times.
 6. Real mode only: a countdown timer is visible in the header throughout the session.
 
@@ -61,17 +69,35 @@ Provide a quiz interface for the reading comprehension section. The user reads a
     as defined in quiz-session spec §Behaviour.13.
 
 ## Data model changes
-None — handled by quiz-session spec.
+None — the passage image path (`passages.source_file`) and OCR text (`passages.text`) already
+exist from the reading-import spec. No schema change.
 
 ## API contract
-Consumes endpoints defined in quiz-session spec.
+Consumes the session endpoints defined in quiz-session spec, plus one new read-only endpoint to
+serve the passage image bytes:
+
+### GET /api/questions/:id/passage-image
+Streams the original passage image for the question's linked passage (analogous to the listening
+`GET /api/questions/:id/audio` route). The image is read from the linked `passages.source_file`
+path on disk and served with the appropriate `Content-Type` (`image/png` / `image/jpeg`).
+```
+Response (200): <binary image bytes>, Content-Type: image/png | image/jpeg
+Error (no passage / not a reading question): 404  { "data": null, "error": { "code": "PASSAGE_IMAGE_NOT_FOUND", "message": "..." } }
+Error (file missing on disk):                404  { "data": null, "error": { "code": "PASSAGE_IMAGE_NOT_FOUND", "message": "..." } }
+```
+The client renders `<img src="/api/questions/:id/passage-image">` and, on the image's `error`
+event (any 404), falls back to OCR-text-only per Behaviour.3c — so the session payload needs no
+new field (presence is probed by attempting to load the image).
 
 ## Acceptance criteria
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [ ] The setup screen lets the user pick mode (Learning / Real); in learning mode the six labelled difficulty bands are presented. (Behaviour.1)
 - [ ] The Start button is disabled until a difficulty is selected (learning) or the mode is confirmed (real). (Behaviour.2)
-- [ ] The layout splits passage (left, or top on narrow viewports) and question panel (right, or bottom), and the passage scrolls independently of the question panel. (Behaviour.3, 4)
+- [ ] The layout splits passage (left, or top on narrow viewports) and question panel (right, or bottom), and the passage panel scrolls independently of the question panel. (Behaviour.3, 4)
+- [ ] The passage panel renders the original passage image on top with the OCR'd passage text directly below it; the image is scaled to panel width preserving aspect ratio. (Behaviour.3a, 3b)
+- [ ] `GET /api/questions/:id/passage-image` returns the image bytes for a reading question's passage with the correct `Content-Type`, and 404 `PASSAGE_IMAGE_NOT_FOUND` when there is no passage image or the file is missing on disk. (API contract)
+- [ ] When the passage image fails to load, the panel shows OCR text only with no broken-image placeholder. (Behaviour.3c)
 - [ ] The question counter shows the filtered band size in learning mode (e.g. "Question 3 of 9") and "Question N of 39" in real mode. (Behaviour.5)
 - [ ] A countdown timer is shown in the header in real mode. (Behaviour.6)
 - [ ] Selecting one of A–D marks a pending selection without recording an answer; "Confirm answer" becomes active and finalises the choice, which cannot be undone. (Behaviour.7, 8, 9, 10)
@@ -81,7 +107,9 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] After the final question, manual submit, or timer expiry, the results screen (quiz-session §Behaviour.13) is shown. (Behaviour.18)
 
 ## Open questions
-- None at this time.
+- Should review mode (review-mode spec) also show the passage image above the OCR excerpt? The
+  current review-mode spec shows a passage *excerpt* (text). Out of scope for this revision —
+  flagged for a follow-up if desired.
 
 ## Revision history
 - 2026-06-04: Initial draft
@@ -92,3 +120,9 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   layout, confirm-answer flow, learning feedback + explanation slot, real-mode countdown with
   auto/manual submit + confirmation dialog, and the results hand-off. Covered by render smoke
   tests; typecheck/lint/build green. Status approved → implemented.
+- 2026-06-12: **Milestone 8 revision.** Passage panel now shows the original passage image on top
+  with the OCR'd text directly below (Behaviour.3a–3c). Added read-only `GET
+  /api/questions/:id/passage-image` (streams `passages.source_file`, 404
+  `PASSAGE_IMAGE_NOT_FOUND`), graceful fallback to text-only when the image is missing, and
+  matching acceptance criteria. No schema change (image path + OCR text already exist from
+  reading-import). Status implemented → revised; the new behaviour is draft pending approval.

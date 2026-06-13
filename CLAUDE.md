@@ -175,7 +175,8 @@ Track detailed status in `docs/milestones.md`. High-level order:
 5. Question bank export / import (web UI: filter by section + complexity, JSON, override on re-import)
 6. Review mode (show wrong answers, retry)
 7. LLM enrichment pass (per-question English explanations citing passage/transcript clues, via the local Claude CLI)
-8. SDD retrospective + polish
+8. Randomized question selection & ordering (learning: random order; real: one random question per sequence position) + reading passage image shown above its OCR text
+9. SDD retrospective + polish
 
 ---
 

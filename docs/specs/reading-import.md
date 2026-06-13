@@ -124,7 +124,9 @@ after `88`.)
 ```
 passages
   id          serial primary key
-  source_file text not null unique   -- passage image path; used for duplicate detection.
+  source_file text not null unique   -- passage image path; used for duplicate detection, and
+                                      -- served at quiz time as the passage image (reading-quiz-ui
+                                      -- spec, GET /api/questions/:id/passage-image).
                                       -- One image per question, so passage:question is 1:1 here.
   text        text not null          -- passage content (OCR of the image, before the footer)
   created_at  timestamptz not null default now()
