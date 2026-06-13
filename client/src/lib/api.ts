@@ -172,6 +172,13 @@ export function audioUrl(questionId: number): string {
   return `/api/questions/${questionId}/audio`;
 }
 
+// spec: docs/specs/reading-quiz-ui.md §API contract GET /api/questions/:id/passage-image
+// The <img> element's src for a reading question's passage image. The server streams the file;
+// a 404 (no passage / missing on disk) fires the img's error event so the UI falls back to text.
+export function passageImageUrl(questionId: number): string {
+  return `/api/questions/${questionId}/passage-image`;
+}
+
 // spec: docs/specs/listening-player.md §API contract GET /api/questions/:id/transcript
 export function fetchTranscript(questionId: number): Promise<{ segments: TranscriptSegment[] }> {
   return get<{ segments: TranscriptSegment[] }>(`/api/questions/${questionId}/transcript`);

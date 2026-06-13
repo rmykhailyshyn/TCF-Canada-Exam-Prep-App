@@ -3,7 +3,14 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { eq, inArray } from 'drizzle-orm';
 import { db, pool } from '../server/db';
-import { audioFiles, options, questions, transcriptSegments } from '../server/db/schema';
+import {
+  audioFiles,
+  explanations,
+  options,
+  questionResults,
+  questions,
+  transcriptSegments,
+} from '../server/db/schema';
 
 // Dev-only seed: a Beginner-band (Q1–4) listening section so the listening player + quiz UI and
 // the audio/transcript API can be exercised end-to-end WITHOUT running the Whisper import (which
@@ -90,6 +97,10 @@ async function main(): Promise<void> {
       .where(eq(questions.sourceFile, SOURCE));
     const ids = existing.map((q) => q.id);
     if (ids.length > 0) {
+      // Children that reference questions must go first (M7 explanations + any recorded answers
+      // from sessions run against the previous seed), otherwise the FK blocks the question delete.
+      await tx.delete(questionResults).where(inArray(questionResults.questionId, ids));
+      await tx.delete(explanations).where(inArray(explanations.questionId, ids));
       await tx.delete(transcriptSegments).where(inArray(transcriptSegments.questionId, ids));
       await tx.delete(audioFiles).where(inArray(audioFiles.questionId, ids));
       await tx.delete(options).where(inArray(options.questionId, ids));

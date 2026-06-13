@@ -20,15 +20,15 @@ test.describe('setup screen', () => {
     // Difficulty hidden initially.
     await expect(page.getByRole('button', { name: /Upper-Intermediate/ })).toHaveCount(0);
     // Start disabled with no mode chosen.
-    await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Start session', exact: true })).toBeDisabled();
 
     await page.getByRole('button', { name: /Learning/ }).click();
     // Bands now visible; Start still disabled until a band is picked.
     await expect(page.getByRole('button', { name: /Upper-Intermediate/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Start session', exact: true })).toBeDisabled();
 
     await page.getByRole('button', { name: /Beginner/ }).click();
-    await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Start session', exact: true })).toBeEnabled();
   });
 
   test('real-mode subtitle reflects the listening time limit (35 min)', async ({ page }) => {

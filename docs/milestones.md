@@ -151,19 +151,34 @@ mismatched seed row.
 ---
 
 ## Milestone 8 — Randomized question selection & ordering
-**Status:** not started
+**Status:** complete
 
-- [ ] Learning mode: present the selected difficulty band's questions in **random order** (all band questions included; only presentation order shuffled, per session)
-- [ ] Real mode: build a 39-question exam by selecting **one randomly chosen question per occupied sequence position 1–39** — e.g. when five questions exist at position 1, exactly one is shown
-- [ ] Real mode: selected questions remain in ascending `sequence` order (1 → 39); only *which* question fills each position is random
-- [ ] Per-position draw respects the answer key: draws only from keyed candidates; `ANSWER_KEY_MISSING` only when an occupied position has no keyed candidate
-- [ ] Resolution is per session (re-entering re-draws / re-shuffles); the resolved set + order are stable for that session's lifetime (review mode reuses them)
-- [ ] Reading questions: passage panel shows the **original passage image on top** with the **OCR'd text directly below it**; served via a new read-only `GET /api/questions/:id/passage-image`, with graceful fallback to text-only when the image is missing on disk
-- [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build` all pass
+- [x] Learning mode: present the selected difficulty band's questions in **random order** (all band questions included; only presentation order shuffled, per session)
+- [x] Real mode: build a 39-question exam by selecting **one randomly chosen question per occupied sequence position 1–39** — e.g. when five questions exist at position 1, exactly one is shown
+- [x] Real mode: selected questions remain in ascending `sequence` order (1 → 39); only *which* question fills each position is random
+- [x] Per-position draw respects the answer key: draws only from keyed candidates; `ANSWER_KEY_MISSING` only when an occupied position has no keyed candidate
+- [x] Resolution is per session (re-entering re-draws / re-shuffles); the resolved set + order are stable for that session's lifetime
+- [x] Reading questions: passage panel shows the **original passage image on top** with the **OCR'd text directly below it**; served via a new read-only `GET /api/questions/:id/passage-image`, with graceful fallback to text-only when the image is missing on disk
+- [x] `npm run typecheck`, `npm run lint`, `npm test` (88 tests), `npm run build`, `npm run test:e2e` (14 tests) all pass
+
+**Implementation notes (SDD Rule 4):** (1) **No schema change.** Rather than persist each session's
+randomly-resolved set, real-mode `total`/`pointsPossible` are computed from the section's *distinct*
+sequence positions, so multiple imports per position never double-count; review/history already
+reconstruct from the per-position `question_results`. Selection/shuffle live in a unit-tested
+`server/lib/random.ts` with an injectable RNG. (2) The passage image is served from
+`passages.source_file` (absolute, or resolved against `MEDIA_DIR`); the client probes it via the
+`<img>` `error` event, so no session-payload change was needed. (3) The dev seeds gained two fixes
+surfaced by this work: they now delete `explanations` + `question_results` children before wiping
+questions (a pre-existing FK gap from M7/sessions), and `seed:dev` writes real placeholder PNGs to
+`MEDIA_DIR`. (4) **e2e isolation:** the suite now creates/migrates/seeds a dedicated `tcf_prep_e2e`
+database and launches the app against it — previously it ran against the dev DB, which now holds
+real listening imports (several questions per position), making the listening flow non-deterministic.
+Stale selectors from the earlier UI redesign (`Start` → `Start session`, `4 / 4 correct`) were also
+fixed, and the listening specs made order-tolerant for the new learning shuffle.
 
 **Specs:**
-- `docs/specs/quiz-session.md` (approved — §Question selection and ordering, Behaviour.19–22)
-- `docs/specs/reading-quiz-ui.md` (approved — passage image + OCR text display, Behaviour.3a–3c + `GET /api/questions/:id/passage-image`)
+- `docs/specs/quiz-session.md` (implemented — §Question selection and ordering, Behaviour.19–22)
+- `docs/specs/reading-quiz-ui.md` (implemented — passage image + OCR text display, Behaviour.3a–3c + `GET /api/questions/:id/passage-image`)
 
 ---
 

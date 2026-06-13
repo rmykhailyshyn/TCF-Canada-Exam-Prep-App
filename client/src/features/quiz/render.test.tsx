@@ -68,6 +68,9 @@ describe('render smoke tests', () => {
     expect(html).toContain('⏱');
     expect(html).toContain('Submit exam');
     expect(html).toContain('Un passage de compréhension écrite.');
+    // spec: reading-quiz-ui §Layout.3a — the passage image is rendered above the OCR text.
+    expect(html).toContain('/api/questions/1/passage-image');
+    expect(html).toContain('Original passage document');
   });
 
   // spec: docs/specs/reading-quiz-ui.md §Learning mode feedback.11–13

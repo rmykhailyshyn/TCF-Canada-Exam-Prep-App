@@ -25,6 +25,9 @@ __pycache__/
 /blob-report/
 /playwright/.cache/
 
+# Local media directory (MEDIA_DIR): imported audio + dev-seed placeholder images, all generated
+/media/
+
 # Generated listening dev clips (e2e global-setup regenerates them with ffmpeg)
 scripts/dev-audio/
 

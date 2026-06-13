@@ -16,6 +16,17 @@ async function firstListeningQuestionId(request: import('@playwright/test').APIR
   return body.data.questions[0].id as number;
 }
 
+async function firstReadingQuestionId(request: import('@playwright/test').APIRequestContext): Promise<number> {
+  const res = await request.post('/api/sessions', {
+    data: { section: 'reading', mode: 'learning', difficulty: 'beginner' },
+  });
+  expect(res.ok()).toBeTruthy();
+  const body = await res.json();
+  expect(body.error).toBeNull();
+  expect(body.data.questions.length).toBeGreaterThan(0);
+  return body.data.questions[0].id as number;
+}
+
 test('GET /api/questions/:id/transcript returns ordered segments in the envelope', async ({
   request,
 }) => {
@@ -62,4 +73,61 @@ test('unknown question ids return a NOT_FOUND envelope / 404', async ({ request 
   const audio = await request.get('/api/questions/999999999/audio');
   expect(audio.status()).toBe(404);
   expect((await audio.json()).error.code).toBe('NOT_FOUND');
+});
+
+// spec: docs/specs/reading-quiz-ui.md §API contract GET /api/questions/:id/passage-image
+test('GET /api/questions/:id/passage-image serves the reading passage image', async ({ request }) => {
+  const id = await firstReadingQuestionId(request);
+  const res = await request.get(`/api/questions/${id}/passage-image`);
+  expect(res.status()).toBe(200);
+  expect(res.headers()['content-type']).toBe('image/png');
+  // A real PNG: the 8-byte signature starts with 0x89 'PNG'.
+  const bytes = await res.body();
+  expect(bytes.length).toBeGreaterThan(0);
+  expect(bytes.subarray(0, 4).toString('latin1')).toBe('\x89PNG');
+});
+
+test('passage-image returns PASSAGE_IMAGE_NOT_FOUND for a listening question and unknown ids', async ({
+  request,
+}) => {
+  // A listening question has no passage → 404 PASSAGE_IMAGE_NOT_FOUND.
+  const listeningId = await firstListeningQuestionId(request);
+  const listening = await request.get(`/api/questions/${listeningId}/passage-image`);
+  expect(listening.status()).toBe(404);
+  expect((await listening.json()).error.code).toBe('PASSAGE_IMAGE_NOT_FOUND');
+
+  const unknown = await request.get('/api/questions/999999999/passage-image');
+  expect(unknown.status()).toBe(404);
+  expect((await unknown.json()).error.code).toBe('PASSAGE_IMAGE_NOT_FOUND');
+});
+
+// spec: docs/specs/quiz-session.md §Question selection and ordering (Behaviour.19–22)
+test('real-mode reading session has one question per sequence position (39, distinct)', async ({
+  request,
+}) => {
+  const res = await request.post('/api/sessions', { data: { section: 'reading', mode: 'real' } });
+  expect(res.ok()).toBeTruthy();
+  const body = await res.json();
+  expect(body.error).toBeNull();
+  const sequences = (body.data.questions as { sequence: number }[]).map((q) => q.sequence);
+  // The dev seed fills positions 1..39 → exactly 39 questions, one per position, ascending.
+  expect(sequences.length).toBe(39);
+  expect(new Set(sequences).size).toBe(39);
+  expect(sequences).toEqual([...sequences].sort((a, b) => a - b));
+});
+
+// spec: docs/specs/quiz-session.md §Question selection.21 — learning order is randomized.
+test('learning-mode question order is randomized across sessions', async ({ request }) => {
+  // Intermediate band has 9 questions; collect the order of several sessions. A fixed order would
+  // make every ordering identical — 9! possible orders make all-identical astronomically unlikely.
+  const orders = new Set<string>();
+  for (let i = 0; i < 5; i += 1) {
+    const res = await request.post('/api/sessions', {
+      data: { section: 'reading', mode: 'learning', difficulty: 'intermediate' },
+    });
+    const body = await res.json();
+    const seqKey = (body.data.questions as { sequence: number }[]).map((q) => q.sequence).join(',');
+    orders.add(seqKey);
+  }
+  expect(orders.size).toBeGreaterThan(1);
 });
