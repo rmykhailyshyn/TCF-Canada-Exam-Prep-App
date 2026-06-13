@@ -1,12 +1,10 @@
 # Spec: Reading Quiz UI
 
 ## Status
-approved
+implemented
 
-> The base UI (Milestone 2) is `implemented`. The **passage image + OCR text display**
-> (Behaviour.3a–3c, the `GET /api/questions/:id/passage-image` endpoint) is a Milestone 8
-> revision, **approved 2026-06-13** and ready to implement; status returns to `implemented`
-> once the code ships.
+> Base UI: Milestone 2. **Passage image + OCR text display** (Behaviour.3a–3c, the
+> `GET /api/questions/:id/passage-image` endpoint): Milestone 8.
 
 ## Goal
 Provide a quiz interface for the reading comprehension section. The user reads a passage and answers multiple-choice questions linked to it. The UI supports both learning mode (immediate feedback) and real mode (timed, no feedback), as defined in the quiz-session spec.
@@ -129,3 +127,10 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   reading-import). Status implemented → revised; the new behaviour is draft pending approval.
 - 2026-06-13: Passage image + OCR text display revision approved (Milestone 8). Status revised →
   approved; ready to implement.
+- 2026-06-13: **Implemented in Milestone 8.** `PassagePanel` renders the passage image (served by
+  the new `GET /api/questions/:id/passage-image` route + `getPassageImage` service) above the OCR
+  text, with an `onError` fallback to text-only (keyed by question id so it resets per question).
+  The dev seed now writes real placeholder PNGs into `MEDIA_DIR` so the path is exercised end-to-
+  end. Verified by e2e (image serves with `image/png`; 404 `PASSAGE_IMAGE_NOT_FOUND` for a
+  listening/unknown id; the image renders in the browser with `naturalWidth > 0`). Status
+  approved → implemented.

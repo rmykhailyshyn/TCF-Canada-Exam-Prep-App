@@ -4,7 +4,7 @@ import { ApiError } from '../lib/errors';
 import { fail, ok } from '../lib/envelope';
 import { parseDifficultyFilter, parseSectionFilter } from '../lib/export-import';
 import { exportQuestions, importQuestions } from '../services/export-import';
-import { getAudioFile, getTranscript } from '../services/questions';
+import { getAudioFile, getPassageImage, getTranscript } from '../services/questions';
 
 export const questionsRouter = Router();
 
@@ -100,6 +100,34 @@ questionsRouter.get('/:id/audio', async (req: Request, res: Response) => {
       res.setHeader('Content-Length', size);
       createReadStream(filePath).pipe(res);
     }
+  } catch (error) {
+    handle(res, error);
+  }
+});
+
+// spec: docs/specs/reading-quiz-ui.md §API contract GET /api/questions/:id/passage-image
+// Streams the original passage image so the reading UI can show it above the OCR'd text. Unknown
+// id / non-reading question / file missing on disk → a PASSAGE_IMAGE_NOT_FOUND 404, which the
+// client treats as "fall back to text-only" (reading-quiz-ui §Behaviour.3c). No range support —
+// images are small and loaded whole by the <img> element.
+questionsRouter.get('/:id/passage-image', async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) throw new ApiError('BAD_REQUEST', 'Invalid question id.');
+
+    const { filePath, contentType } = await getPassageImage(id);
+    if (!existsSync(filePath)) {
+      throw new ApiError(
+        'PASSAGE_IMAGE_NOT_FOUND',
+        `Passage image is missing on disk for question ${id}.`,
+        404,
+      );
+    }
+
+    const size = statSync(filePath).size;
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Length', size);
+    createReadStream(filePath).pipe(res);
   } catch (error) {
     handle(res, error);
   }

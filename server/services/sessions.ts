@@ -11,6 +11,7 @@ import {
   sequenceInBand,
 } from '../lib/bands';
 import { type Section, getTimeLimitMs } from '../config/exam';
+import { pickOne, shuffle } from '../lib/random';
 
 // spec: docs/specs/quiz-session.md §API contract
 // Business logic for session lifecycle. Services return plain typed values or throw ApiError;
@@ -73,26 +74,39 @@ export async function createSession(input: CreateSessionInput): Promise<CreateSe
     band = bandForSlug(input.difficulty)!;
   }
 
-  // Resolve the question set in fixed import order (quiz-session §Open questions: TCF uses a
-  // fixed order, so no shuffle).
+  // Load all questions in the section (ascending by sequence) plus their options up front. Options
+  // are needed both to detect a missing answer key and — in real mode — to draw the per-position
+  // pick only from questions that actually carry a key (quiz-session §Question selection.19–21).
   const sectionQuestions = await db
     .select()
     .from(questions)
     .where(eq(questions.section, section))
     .orderBy(asc(questions.sequence));
 
-  let resolved = sectionQuestions;
-
-  // Learning mode restricts to the selected difficulty band's sequence range.
-  if (band) {
-    resolved = resolved.filter((q) => sequenceInBand(q.sequence, band!));
+  const sectionIds = sectionQuestions.map((q) => q.id);
+  const allOptions = sectionIds.length
+    ? await db.select().from(options).where(inArray(options.questionId, sectionIds))
+    : [];
+  const optionsByQuestion = new Map<number, typeof allOptions>();
+  for (const opt of allOptions) {
+    const list = optionsByQuestion.get(opt.questionId) ?? [];
+    list.push(opt);
+    optionsByQuestion.set(opt.questionId, list);
   }
+  const isKeyed = (questionId: number): boolean =>
+    (optionsByQuestion.get(questionId) ?? []).some((o) => o.isCorrect);
 
-  // Optional retry filter (review-mode). In learning mode every id must fall within the band.
-  if (input.questionIds && input.questionIds.length > 0) {
-    const wanted = new Set(input.questionIds);
-    if (band) {
-      const inBandIds = new Set(resolved.map((q) => q.id));
+  let resolved: typeof sectionQuestions;
+
+  if (band) {
+    // Learning mode: the band's questions in RANDOM order (Behaviour.21). All band questions are
+    // kept (including multiple candidates that share a sequence position) — only the presentation
+    // order is shuffled, no per-position pruning.
+    let bandQuestions = sectionQuestions.filter((q) => sequenceInBand(q.sequence, band!));
+
+    // Optional retry filter (review-mode). Every supplied id must fall within the band.
+    if (input.questionIds && input.questionIds.length > 0) {
+      const inBandIds = new Set(bandQuestions.map((q) => q.id));
       const outOfBand = input.questionIds.filter((id) => !inBandIds.has(id));
       if (outOfBand.length > 0) {
         throw new ApiError(
@@ -100,35 +114,45 @@ export async function createSession(input: CreateSessionInput): Promise<CreateSe
           `Question(s) ${outOfBand.join(', ')} are not in the ${band.slug} band.`,
         );
       }
+      const wanted = new Set(input.questionIds);
+      bandQuestions = bandQuestions.filter((q) => wanted.has(q.id));
     }
-    resolved = resolved.filter((q) => wanted.has(q.id));
+
+    // Every band question must have an imported answer key (API contract — learning mode).
+    for (const q of bandQuestions) {
+      if (!isKeyed(q.id)) {
+        throw new ApiError('ANSWER_KEY_MISSING', `Question ${q.sequence} has no imported answer key.`);
+      }
+    }
+
+    resolved = shuffle(bandQuestions);
+  } else {
+    // Real mode: build the exam by drawing ONE random keyed question per occupied sequence
+    // position, then presenting them in ascending sequence order (Behaviour.19–20).
+    const keyedByPosition = new Map<number, typeof sectionQuestions>();
+    for (const q of sectionQuestions) {
+      if (!isKeyed(q.id)) continue;
+      const list = keyedByPosition.get(q.sequence) ?? [];
+      list.push(q);
+      keyedByPosition.set(q.sequence, list);
+    }
+
+    // Every occupied position (one holding any question) must have at least one keyed candidate,
+    // otherwise the exam can't be formed for that position (API contract — real mode).
+    const occupiedPositions = [...new Set(sectionQuestions.map((q) => q.sequence))].sort(
+      (a, b) => a - b,
+    );
+    for (const pos of occupiedPositions) {
+      if (!keyedByPosition.has(pos)) {
+        throw new ApiError('ANSWER_KEY_MISSING', `Question ${pos} has no imported answer key.`);
+      }
+    }
+
+    resolved = occupiedPositions.map((pos) => pickOne(keyedByPosition.get(pos)!));
   }
 
   if (resolved.length === 0) {
     throw new ApiError('ANSWER_KEY_MISSING', 'No questions are available for this selection.');
-  }
-
-  const questionIds = resolved.map((q) => q.id);
-  const allOptions = await db
-    .select()
-    .from(options)
-    .where(inArray(options.questionId, questionIds));
-
-  // Group options by question; reject if any resolved question has no correct option imported.
-  const optionsByQuestion = new Map<number, typeof allOptions>();
-  for (const opt of allOptions) {
-    const list = optionsByQuestion.get(opt.questionId) ?? [];
-    list.push(opt);
-    optionsByQuestion.set(opt.questionId, list);
-  }
-  for (const q of resolved) {
-    const opts = optionsByQuestion.get(q.id) ?? [];
-    if (!opts.some((o) => o.isCorrect)) {
-      throw new ApiError(
-        'ANSWER_KEY_MISSING',
-        `Question ${q.sequence} has no imported answer key.`,
-      );
-    }
   }
 
   // Load passages for the resolved questions (reading section).
@@ -241,30 +265,34 @@ export async function completeSession(
 
   const correct = results.filter((r) => r.isCorrect).length;
 
-  // `total` reflects the resolved set size (band size in learning, the section in real),
-  // recomputed from the section's questions (quiz-session §Results.13).
-  const sectionQuestions = await db
+  // `total` reflects the resolved set size (quiz-session §Results.13). Learning mode practises
+  // every band question (so the band's question count), while real mode is a one-question-per-
+  // position exam (so the number of DISTINCT occupied positions — multiple imports at the same
+  // position must never inflate the total or the points possible).
+  const sectionRows = await db
     .select({ sequence: questions.sequence })
     .from(questions)
     .where(eq(questions.section, session.section as Section));
 
-  let resolved = sectionQuestions;
-  if (session.mode === 'learning' && session.difficulty) {
-    const band = bandForSlug(session.difficulty);
-    if (band) {
-      resolved = resolved.filter((q) => sequenceInBand(q.sequence, band));
-    }
-  }
-  const total = resolved.length;
-
-  // Points only apply in real mode (learning tracks correct/total only — Behaviour.13).
+  let total: number;
   let pointsScored: number | null = null;
   let pointsPossible: number | null = null;
   if (session.mode === 'real') {
+    const positions = [...new Set(sectionRows.map((q) => q.sequence))];
+    total = positions.length;
     pointsScored = results
       .filter((r) => r.isCorrect)
       .reduce((sum, r) => sum + pointsForSequence(r.sequence), 0);
-    pointsPossible = resolved.reduce((sum, q) => sum + pointsForSequence(q.sequence), 0);
+    pointsPossible = positions.reduce((sum, pos) => sum + pointsForSequence(pos), 0);
+  } else {
+    let bandRows = sectionRows;
+    if (session.difficulty) {
+      const band = bandForSlug(session.difficulty);
+      if (band) {
+        bandRows = bandRows.filter((q) => sequenceInBand(q.sequence, band));
+      }
+    }
+    total = bandRows.length;
   }
 
   return { correct, total, pointsScored, pointsPossible };

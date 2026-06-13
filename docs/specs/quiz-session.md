@@ -1,11 +1,9 @@
 # Spec: Quiz Session
 
 ## Status
-approved
+implemented
 
-> The base session model (Milestone 2) is `implemented`. The **§Question selection and
-> ordering** behaviour (items 19–22) is a Milestone 8 revision, **approved 2026-06-13** and
-> ready to implement; status returns to `implemented` once the code ships.
+> Base session model: Milestone 2. **§Question selection and ordering** (items 19–22): Milestone 8.
 
 ## Goal
 Define the shared session model that underpins both reading and listening quiz modes.
@@ -275,3 +273,11 @@ _None._
   draft pending approval before implementation.
 - 2026-06-13: §Question selection and ordering revision approved (Milestone 8). Status revised →
   approved; ready to implement.
+- 2026-06-13: **Implemented in Milestone 8.** `createSession` now shuffles learning-mode band
+  questions and draws one random keyed question per occupied position in real mode (via the new
+  `server/lib/random.ts` shuffle/pickOne, unit-tested with an injectable RNG). **SDD Rule 4 — no
+  schema change:** the resolved set is not persisted; instead real-mode `total`/`pointsPossible`
+  in `completeSession` are computed from the section's DISTINCT sequence positions, so multiple
+  imports at one position no longer double-count (review/history already reconstruct from the
+  per-position `question_results`). Verified by e2e: real-mode reading returns 39 distinct
+  positions ascending; learning order varies across sessions. Status approved → implemented.

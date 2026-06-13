@@ -9,12 +9,21 @@ test('reading learning flow renders a passage and reveals feedback on confirm', 
   await page.getByRole('button', { name: /Reading/ }).click();
   await page.getByRole('button', { name: /Learning/ }).click();
   await page.getByRole('button', { name: /Beginner/ }).click();
-  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  await page.getByRole('button', { name: 'Start session', exact: true }).click();
 
   // spec: reading-quiz-ui §Layout.3–4 — passage panel + options below it.
   await expect(page.getByRole('heading', { name: 'Passage' })).toBeVisible();
   await expect(page.getByText('Listening · Learning')).toHaveCount(0);
   await expect(page.getByText(/Reading · Learning/)).toBeVisible();
+
+  // spec: reading-quiz-ui §Layout.3a — the original passage image renders above the OCR text. The
+  // dev seed writes real placeholder PNGs, so the image loads (naturalWidth > 0) rather than
+  // falling back to text-only.
+  const passageImage = page.getByRole('img', { name: 'Original passage document' });
+  await expect(passageImage).toBeVisible();
+  await expect
+    .poll(async () => passageImage.evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .toBeGreaterThan(0);
 
   // Select option A and confirm; learning mode reveals correct/incorrect feedback.
   await page.getByRole('button', { name: /^A / }).click();

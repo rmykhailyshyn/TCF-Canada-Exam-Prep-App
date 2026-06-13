@@ -34,7 +34,7 @@ export function QuizScreen({ session, config }: Props): JSX.Element {
       </header>
 
       <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-4 lg:grid-cols-2">
-        <PassagePanel passage={question.passage} />
+        <PassagePanel key={question.id} questionId={question.id} passage={question.passage} />
         <div className="min-h-0 overflow-y-auto">
           <QuestionPanel
             question={question}
