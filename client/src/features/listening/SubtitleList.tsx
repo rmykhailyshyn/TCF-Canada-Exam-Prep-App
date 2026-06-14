@@ -32,6 +32,7 @@ export function SubtitleList({ segments, activeIndex, onSeek }: Props): JSX.Elem
             <button
               ref={active ? activeRef : undefined}
               type="button"
+              lang="fr"
               onClick={() => onSeek(index)}
               aria-current={active ? 'true' : undefined}
               className={`w-full rounded-lg px-3 py-1.5 text-left text-sm leading-relaxed transition ${

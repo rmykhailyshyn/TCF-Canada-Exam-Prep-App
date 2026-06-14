@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  index,
   integer,
   pgTable,
   serial,
@@ -12,6 +13,11 @@ import {
 
 // Single source of truth for the database schema. Each table maps to the data model
 // defined in the corresponding feature spec; run `npm run db:generate` after any change.
+//
+// Indexes: Postgres auto-indexes primary keys and UNIQUE constraints but NOT plain foreign-key
+// columns. We add explicit indexes on the FK / filter columns that the session and player queries
+// join or filter on (most importantly question_results.session_id, joined on every history,
+// results, and review read). spec: docs/milestones.md §Milestone 9 (performance review).
 
 // spec: docs/specs/reading-import.md §Data model changes
 export const passages = pgTable('passages', {
@@ -37,6 +43,9 @@ export const questions = pgTable(
     // Idempotency key: one source file (PDF) yields many questions, unique by position.
     unique('questions_source_file_sequence_unique').on(table.sourceFile, table.sequence),
     check('questions_section_check', sql`${table.section} in ('reading', 'listening')`),
+    // Session creation filters the whole section by `section` before resolving the question set.
+    index('questions_section_idx').on(table.section),
+    index('questions_passage_id_idx').on(table.passageId),
   ],
 );
 
@@ -52,7 +61,11 @@ export const options = pgTable(
     text: text('text').notNull(),
     isCorrect: boolean('is_correct').notNull(),
   },
-  (table) => [check('options_label_check', sql`${table.label} in ('A', 'B', 'C', 'D')`)],
+  (table) => [
+    check('options_label_check', sql`${table.label} in ('A', 'B', 'C', 'D')`),
+    // Options are loaded by question_id for the resolved question set on every session start.
+    index('options_question_id_idx').on(table.questionId),
+  ],
 );
 
 // spec: docs/specs/listening-import.md §Data model changes
@@ -67,16 +80,21 @@ export const audioFiles = pgTable('audio_files', {
 });
 
 // spec: docs/specs/listening-import.md §Data model changes
-export const transcriptSegments = pgTable('transcript_segments', {
-  id: serial('id').primaryKey(),
-  questionId: integer('question_id')
-    .notNull()
-    .references(() => questions.id),
-  sequence: integer('sequence').notNull(),
-  text: text('text').notNull(),
-  startMs: integer('start_ms').notNull(),
-  endMs: integer('end_ms').notNull(),
-});
+export const transcriptSegments = pgTable(
+  'transcript_segments',
+  {
+    id: serial('id').primaryKey(),
+    questionId: integer('question_id')
+      .notNull()
+      .references(() => questions.id),
+    sequence: integer('sequence').notNull(),
+    text: text('text').notNull(),
+    startMs: integer('start_ms').notNull(),
+    endMs: integer('end_ms').notNull(),
+  },
+  // The player loads a question's segments by question_id, ordered by sequence.
+  (table) => [index('transcript_segments_question_id_idx').on(table.questionId)],
+);
 
 // spec: docs/specs/quiz-session.md §Data model changes
 export const sessions = pgTable(
@@ -118,6 +136,10 @@ export const questionResults = pgTable(
   },
   (table) => [
     check('question_results_chosen_label_check', sql`${table.chosenLabel} in ('A', 'B', 'C', 'D')`),
+    // Hot path: completion, history and review all filter/join question_results by session_id;
+    // scoring joins back to questions by question_id.
+    index('question_results_session_id_idx').on(table.sessionId),
+    index('question_results_question_id_idx').on(table.questionId),
   ],
 );
 

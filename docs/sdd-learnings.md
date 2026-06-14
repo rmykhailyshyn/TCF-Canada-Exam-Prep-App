@@ -218,3 +218,110 @@ scripts/lib, pure transforms are exported and tested" convention — established
 — absorbed a third external tool with zero architectural change. **Lesson:** a convention earns its
 keep the third time you apply it without thinking; the LLM provider was "just another CLI" because
 the seam for CLIs already existed.
+
+---
+
+## Milestone 8 — Randomized selection & ordering + reading passage image
+
+**A spec written without a data-model change forced the *better* implementation.** The M8 spec
+revision (random per-session selection: shuffle the learning band; draw one question per position in
+real mode) was deliberately authored with **no schema change** — the "Data model" section stayed
+empty. At implementation that constraint did real work. The naïve way to make a randomly-drawn exam
+"stable for review" is to persist the chosen set (a `session_questions` join table). But the existing
+`question_results` rows *already are* the per-session record (one row per answered position), so the
+only genuinely new need was getting real-mode `total`/`pointsPossible` right when a position has
+several imported candidates. That reduced to "count **distinct** sequence positions, not question
+rows" — a three-line change in `completeSession`, no migration, no backfill, review/history
+untouched. **Lesson:** the empty "Data model" section is a design assertion, not an omission. Holding
+it forces you to ask whether the data you'd add is already implied by data you have — here it was, and
+the spec's restraint is what surfaced that.
+
+**The feature's correctness was provable at the API layer; the UI fallout was the expensive part.**
+The two behaviours that *are* M8 — real mode returns 39 distinct ascending positions, learning order
+varies across sessions — are pinned by two short e2e API assertions that needed no browser. What cost
+the most was a *second-order* effect: shuffling learning order broke three listening e2e tests that
+had hard-coded "Q1 is shown first" (its options, its transcript phrases). The tests weren't wrong
+about the player; they were wrong to assume order. Making them order-tolerant (identify whichever
+question is on screen by its unique correct option, then act) is the shape a test should have had all
+along once order became non-deterministic. **Lesson:** a randomness feature's blast radius is every
+test that silently depended on determinism it never declared. Budget for converting "assumes a fixed
+order" tests, not just for the feature.
+
+**The deepest bug was in the *test environment*, and only real data exposed it.** The e2e suite ran
+against the shared dev database. That was invisibly fine until the developer imported real listening
+exams — several questions per position — at which point the seeded "Beginner band = 4 questions"
+assumption was false (it was 22), and the suite was non-deterministic in a way no code change could
+fix. The honest fix was structural: isolate e2e onto a dedicated `tcf_prep_e2e` database that
+global-setup creates, migrates and seeds, with the app launched against it. **Lesson:** "the suite
+seeds its own data" is only half of self-containment; the other half is *owning the database it seeds
+into*. A suite that writes its fixtures into a DB it shares with real data is deterministic only until
+the real data arrives — and SDD's specs say nothing about test-harness isolation, so this class of
+gap lives entirely outside the spec discipline and has to be caught by actually running the thing.
+
+**Polish surfaced two pre-existing defects the specs couldn't have caught — because they were
+*implementation* drift, not *spec* divergence.** (1) The dev seeds deleted questions without first
+deleting the `explanations` / `question_results` that reference them — a latent FK error that only
+fired once M7 explanations existed for seeded rows. (2) `listSessions` computed its "correct" count
+with no `is_correct` filter, so every history row read N/N; the spec said "correct count," the code
+quietly didn't. Both passed every gate (spec approved, types check, lint clean, prior tests green)
+because nothing *exercised* them with the right data. **Meta-lesson on the limits of SDD:** the spec
+gate catches *divergence from intent*; it does not catch *code that never matched the intent it cited
+and was never run against data that would tell*. Traceability comments point you at the right clause,
+but a comment that says `// spec: …correct count` sitting above a query that counts everything is the
+failure mode SDD can't see. Only an integrity check or an adversarial test does.
+
+---
+
+## Milestone 9 — Retrospective + polish: did SDD pay off?
+
+A verdict on the four questions this project set out to evaluate, with the evidence from M1–M8.
+
+**1. Does writing specs before code reduce rework?** *Yes, but indirectly — the reduction came from
+reuse, not from getting code right the first time.* Specs were confidently **wrong** about external
+artifacts more than once (rects-vs-curves in M2; the reading PDF's structure; the M7 provider pivot),
+so "spec first" did not prevent those reworks. What it did was make the *seams* generous: a
+section-agnostic PDF parser and session hook (M2) carried listening for free (M3); a parameterised
+`POST /api/sessions` (M2) made review-mode retry a zero-backend feature (M6); a CLI wrapper convention
+(M2/M3) absorbed the LLM provider (M7); an empty "Data model" section (M8) forced the no-migration
+design. The rework SDD avoids is **structural** rework — the kind where a missing parameter or a
+section-specific assumption forces you to re-cut an interface two milestones later. Local, factual
+rework (a wrong RGB value, a missing header) it does not prevent and shouldn't claim to.
+
+**2. Does the approval gate cause friction or prevent bad decisions?** *Prevent — and its real value
+showed up at exactly one moment per milestone, not continuously.* On a solo project the gate is not
+about a second person; it is a forced *checkpoint* that front-loads the expensive, hard-to-reverse
+decisions to when they are still prose. The clearest payoff was M7: three changes (provider, language,
+where output surfaces) requested while the spec was still `approved`-but-unbuilt cost one file edit
+instead of unwinding a wired-in abstraction. The gate's discipline — "draft → re-approve" for a pivot,
+"named default" for a reversible open question (M3), "out of scope, in writing" for a deferral —
+is what kept it from becoming a bottleneck. **The gate is friction proportioned to reversibility**,
+which is the right shape.
+
+**3. Are traceability comments useful, or noise?** *Useful while writing, and a double-edged sword
+while debugging.* Writing `// spec: …§Behaviour.N` repeatedly forced re-reading the exact clause and
+caught would-be divergences before they were typed (M2). But M8 exposed the limit: a traceability
+comment is an *assertion of intent*, and the `listSessions` "correct count" bug was a comment sitting
+truthfully above code that didn't do what the comment said. The comments are a high-signal index into
+the specs; they are **not** a verification that the code matches. Their honest value is navigation, not
+proof — pair them with integrity checks, never lean on them as evidence.
+
+**4. How well does this scale solo vs. to a team?** *Solo: clearly net-positive, because the specs are
+the externalised memory a solo dev otherwise keeps in their head and loses.* The revision histories
+("rects → curves, re-validated 27/437"; "supersedes review-mode §Behaviour.6") are the single best
+artifact the project produced — they make a decision's *why* legible months later. For a team the same
+artifacts would do more work (shared context, async review at the gate), but two team-specific stresses
+went **untested** here because author and approver were one person: genuine disagreement at the
+approval gate, and concurrent specs editing the same surface. The one concrete team-shaped hazard that
+*did* appear — two PRs (M8, M9) both editing `milestones.md` and the same specs — is a merge-conflict
+risk the gate does nothing about.
+
+**Where SDD was silent.** Three of this project's most expensive issues lived entirely outside the
+spec discipline and had to be caught by *running the system against real data*: e2e DB isolation, the
+seed FK-ordering bug, and the history correct-count bug (M8/M9). SDD governs the boundary between
+*intent* and *code*; it has nothing to say about the boundary between *code* and *reality* (does the
+PDF actually look like that? does the test DB actually contain what you think?). The project's best
+defence there was not a spec but a habit the specs *encouraged*: encode an **independent integrity
+check** (the weighted-score cross-check, the `idStable` assertion, the "39 distinct positions"
+e2e) so reality has a way to contradict you. **Final lesson:** specs are necessary and they paid for
+themselves, but the integrity checks they prompted — not the prose — are what actually pinned the
+behaviour down. SDD's contribution was making those checks the natural thing to write.

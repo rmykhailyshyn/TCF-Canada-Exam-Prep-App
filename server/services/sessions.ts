@@ -1,4 +1,4 @@
-import { asc, count, desc, eq, inArray, isNotNull } from 'drizzle-orm';
+import { asc, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { db } from '../db';
 import { explanations, options, passages, questionResults, questions, sessions } from '../db/schema';
 import { ApiError } from '../lib/errors';
@@ -323,21 +323,10 @@ export async function listSessions(): Promise<SessionSummary[]> {
 
   const sessionIds = completed.map((s) => s.id);
 
-  // Aggregate correct counts per session in one query.
-  const correctRows = await db
-    .select({ sessionId: questionResults.sessionId, correct: count() })
-    .from(questionResults)
-    .where(inArray(questionResults.sessionId, sessionIds))
-    .groupBy(questionResults.sessionId);
-
-  // Aggregate total counts per session (all recorded answers).
-  const totalRows = await db
-    .select({ sessionId: questionResults.sessionId, total: count() })
-    .from(questionResults)
-    .where(inArray(questionResults.sessionId, sessionIds))
-    .groupBy(questionResults.sessionId);
-
-  // Points per session require per-question scoring; done per-session from recorded results.
+  // One query for every recorded answer across the listed sessions; correct / total / points are
+  // all derived from it in memory. (Previously three queries, and the "correct" aggregate omitted
+  // the is_correct filter — so it equalled total and every history row read N/N.)
+  // spec: progress-tracking §Behaviour.6.
   const allResults = await db
     .select({
       sessionId: questionResults.sessionId,
@@ -348,8 +337,6 @@ export async function listSessions(): Promise<SessionSummary[]> {
     .innerJoin(questions, eq(questionResults.questionId, questions.id))
     .where(inArray(questionResults.sessionId, sessionIds));
 
-  const correctBySession = new Map(correctRows.map((r) => [r.sessionId, Number(r.correct)]));
-  const totalBySession = new Map(totalRows.map((r) => [r.sessionId, Number(r.total)]));
   const resultsBySession = new Map<number, typeof allResults>();
   for (const r of allResults) {
     const list = resultsBySession.get(r.sessionId) ?? [];
@@ -359,6 +346,8 @@ export async function listSessions(): Promise<SessionSummary[]> {
 
   return completed.map((s) => {
     const sessionResults = resultsBySession.get(s.id) ?? [];
+    const correct = sessionResults.filter((r) => r.isCorrect).length;
+    const total = sessionResults.length;
     let pointsScored: number | null = null;
     let pointsPossible: number | null = null;
     if (s.mode === 'real') {
@@ -376,8 +365,8 @@ export async function listSessions(): Promise<SessionSummary[]> {
       mode: s.mode,
       difficulty: s.difficulty ?? null,
       completedAt: s.completedAt!.toISOString(),
-      correct: correctBySession.get(s.id) ?? 0,
-      total: totalBySession.get(s.id) ?? 0,
+      correct,
+      total,
       pointsScored,
       pointsPossible,
       elapsedMs: s.elapsedMs ?? null,

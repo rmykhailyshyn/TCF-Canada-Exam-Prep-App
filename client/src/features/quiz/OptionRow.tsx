@@ -44,7 +44,7 @@ export function OptionRow({ label, text, state, disabled, onClick }: Props): JSX
         {label}
       </span>
       <span className="pt-0.5 text-slate-900">
-        {text || <span className="italic text-slate-400">(audio option)</span>}
+        {text ? <span lang="fr">{text}</span> : <span className="italic text-slate-400">(audio option)</span>}
       </span>
       {state === 'correct' && <span className="ml-auto pt-0.5 text-lg leading-none text-green-600">✓</span>}
       {state === 'wrong' && <span className="ml-auto pt-0.5 text-lg leading-none text-red-600">✗</span>}

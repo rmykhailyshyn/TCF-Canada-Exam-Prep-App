@@ -131,3 +131,31 @@ test('learning-mode question order is randomized across sessions', async ({ requ
   }
   expect(orders.size).toBeGreaterThan(1);
 });
+
+// spec: docs/specs/progress-tracking.md §Behaviour.6 — Milestone 9 regression: the history list's
+// `correct` count must reflect actual correctness, not equal `total`. (listSessions previously
+// counted all recorded answers for both, so every row read N/N.)
+test('history list reports correct < total for a partially-correct session', async ({ request }) => {
+  // Start a real reading exam and answer every question with 'A'. The seed's correct answers are a
+  // mix of labels, so a fixed 'A' yields some right and some wrong → 0 < correct < total.
+  const created = await request.post('/api/sessions', { data: { section: 'reading', mode: 'real' } });
+  const { sessionId, questions } = (await created.json()).data as {
+    sessionId: number;
+    questions: { id: number }[];
+  };
+  for (const q of questions) {
+    await request.post(`/api/sessions/${sessionId}/answers`, {
+      data: { questionId: q.id, chosenLabel: 'A' },
+    });
+  }
+  await request.post(`/api/sessions/${sessionId}/complete`, { data: { elapsedMs: 1000 } });
+
+  const list = await request.get('/api/sessions');
+  const row = ((await list.json()).data.sessions as { id: number; correct: number; total: number }[]).find(
+    (s) => s.id === sessionId,
+  );
+  expect(row).toBeTruthy();
+  expect(row!.total).toBe(questions.length);
+  expect(row!.correct).toBeGreaterThan(0);
+  expect(row!.correct).toBeLessThan(row!.total);
+});
