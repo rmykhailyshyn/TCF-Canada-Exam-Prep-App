@@ -29,8 +29,8 @@ export function PassagePanel({ questionId, passage }: Props): JSX.Element {
                 className="w-full rounded-xl border border-slate-200/80"
               />
             )}
-            {/* OCR'd text directly below the image (Behaviour.3a). */}
-            <p className="whitespace-pre-line text-[15px] leading-relaxed text-slate-700">
+            {/* OCR'd text directly below the image (Behaviour.3a). French content → lang="fr". */}
+            <p lang="fr" className="whitespace-pre-line text-[15px] leading-relaxed text-slate-700">
               {passage.text}
             </p>
           </div>

@@ -49,7 +49,9 @@ export function QuestionPanel({
       <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
         Question {question.sequence}
       </h2>
-      <p className="mt-1.5 text-lg font-medium leading-snug text-slate-900">{question.text}</p>
+      <p lang="fr" className="mt-1.5 text-lg font-medium leading-snug text-slate-900">
+        {question.text}
+      </p>
 
       <div className="mt-5 space-y-2.5">
         {question.options.map((opt) => (

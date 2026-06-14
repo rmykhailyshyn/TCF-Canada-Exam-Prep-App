@@ -183,11 +183,20 @@ fixed, and the listening specs made order-tolerant for the new learning shuffle.
 ---
 
 ## Milestone 9 — SDD retrospective + polish
-**Status:** not started
+**Status:** complete
 
-- [ ] Complete `docs/sdd-learnings.md` retrospective
-- [ ] UI polish pass
-- [ ] Performance review (DB queries, audio loading)
-- [ ] Final typecheck + lint + test pass
+- [x] Complete `docs/sdd-learnings.md` retrospective — added the Milestone 8 entry and a final synthesis answering the four "key questions under evaluation" (rework, the approval gate, traceability comments, solo-vs-team), plus a "where SDD was silent" section on the code-vs-reality boundary
+- [x] UI polish pass — tagged the French content (passage, question, options, subtitles) with `lang="fr"` so screen readers pronounce it correctly and hyphenation behaves (non-visual a11y/typography improvement)
+- [x] Performance review (DB queries, audio loading):
+  - Added explicit indexes on the foreign-key / filter columns Postgres does not auto-index — `question_results(session_id)` + `(question_id)`, `questions(section)` + `(passage_id)`, `options(question_id)`, `transcript_segments(question_id)` (migration `0001_known_war_machine.sql`). `session_id` is the hot one (joined on every completion, history and review read).
+  - Collapsed `listSessions` from three queries to one (correct/total/points all derived in memory) — which also **fixed a latent bug**: the "correct" aggregate omitted the `is_correct` filter, so every history row displayed N/N regardless of actual score.
+  - Audio loading was already range-aware streaming (`GET /api/questions/:id/audio`, HTTP 206) — reviewed, no change needed.
+- [x] Final typecheck + lint + test pass — `npm run typecheck`, `npm run lint`, `npm test` (88), `npm run build`, `npm run test:e2e` (14) all green
+
+**Note (out of scope, flagged):** `listSessions` and `getSession` report `total` as the number of
+*recorded answers*, while `completeSession` reports the full exam size — they diverge for an
+abandoned/timed-out real session. This is a pre-existing semantic inconsistency in the
+progress-tracking spec, not a polish item; left for a future spec revision rather than patched
+silently (SDD Rule 4).
 
 **Specs:** none (polish only)
