@@ -200,3 +200,83 @@ progress-tracking spec, not a polish item; left for a future spec revision rathe
 silently (SDD Rule 4).
 
 **Specs:** none (polish only)
+
+---
+
+## Milestone 10 — Writing section: tasks import + session/UI + LLM evaluation
+**Status:** draft
+
+Introduces the third exam section (TCF *Expression écrite*): three free-text tasks, a single
+60-minute real-mode limit, an untimed training mode with sample answers + templates + on-request
+Claude correction, and — in both modes — a score + feedback produced by the local Claude CLI on
+submit. Diverges from reading/listening in three ways the specs make explicit: free-text (not MCQ,
+so new tables and a per-task /20 + NCLC scoring shape, not the 699-point map); **request-time**
+server-side Claude CLI invocation (which llm-enrichment had scoped out); and an authored task bank
+imported from a **directory of markdown files** (no answer key, no OCR/Whisper).
+
+- [ ] Writing task import: `npm run import:writing -- --dir <path>` — discovers `*.md` task files
+  (front-matter + `## Prompt` / `## Sample answer` / `## Template`), idempotent on
+  `(source_file, task_number)`, skip-and-continue on malformed files, `--dry-run`; new `writing_tasks` table
+- [ ] Writing session: reuse the `sessions` table (`section = 'writing'`); training mode (single task
+  or all three, untimed, guidance shown) and real mode (all three, one 60-min budget from
+  `exam.config.json`, auto/manual submit); per-task draft autosave + submit; new `writing_responses`
+  table; `POST /api/writing/sessions`, `PUT/POST …/responses`, `…/correct`, `…/complete`, `GET …/:id`
+- [ ] Writing evaluation: request-time local Claude CLI wrapper in `server/services/` (reusing the
+  `scripts/lib/claude.ts` prompt/parse helpers) — scoring + feedback on submit (both modes), on-request
+  correction (training only, ephemeral); graceful per-call failure; new `writing_evaluations` table
+- [ ] Writing UI: section entry + mode/task selector, per-task textarea editor with live word counter,
+  single 60-min real-mode countdown (reused timer), training sample-answer/template panels + "Get
+  correction", per-task + overall results (score/20 + NCLC + feedback), read-only review
+- [ ] History: completed writing attempts retained (responses + per-task scores + feedback persisted)
+  and listed in the unified session history with an overall /20 average, for future review/analysis
+  (progress-tracking revision)
+- [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass
+
+**Specs:**
+- `docs/specs/writing-import.md` (draft)
+- `docs/specs/writing-session.md` (draft)
+- `docs/specs/writing-evaluation.md` (draft)
+- `docs/specs/writing-ui.md` (draft)
+- `docs/specs/progress-tracking.md` (revised — §Writing & speaking sessions, draft pending approval)
+
+---
+
+## Milestone 11 — Speaking section: tasks import + session/UI + Whisper transcription + LLM evaluation
+**Status:** draft
+
+Introduces the fourth exam section (TCF *Expression orale*): three spoken tasks the user answers by
+**recording their voice** in the browser. On submit, the audio is saved, **transcribed by the local
+Whisper CLI**, and the transcript is scored by the **local Claude CLI** (per-task /20 + NCLC level +
+feedback, acting as an *Expression orale* examiner). Mirrors Writing (Milestone 10) but differs in
+three ways: a **JSON** task import (`[{ task, question, answer }]`), **voice recording → Whisper →
+Claude** instead of typing, and **per-task TCF-authentic timing** (a prep phase before tasks 2 & 3).
+Adds **request-time Whisper transcription** on the server — which, like the listening import, is
+Apple-Silicon/macOS-only; the Claude scoring step is platform-agnostic.
+
+- [ ] Speaking task import: `npm run import:speaking -- --file <path.json>` — parses a JSON array of
+  `{ task, question, answer }`, idempotent on `(source_file, sequence)`, skip-and-continue + `--dry-run`;
+  new `speaking_tasks` table
+- [ ] Speaking session: reuse the `sessions` table (`section = 'speaking'`); training mode (single task
+  or all three, untimed, sample answer shown) and real mode (all three, per-task prep + recording limits
+  from a new `exam.config.json` `speaking` block, auto-stop recording); per-task recording capture +
+  submit; new `speaking_responses` table (audio path + transcript); the `/api/speaking/*` endpoints
+  incl. range-aware recording playback
+- [ ] Speaking evaluation: request-time `server/services/` wrapper reusing `scripts/lib/whisper.ts`
+  (transcription, `--language fr`) and `scripts/lib/claude.ts` (scoring + correction) — score + feedback
+  on submit (both modes), on-request correction on the transcript (training only, ephemeral); graceful
+  `TRANSCRIPTION_FAILED` / `EVALUATION_FAILED` / `CORRECTION_FAILED`; new `speaking_evaluations` table
+- [ ] Speaking UI: section entry + mode/task selector, in-browser MediaRecorder (mic permission,
+  record/stop/playback/re-record), per-task prep→record countdowns in real mode, training sample-answer
+  + transcript + "Get correction", per-task + overall results with audio playback (score/20 + NCLC +
+  feedback), read-only review
+- [ ] History: completed speaking attempts retained (recordings + transcripts + per-task scores +
+  feedback persisted) and listed in the unified session history with an overall /20 average, for future
+  review/analysis (shared progress-tracking revision with Milestone 10)
+- [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass
+
+**Specs:**
+- `docs/specs/speaking-import.md` (draft)
+- `docs/specs/speaking-session.md` (draft)
+- `docs/specs/speaking-evaluation.md` (draft)
+- `docs/specs/speaking-ui.md` (draft)
+- `docs/specs/progress-tracking.md` (revised — §Writing & speaking sessions, shared with Milestone 10)
