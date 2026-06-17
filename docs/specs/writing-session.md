@@ -1,7 +1,7 @@
 # Spec: Writing Session
 
 ## Status
-draft
+approved
 
 > Milestone 10. Session lifecycle for the Writing section. The scoring/feedback produced on submit
 > and the on-request correction are defined in the writing-evaluation spec; the editor and results
@@ -231,3 +231,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   retained with per-task scores + feedback and listed in the unified history; resolved the history
   open question and triggered the progress-tracking revision (Rule 4). (Tasks are already drawn at
   random from the imported task bank per §Task selection.)
+- 2026-06-17: Status moved draft → approved.

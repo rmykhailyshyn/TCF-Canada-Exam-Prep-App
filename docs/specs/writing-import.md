@@ -1,7 +1,7 @@
 # Spec: Writing Task Import
 
 ## Status
-draft
+approved
 
 > Milestone 10. First of the four Writing-section specs (import → session → evaluation → ui).
 
@@ -134,3 +134,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 
 ## Revision history
 - 2026-06-17: Initial draft (Milestone 10).
+- 2026-06-17: Status moved draft → approved.

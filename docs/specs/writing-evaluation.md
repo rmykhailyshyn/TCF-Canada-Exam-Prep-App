@@ -1,7 +1,7 @@
 # Spec: Writing Evaluation & Correction
 
 ## Status
-draft
+approved
 
 > Milestone 10. The local-Claude-CLI layer for the Writing section: scoring + feedback on submit
 > (both modes) and on-request correction (training only). Consumed by the writing-session endpoints
@@ -189,3 +189,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   a shared `server/lib/nclc.ts` helper) instead of being produced by the model; dropped the stored
   `level` column (derived on read, echoing the M8 "don't persist derived data" decision). Resolved the
   NCLC-fidelity open question.
+- 2026-06-17: Status moved draft → approved.

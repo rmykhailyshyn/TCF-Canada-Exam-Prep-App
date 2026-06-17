@@ -204,7 +204,7 @@ silently (SDD Rule 4).
 ---
 
 ## Milestone 10 — Writing section: tasks import + session/UI + LLM evaluation
-**Status:** draft
+**Status:** approved
 
 Introduces the third exam section (TCF *Expression écrite*): three free-text tasks, a single
 60-minute real-mode limit, an untimed training mode with sample answers + templates + on-request
@@ -233,11 +233,11 @@ imported from a **directory of markdown files** (no answer key, no OCR/Whisper).
 - [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass
 
 **Specs:**
-- `docs/specs/writing-import.md` (draft)
-- `docs/specs/writing-session.md` (draft)
-- `docs/specs/writing-evaluation.md` (draft)
-- `docs/specs/writing-ui.md` (draft)
-- `docs/specs/progress-tracking.md` (revised — §Writing & speaking sessions, draft pending approval)
+- `docs/specs/writing-import.md` (approved)
+- `docs/specs/writing-session.md` (approved)
+- `docs/specs/writing-evaluation.md` (approved)
+- `docs/specs/writing-ui.md` (approved)
+- `docs/specs/progress-tracking.md` (revised — §Writing & speaking sessions, draft pending approval; shared with Milestone 11)
 
 ---
 

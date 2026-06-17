@@ -1,7 +1,7 @@
 # Spec: Writing Quiz UI
 
 ## Status
-draft
+approved
 
 > Milestone 10. The React UI for the Writing section. Consumes the writing-session endpoints; the
 > scoring/feedback and correction shapes come from writing-evaluation. Mirrors the
@@ -120,3 +120,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 
 ## Revision history
 - 2026-06-17: Initial draft (Milestone 10).
+- 2026-06-17: Status moved draft → approved.
