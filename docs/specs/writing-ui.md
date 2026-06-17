@@ -52,8 +52,16 @@ on-request correction, and a results view showing each task's score (/20), NCLC 
 ### Editor
 5. Each presented task shows its `title`/`prompt`/`instructions` (French content `lang="fr"`) and a
    `<textarea>` for the response.
-6. A live **word counter** shows the current word count and the `minWords`–`maxWords` guidance,
-   visually indicating under/over range (informational only — it does not block submission).
+6. A live **word counter** is shown on screen with each task and updates **dynamically as the user
+   types** (and as characters are inserted via the on-screen keyboard — see virtual-keyboard spec). It
+   displays the **current word count over the task's target** in the form `current / target`
+   (e.g. `33 / 60` for a task whose target is 60 words), where the **target is the task's `minWords`**
+   (the minimum the response should reach). It visually indicates when the count is **below target**
+   and, when `maxWords` is set, when it **exceeds the maximum**. The counter is informational — it does
+   not block submission. (If a task has no `minWords`, the counter shows the current count alone.)
+6b. The Writing editor includes the **on-screen virtual keyboard** for French accents next to each
+    task's textarea (see virtual-keyboard spec, Milestone 12); inserted characters update this word
+    counter exactly like typed input.
 7. When more than one task is presented, the UI provides navigation between tasks (the user can move
    freely between them and back).
 8. The editor autosaves the current draft via `PUT …/responses/:taskNumber` (e.g. on pause/blur/task
@@ -102,7 +110,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [ ] The section picker offers Writing and routes to a start screen with Training/Real selection and (training) a single-vs-all-three task choice. (Behaviour.1, 2, 3)
 - [ ] Starting renders one `<textarea>` per returned task with prompt text tagged `lang="fr"`, and a `NO_TASKS` start error is shown clearly. (Behaviour.4, 5)
-- [ ] Each task shows a live word counter against `minWords`/`maxWords` that indicates under/over range without blocking submission. (Behaviour.6)
+- [ ] Each task shows a live, dynamically-updating word counter in `current / target` form (target = `minWords`, e.g. `33 / 60`) that indicates below-target and over-`maxWords` states without blocking submission, and updates on both typed and on-screen-keyboard input. (Behaviour.6, 6b)
 - [ ] Drafts autosave via `PUT …/responses/:taskNumber` with a save-state indicator; multi-task sessions allow navigation between tasks. (Behaviour.7, 8)
 - [ ] Training: sample-answer and template panels render from the payload (hidden when absent); "Get correction" renders corrected text + suggestions; "Submit for score" renders score/level/feedback and supports resubmission. (Behaviour.9, 10, 11)
 - [ ] Real: a single 60-minute countdown is shown; no guidance/correction is available; auto-submit on expiry and manual "Submit exam" both route to results with `elapsedMs` sent. (Behaviour.13, 14, 15)
@@ -121,3 +129,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 ## Revision history
 - 2026-06-17: Initial draft (Milestone 10).
 - 2026-06-17: Status moved draft → approved.
+- 2026-06-17: Refined the word counter (Behaviour.6) to a dynamic on-screen `current / target` display
+  (target = `minWords`, e.g. `33 / 60`), and added the on-screen French-accent keyboard integration
+  point (Behaviour.6b → virtual-keyboard spec, Milestone 12). Pre-implementation refinements directed
+  by the user; remains approved.

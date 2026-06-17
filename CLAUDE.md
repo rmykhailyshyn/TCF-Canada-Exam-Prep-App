@@ -179,6 +179,7 @@ Track detailed status in `docs/milestones.md`. High-level order:
 9. SDD retrospective + polish
 10. Writing section: free-text tasks import (markdown task bank) + session/UI (training mode with sample answers, templates & on-request Claude correction; real mode with a single 60-min limit) + per-task score/feedback via the local Claude CLI on submit
 11. Speaking section: spoken tasks import (JSON task bank) + session/UI with in-browser voice recording (training mode with sample answers & on-request correction; real mode with per-task TCF timing) + recordings transcribed by the local Whisper CLI and scored per task (/20 + NCLC + feedback) by the local Claude CLI on submit
+12. On-screen virtual keyboard for French accents (é, à, ç, …) in the Writing editor, mirroring the real TCF Canada exam software's keyboard (frontend input aid; both training and real modes)
 
 ---
 

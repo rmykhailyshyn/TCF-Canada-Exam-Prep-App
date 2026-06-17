@@ -224,9 +224,10 @@ imported from a **directory of markdown files** (no answer key, no OCR/Whisper).
 - [ ] Writing evaluation: request-time local Claude CLI wrapper in `server/services/` (reusing the
   `scripts/lib/claude.ts` prompt/parse helpers) — scoring + feedback on submit (both modes), on-request
   correction (training only, ephemeral); graceful per-call failure; new `writing_evaluations` table
-- [ ] Writing UI: section entry + mode/task selector, per-task textarea editor with live word counter,
-  single 60-min real-mode countdown (reused timer), training sample-answer/template panels + "Get
-  correction", per-task + overall results (score/20 + NCLC + feedback), read-only review
+- [ ] Writing UI: section entry + mode/task selector, per-task textarea editor with a live word counter
+  shown as `current / target` (target = task `minWords`, e.g. `33 / 60`), single 60-min real-mode
+  countdown (reused timer), training sample-answer/template panels + "Get correction", per-task +
+  overall results (score/20 + NCLC + feedback), read-only review
 - [ ] History: completed writing attempts retained (responses + per-task scores + feedback persisted)
   and listed in the unified session history with an overall /20 average, for future review/analysis
   (progress-tracking revision)
@@ -280,3 +281,28 @@ Apple-Silicon/macOS-only; the Claude scoring step is platform-agnostic.
 - `docs/specs/speaking-evaluation.md` (draft)
 - `docs/specs/speaking-ui.md` (draft)
 - `docs/specs/progress-tracking.md` (revised — §Writing & speaking sessions, shared with Milestone 10)
+
+---
+
+## Milestone 12 — On-screen virtual keyboard (French accents)
+**Status:** draft
+
+A frontend input aid for the Writing editor: an on-screen virtual keyboard / accent toolbar for typing
+French special characters (é, à, ç, …) by clicking, mirroring the keyboard provided by the real TCF
+Canada exam software. Removes the dependency on a French (AZERTY) physical keyboard or OS dead-key
+sequences. Presentation/input only — no backend, data-model, or scoring change; the already-approved
+writing-ui spec is unchanged (this spec augments its editor as the integration point).
+
+- [ ] Reusable on-screen accent keyboard component matching the real TCF software: the exact 16-key 4×4
+  grid (`é è ê ë / à â ù û / ô î ï ç / œ æ « »`) + a `⇧ abc` shift toggle to uppercase, inserted at the
+  caret of the focused input
+- [ ] Integrated into the Writing editor next to each task's textarea, in both training and real modes
+  (the real TCF software provides it during the timed exam)
+- [ ] Inserted characters behave like typed input: caret-aware insertion, native undo, and the same
+  word-count + autosave paths; toolbar interoperates with physical-keyboard typing
+- [ ] Accessible buttons (keyboard-operable, labelled); inserted French text stays within the
+  `lang="fr"` textarea content
+- [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass
+
+**Specs:**
+- `docs/specs/virtual-keyboard.md` (draft)
