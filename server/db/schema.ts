@@ -110,7 +110,8 @@ export const sessions = pgTable(
     elapsedMs: integer('elapsed_ms'),
   },
   (table) => [
-    check('sessions_section_check', sql`${table.section} in ('reading', 'listening')`),
+    // Writing sessions reuse this table (spec: docs/specs/writing-session.md §Data model changes).
+    check('sessions_section_check', sql`${table.section} in ('reading', 'listening', 'writing')`),
     check('sessions_mode_check', sql`${table.mode} in ('learning', 'real')`),
     check(
       'sessions_difficulty_check',
@@ -158,3 +159,74 @@ export const explanations = pgTable('explanations', {
   generatedBy: text('generated_by').notNull(),
   generatedAt: timestamp('generated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// spec: docs/specs/writing-import.md §Data model changes
+// The authored Writing task bank. Natural key (source_file, task_number) mirrors questions; a
+// task_number (1–3) may have multiple candidates that the per-session draw selects from.
+export const writingTasks = pgTable(
+  'writing_tasks',
+  {
+    id: serial('id').primaryKey(),
+    sourceFile: text('source_file').notNull(),
+    taskNumber: integer('task_number').notNull(),
+    title: text('title'),
+    prompt: text('prompt').notNull(),
+    instructions: text('instructions'),
+    minWords: integer('min_words'),
+    maxWords: integer('max_words'),
+    sampleAnswer: text('sample_answer'),
+    template: text('template'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('writing_tasks_source_file_task_number_unique').on(table.sourceFile, table.taskNumber),
+    check('writing_tasks_task_number_check', sql`${table.taskNumber} between 1 and 3`),
+    // Session creation filters/draws by task_number.
+    index('writing_tasks_task_number_idx').on(table.taskNumber),
+  ],
+);
+
+// spec: docs/specs/writing-session.md §Data model changes
+// One free-text response per task per writing session (drafts autosaved; submitted_at set on submit).
+export const writingResponses = pgTable(
+  'writing_responses',
+  {
+    id: serial('id').primaryKey(),
+    sessionId: integer('session_id')
+      .notNull()
+      .references(() => sessions.id),
+    writingTaskId: integer('writing_task_id')
+      .notNull()
+      .references(() => writingTasks.id),
+    taskNumber: integer('task_number').notNull(),
+    responseText: text('response_text').notNull().default(''),
+    wordCount: integer('word_count'),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }),
+  },
+  (table) => [
+    unique('writing_responses_session_task_unique').on(table.sessionId, table.taskNumber),
+    check('writing_responses_task_number_check', sql`${table.taskNumber} between 1 and 3`),
+    index('writing_responses_session_id_idx').on(table.sessionId),
+  ],
+);
+
+// spec: docs/specs/writing-evaluation.md §Data model changes
+// Claude's score (0–20) + feedback for one response. The NCLC level is NOT stored — it is derived
+// deterministically from `score` on read (writing-evaluation §Score → NCLC).
+export const writingEvaluations = pgTable(
+  'writing_evaluations',
+  {
+    id: serial('id').primaryKey(),
+    responseId: integer('response_id')
+      .notNull()
+      .unique()
+      .references(() => writingResponses.id),
+    score: integer('score').notNull(),
+    strengths: text('strengths').notNull(),
+    errors: text('errors').notNull(),
+    improvements: text('improvements').notNull(),
+    generatedBy: text('generated_by').notNull(),
+    generatedAt: timestamp('generated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [check('writing_evaluations_score_check', sql`${table.score} between 0 and 20`)],
+);

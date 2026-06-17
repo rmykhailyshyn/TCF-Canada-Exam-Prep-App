@@ -8,7 +8,9 @@ import { dirname, resolve } from 'node:path';
 export type Section = 'reading' | 'listening';
 
 type SectionConfig = { timeLimitMinutes: number; questionCount: number };
-type ExamConfig = { reading: SectionConfig; listening: SectionConfig };
+// spec: docs/specs/writing-session.md §Configuration.17 — writing has a single time limit and a task count.
+type WritingConfig = { timeLimitMinutes: number; taskCount: number };
+type ExamConfig = { reading: SectionConfig; listening: SectionConfig; writing: WritingConfig };
 
 let cached: ExamConfig | null = null;
 
@@ -25,4 +27,14 @@ export function getExamConfig(): ExamConfig {
 // spec: docs/specs/quiz-session.md §Real mode.8 — timer initialised from the configured limit.
 export function getTimeLimitMs(section: Section): number {
   return getExamConfig()[section].timeLimitMinutes * 60_000;
+}
+
+// spec: docs/specs/writing-session.md §Configuration.17 — the single 60-min real-mode budget.
+export function getWritingTimeLimitMs(): number {
+  return getExamConfig().writing.timeLimitMinutes * 60_000;
+}
+
+// spec: docs/specs/writing-session.md §Task selection — the number of writing tasks (3).
+export function getWritingTaskCount(): number {
+  return getExamConfig().writing.taskCount;
 }

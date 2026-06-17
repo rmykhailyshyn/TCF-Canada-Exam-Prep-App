@@ -8,6 +8,12 @@ import type { DifficultySlug } from '../lib/api';
 // spec: docs/specs/progress-tracking.md §Behaviour.4–8
 
 function scoreLabel(s: SessionSummary): string {
+  // spec: docs/specs/progress-tracking.md §Writing & speaking sessions — writing rows show the
+  // overall /20 average + tasks submitted, not correct/total.
+  if (s.section === 'writing') {
+    const time = s.elapsedMs !== null ? ` · ${formatClock(s.elapsedMs)}` : '';
+    return `${s.overallScore ?? 0} / 20 avg · ${s.tasksSubmitted ?? 0} tasks${time}`;
+  }
   if (s.mode === 'real') {
     const points =
       s.pointsScored !== null && s.pointsPossible !== null
@@ -18,6 +24,12 @@ function scoreLabel(s: SessionSummary): string {
   }
   const diff = s.difficulty ? `${bandName(s.difficulty as DifficultySlug)} · ` : '';
   return `${diff}${s.correct} / ${s.total} correct`;
+}
+
+// Writing's "learning" mode is presented as "Training" (spec: writing-session §Mode storage note).
+function modeLabel(s: SessionSummary): string {
+  if (s.section === 'writing' && s.mode === 'learning') return 'Training';
+  return s.mode;
 }
 
 export function HistoryPage(): JSX.Element {
@@ -58,14 +70,16 @@ export function HistoryPage(): JSX.Element {
               <li key={s.id}>
                 <button
                   type="button"
-                  onClick={() => navigate(`/history/${s.id}`)}
+                  onClick={() =>
+                    navigate(s.section === 'writing' ? `/writing/${s.id}` : `/history/${s.id}`)
+                  }
                   className="w-full rounded-xl border border-slate-200 bg-white px-5 py-4 text-left shadow-sm transition hover:border-sky-400 hover:shadow-md"
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <span className="font-medium text-slate-900 capitalize">{s.section}</span>
                       <span className="mx-2 text-slate-300">·</span>
-                      <span className="text-slate-600 capitalize">{s.mode}</span>
+                      <span className="text-slate-600 capitalize">{modeLabel(s)}</span>
                     </div>
                     <span className="text-xs text-slate-400 whitespace-nowrap">
                       {new Date(s.completedAt).toLocaleDateString()}

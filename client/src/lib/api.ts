@@ -102,6 +102,9 @@ export type SessionSummary = {
   total: number;
   pointsScored: number | null;
   pointsPossible: number | null;
+  // Writing sessions only (null for reading/listening): mean per-task /20 + answered-task count.
+  overallScore: number | null;
+  tasksSubmitted: number | null;
   elapsedMs: number | null;
 };
 
@@ -231,4 +234,131 @@ export function importQuestions(
   override: boolean,
 ): Promise<ImportSummary> {
   return request<ImportSummary>('/api/questions/import', { document, override });
+}
+
+// ============================================================================
+// Writing section (Milestone 10)
+// spec: docs/specs/writing-session.md §API contract + docs/specs/writing-evaluation.md
+// ============================================================================
+
+async function send<T>(method: 'PUT' | 'POST', path: string, body: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const envelope = (await res.json()) as Envelope<T>;
+  if (envelope.error) throw new ApiError(envelope.error.code, envelope.error.message);
+  return envelope.data;
+}
+
+export type WritingMode = 'learning' | 'real';
+
+export type WritingTask = {
+  taskId: number;
+  taskNumber: number;
+  title: string | null;
+  prompt: string;
+  instructions: string | null;
+  minWords: number | null;
+  maxWords: number | null;
+  sampleAnswer?: string | null;
+  template?: string | null;
+};
+
+export type CreateWritingSessionResult = {
+  sessionId: number;
+  mode: WritingMode;
+  tasks: WritingTask[];
+  timeLimitMs: number | null;
+};
+
+export type WritingFeedback = { strengths: string; errors: string; improvements: string };
+export type WritingEvaluation = { score: number; level: string; feedback: WritingFeedback };
+export type WritingCorrection = { correctedText: string; suggestions: string[] };
+
+export type WritingCompleteResult = {
+  tasks: { taskNumber: number; score: number | null; level: string | null }[];
+  overallScore: number;
+  submitted: number;
+};
+
+export type WritingTaskReview = {
+  taskNumber: number;
+  title: string | null;
+  prompt: string;
+  instructions: string | null;
+  minWords: number | null;
+  maxWords: number | null;
+  sampleAnswer: string | null;
+  template: string | null;
+  responseText: string;
+  wordCount: number | null;
+  submitted: boolean;
+  score: number | null;
+  level: string | null;
+  feedback: WritingFeedback | null;
+};
+
+export type WritingSessionDetail = {
+  session: {
+    id: number;
+    mode: string;
+    completedAt: string | null;
+    elapsedMs: number | null;
+    overallScore: number | null;
+    submitted: number;
+  };
+  tasks: WritingTaskReview[];
+};
+
+export function createWritingSession(
+  mode: WritingMode,
+  taskNumbers?: number[],
+): Promise<CreateWritingSessionResult> {
+  return request<CreateWritingSessionResult>('/api/writing/sessions', { mode, taskNumbers });
+}
+
+export function saveWritingDraft(
+  sessionId: number,
+  taskNumber: number,
+  text: string,
+): Promise<{ wordCount: number }> {
+  return send<{ wordCount: number }>(
+    'PUT',
+    `/api/writing/sessions/${sessionId}/responses/${taskNumber}`,
+    { text },
+  );
+}
+
+export function submitWritingResponse(
+  sessionId: number,
+  taskNumber: number,
+  text: string,
+): Promise<WritingEvaluation> {
+  return request<WritingEvaluation>(
+    `/api/writing/sessions/${sessionId}/responses/${taskNumber}/submit`,
+    { text },
+  );
+}
+
+export function requestWritingCorrection(
+  sessionId: number,
+  taskNumber: number,
+  text: string,
+): Promise<WritingCorrection> {
+  return request<WritingCorrection>(`/api/writing/sessions/${sessionId}/correct/${taskNumber}`, {
+    text,
+  });
+}
+
+export function completeWritingSession(
+  sessionId: number,
+  elapsedMs: number | null,
+): Promise<WritingCompleteResult> {
+  return request<WritingCompleteResult>(`/api/writing/sessions/${sessionId}/complete`, { elapsedMs });
+}
+
+export function fetchWritingSession(sessionId: number): Promise<WritingSessionDetail> {
+  return get<WritingSessionDetail>(`/api/writing/sessions/${sessionId}`);
 }

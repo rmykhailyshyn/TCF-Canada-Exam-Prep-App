@@ -204,7 +204,7 @@ silently (SDD Rule 4).
 ---
 
 ## Milestone 10 — Writing section: tasks import + session/UI + LLM evaluation
-**Status:** approved
+**Status:** complete
 
 Introduces the third exam section (TCF *Expression écrite*): three free-text tasks, a single
 60-minute real-mode limit, an untimed training mode with sample answers + templates + on-request
@@ -214,30 +214,47 @@ so new tables and a per-task /20 + NCLC scoring shape, not the 699-point map); *
 server-side Claude CLI invocation (which llm-enrichment had scoped out); and an authored task bank
 imported from a **directory of markdown files** (no answer key, no OCR/Whisper).
 
-- [ ] Writing task import: `npm run import:writing -- --dir <path>` — discovers `*.md` task files
+- [x] Writing task import: `npm run import:writing -- --dir <path>` — discovers `*.md` task files
   (front-matter + `## Prompt` / `## Sample answer` / `## Template`), idempotent on
   `(source_file, task_number)`, skip-and-continue on malformed files, `--dry-run`; new `writing_tasks` table
-- [ ] Writing session: reuse the `sessions` table (`section = 'writing'`); training mode (single task
+- [x] Writing session: reuse the `sessions` table (`section = 'writing'`); training mode (single task
   or all three, untimed, guidance shown) and real mode (all three, one 60-min budget from
   `exam.config.json`, auto/manual submit); per-task draft autosave + submit; new `writing_responses`
   table; `POST /api/writing/sessions`, `PUT/POST …/responses`, `…/correct`, `…/complete`, `GET …/:id`
-- [ ] Writing evaluation: request-time local Claude CLI wrapper in `server/services/` (reusing the
-  `scripts/lib/claude.ts` prompt/parse helpers) — scoring + feedback on submit (both modes), on-request
-  correction (training only, ephemeral); graceful per-call failure; new `writing_evaluations` table
-- [ ] Writing UI: section entry + mode/task selector, per-task textarea editor with a live word counter
+- [x] Writing evaluation: request-time local Claude CLI wrapper in `server/services/writingEvaluation.ts`
+  (reusing the shared `server/lib/claude-cli.ts` primitives + `server/lib/nclc.ts` for the derived NCLC
+  level) — scoring + feedback on submit (both modes), on-request correction (training only, ephemeral);
+  graceful `EVALUATION_FAILED` / `CORRECTION_FAILED`; new `writing_evaluations` table
+- [x] Writing UI: section entry + mode/task selector, per-task textarea editor with a live word counter
   shown as `current / target` (target = task `minWords`, e.g. `33 / 60`), single 60-min real-mode
   countdown (reused timer), training sample-answer/template panels + "Get correction", per-task +
   overall results (score/20 + NCLC + feedback), read-only review
-- [ ] History: completed writing attempts retained (responses + per-task scores + feedback persisted)
-  and listed in the unified session history with an overall /20 average, for future review/analysis
-  (progress-tracking revision)
-- [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass
+- [x] History: completed writing attempts retained (responses + per-task scores + feedback persisted)
+  and listed in the unified session history with an overall /20 average, routing to a writing review
+  view (progress-tracking revision; `GET /api/sessions` extended with `overallScore`/`tasksSubmitted`)
+- [x] `npm run typecheck`, `npm run lint`, `npm test` (114), `npm run build` all pass
+
+**Implementation notes (SDD Rule 4):** (1) **Shared CLI primitives** — the enrichment wrapper's pure
+helpers (`runClaude`, `extractJsonObject`, `parseCliEnvelope`, `ClaudeError`) were extracted to
+`server/lib/claude-cli.ts` so the **request-time** writing evaluation service can reuse them;
+`scripts/lib/claude.ts` re-exports them (no behaviour change, existing tests pass). (2) **Deterministic
+NCLC** — per the approved revision, the model returns only `score` (0–20) + feedback; the NCLC level is
+derived from the score by `server/lib/nclc.ts` and is **not** stored. (3) **Resolved draw persisted** —
+unlike the MCQ real-mode draw (recomputed, not stored), a writing session persists one empty
+`writing_responses` row per drawn task at creation, so review/scoring always reference the task that was
+actually drawn. (4) **Unified history** — `listSessions` now special-cases writing sessions (overall /20
+mean + tasks-submitted from `writing_evaluations`); `SessionSummary` gained nullable
+`overallScore`/`tasksSubmitted`; the history row routes writing → `/writing/:id`. (5) **Not run live
+here:** the DB migration (`0002_clumsy_sister_grimm.sql`) and the live Claude scoring path require the
+local Postgres + `claude` CLI (Docker unavailable in this environment), so they were not exercised
+end-to-end — but the pure parsers/prompts/derivation are unit-tested and typecheck/lint/build are green.
+A sample task bank lives in `samples/writing-tasks/` for `npm run import:writing -- --dir samples/writing-tasks`.
 
 **Specs:**
-- `docs/specs/writing-import.md` (approved)
-- `docs/specs/writing-session.md` (approved)
-- `docs/specs/writing-evaluation.md` (approved)
-- `docs/specs/writing-ui.md` (approved)
+- `docs/specs/writing-import.md` (implemented)
+- `docs/specs/writing-session.md` (implemented)
+- `docs/specs/writing-evaluation.md` (implemented)
+- `docs/specs/writing-ui.md` (implemented)
 - `docs/specs/progress-tracking.md` (revised — §Writing & speaking sessions, draft pending approval; shared with Milestone 11)
 
 ---

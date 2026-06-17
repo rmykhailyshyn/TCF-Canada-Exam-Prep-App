@@ -1,7 +1,7 @@
 # Spec: Writing Task Import
 
 ## Status
-approved
+implemented
 
 > Milestone 10. First of the four Writing-section specs (import → session → evaluation → ui).
 

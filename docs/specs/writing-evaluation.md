@@ -1,7 +1,7 @@
 # Spec: Writing Evaluation & Correction
 
 ## Status
-approved
+implemented
 
 > Milestone 10. The local-Claude-CLI layer for the Writing section: scoring + feedback on submit
 > (both modes) and on-request correction (training only). Consumed by the writing-session endpoints
