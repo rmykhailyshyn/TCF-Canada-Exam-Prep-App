@@ -1,7 +1,7 @@
 # Spec: Speaking Quiz UI
 
 ## Status
-approved
+implemented
 
 > Milestone 11. The React UI for the Speaking section. Consumes the speaking-session endpoints; the
 > transcript/score/feedback and correction shapes come from speaking-evaluation. Reuses the listening
@@ -125,3 +125,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 ## Revision history
 - 2026-06-17: Initial draft (Milestone 11).
 - 2026-06-18: Approved (Milestone 11).
+- 2026-06-18: Implemented — `client/src/features/speaking/` (`useSpeakingSession`, `SpeakingSetup`, `SpeakingSession`, `SpeakingRecorder`, `SpeakingResults`) + `SpeakingPage`/`SpeakingReviewPage`; MediaRecorder MIME negotiated to `audio/webm;codecs=opus`; auto-advance in real mode; reuses the quiz `CountdownTimer`/`ConfirmDialog`. Speaking entry added to the Home nav (full section picker is Milestone 12).

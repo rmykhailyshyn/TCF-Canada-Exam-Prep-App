@@ -260,7 +260,7 @@ A sample task bank lives in `samples/writing-tasks/` for `npm run import:writing
 ---
 
 ## Milestone 11 — Speaking section: tasks import + session/UI + Whisper transcription + LLM evaluation
-**Status:** approved
+**Status:** implemented
 
 Introduces the fourth exam section (TCF *Expression orale*): three spoken tasks the user answers by
 **recording their voice** in the browser. On submit, the audio is saved, **transcribed by the local
@@ -271,32 +271,32 @@ Claude** instead of typing, and **per-task TCF-authentic timing** (a prep phase 
 Adds **request-time Whisper transcription** on the server — which, like the listening import, is
 Apple-Silicon/macOS-only; the Claude scoring step is platform-agnostic.
 
-- [ ] Speaking task import: `npm run import:speaking -- --file <path.json>` — parses a JSON array of
+- [x] Speaking task import: `npm run import:speaking -- --file <path.json>` — parses a JSON array of
   `{ task, question, answer }`, idempotent on `(source_file, sequence)`, skip-and-continue + `--dry-run`;
   new `speaking_tasks` table
-- [ ] Speaking session: reuse the `sessions` table (`section = 'speaking'`); training mode (single task
+- [x] Speaking session: reuse the `sessions` table (`section = 'speaking'`); training mode (single task
   or all three, untimed, sample answer shown) and real mode (all three, per-task prep + recording limits
   from a new `exam.config.json` `speaking` block, auto-stop recording); per-task recording capture +
   submit; new `speaking_responses` table (audio path + transcript); the `/api/speaking/*` endpoints
   incl. range-aware recording playback
-- [ ] Speaking evaluation: request-time `server/services/` wrapper reusing `scripts/lib/whisper.ts`
+- [x] Speaking evaluation: request-time `server/services/` wrapper reusing `scripts/lib/whisper.ts`
   (transcription, `--language fr`) and `scripts/lib/claude.ts` (scoring + correction) — score + feedback
   on submit (both modes), on-request correction on the transcript (training only, ephemeral); graceful
   `TRANSCRIPTION_FAILED` / `EVALUATION_FAILED` / `CORRECTION_FAILED`; new `speaking_evaluations` table
-- [ ] Speaking UI: section entry + mode/task selector, in-browser MediaRecorder (mic permission,
+- [x] Speaking UI: section entry + mode/task selector, in-browser MediaRecorder (mic permission,
   record/stop/playback/re-record), per-task prep→record countdowns in real mode, training sample-answer
   + transcript + "Get correction", per-task + overall results with audio playback (score/20 + NCLC +
   feedback), read-only review
-- [ ] History: completed speaking attempts retained (recordings + transcripts + per-task scores +
+- [x] History: completed speaking attempts retained (recordings + transcripts + per-task scores +
   feedback persisted) and listed in the unified session history with an overall /20 average, for future
   review/analysis (shared progress-tracking revision with Milestone 10)
 - [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass
 
 **Specs:**
-- `docs/specs/speaking-import.md` (approved)
-- `docs/specs/speaking-session.md` (approved)
-- `docs/specs/speaking-evaluation.md` (approved)
-- `docs/specs/speaking-ui.md` (approved)
+- `docs/specs/speaking-import.md` (implemented)
+- `docs/specs/speaking-session.md` (implemented)
+- `docs/specs/speaking-evaluation.md` (implemented)
+- `docs/specs/speaking-ui.md` (implemented)
 - `docs/specs/progress-tracking.md` (revised — §Writing & speaking sessions, shared with Milestone 10)
 
 ---

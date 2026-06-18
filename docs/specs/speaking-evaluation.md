@@ -1,7 +1,7 @@
 # Spec: Speaking Transcription & Evaluation
 
 ## Status
-approved
+implemented
 
 > Milestone 11. The request-time CLI layer for the Speaking section: **Whisper transcription** of a
 > recording, **Claude scoring + feedback** on submit (both modes), and **on-request correction**
@@ -193,3 +193,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   writing-evaluation §Score → NCLC map (`server/lib/nclc.ts`), not produced by the model; dropped the
   stored `level` column. Resolved the NCLC-fidelity open question.
 - 2026-06-18: Approved (Milestone 11).
+- 2026-06-18: Implemented — `server/services/speakingTranscription.ts` (reuses `scripts/lib/whisper.ts`) + `server/services/speakingEvaluation.ts` (reuses `server/lib/claude-cli.ts`; NCLC derived via `server/lib/nclc.ts`). Recording saved as-is (browser webm/opus); mlx_whisper ingests it via its bundled ffmpeg — no separate transcode step.

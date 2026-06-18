@@ -7,6 +7,8 @@ import {
   questionResults,
   questions,
   sessions,
+  speakingEvaluations,
+  speakingResponses,
   writingEvaluations,
   writingResponses,
 } from '../db/schema';
@@ -362,10 +364,19 @@ export async function listSessions(): Promise<SessionSummary[]> {
   const writingBySession = await loadWritingAggregates(
     completed.filter((s) => s.section === 'writing').map((s) => s.id),
   );
+  // spec: docs/specs/speaking-session.md §Behaviour.17 — speaking rows carry the same overall /20
+  // average + tasks-submitted shape as writing (no correct/total/points).
+  const speakingBySession = await loadSpeakingAggregates(
+    completed.filter((s) => s.section === 'speaking').map((s) => s.id),
+  );
 
   return completed.map((s) => {
-    if (s.section === 'writing') {
-      const agg = writingBySession.get(s.id) ?? { overallScore: 0, tasksSubmitted: 0 };
+    if (s.section === 'writing' || s.section === 'speaking') {
+      const agg =
+        (s.section === 'writing' ? writingBySession : speakingBySession).get(s.id) ?? {
+          overallScore: 0,
+          tasksSubmitted: 0,
+        };
       return {
         id: s.id,
         section: s.section,
@@ -428,6 +439,39 @@ async function loadWritingAggregates(
     .from(writingResponses)
     .leftJoin(writingEvaluations, eq(writingEvaluations.responseId, writingResponses.id))
     .where(inArray(writingResponses.sessionId, sessionIds));
+
+  const bySession = new Map<number, (number | null)[]>();
+  for (const r of rows) {
+    const list = bySession.get(r.sessionId) ?? [];
+    list.push(r.score ?? null);
+    bySession.set(r.sessionId, list);
+  }
+
+  for (const [sessionId, scores] of bySession) {
+    const tasksSubmitted = scores.filter((s) => s != null).length;
+    const sum = scores.reduce<number>((acc, s) => acc + (s ?? 0), 0);
+    const overallScore = scores.length ? Math.round(sum / scores.length) : 0;
+    out.set(sessionId, { overallScore, tasksSubmitted });
+  }
+  return out;
+}
+
+// Per speaking session: the mean of per-task /20 scores (unscored tasks counting 0) and the number
+// of scored tasks — the same shape as writing. spec: docs/specs/speaking-session.md §Behaviour.17.
+async function loadSpeakingAggregates(
+  sessionIds: number[],
+): Promise<Map<number, { overallScore: number; tasksSubmitted: number }>> {
+  const out = new Map<number, { overallScore: number; tasksSubmitted: number }>();
+  if (sessionIds.length === 0) return out;
+
+  const rows = await db
+    .select({
+      sessionId: speakingResponses.sessionId,
+      score: speakingEvaluations.score,
+    })
+    .from(speakingResponses)
+    .leftJoin(speakingEvaluations, eq(speakingEvaluations.responseId, speakingResponses.id))
+    .where(inArray(speakingResponses.sessionId, sessionIds));
 
   const bySession = new Map<number, (number | null)[]>();
   for (const r of rows) {

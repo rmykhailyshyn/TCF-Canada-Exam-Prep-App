@@ -8,9 +8,9 @@ import type { DifficultySlug } from '../lib/api';
 // spec: docs/specs/progress-tracking.md §Behaviour.4–8
 
 function scoreLabel(s: SessionSummary): string {
-  // spec: docs/specs/progress-tracking.md §Writing & speaking sessions — writing rows show the
-  // overall /20 average + tasks submitted, not correct/total.
-  if (s.section === 'writing') {
+  // spec: docs/specs/progress-tracking.md §Writing & speaking sessions — writing/speaking rows show
+  // the overall /20 average + tasks submitted, not correct/total.
+  if (s.section === 'writing' || s.section === 'speaking') {
     const time = s.elapsedMs !== null ? ` · ${formatClock(s.elapsedMs)}` : '';
     return `${s.overallScore ?? 0} / 20 avg · ${s.tasksSubmitted ?? 0} tasks${time}`;
   }
@@ -26,9 +26,10 @@ function scoreLabel(s: SessionSummary): string {
   return `${diff}${s.correct} / ${s.total} correct`;
 }
 
-// Writing's "learning" mode is presented as "Training" (spec: writing-session §Mode storage note).
+// Writing/speaking "learning" mode is presented as "Training" (spec: writing-session +
+// speaking-session §Mode storage note).
 function modeLabel(s: SessionSummary): string {
-  if (s.section === 'writing' && s.mode === 'learning') return 'Training';
+  if ((s.section === 'writing' || s.section === 'speaking') && s.mode === 'learning') return 'Training';
   return s.mode;
 }
 
@@ -71,7 +72,13 @@ export function HistoryPage(): JSX.Element {
                 <button
                   type="button"
                   onClick={() =>
-                    navigate(s.section === 'writing' ? `/writing/${s.id}` : `/history/${s.id}`)
+                    navigate(
+                      s.section === 'writing'
+                        ? `/writing/${s.id}`
+                        : s.section === 'speaking'
+                          ? `/speaking/${s.id}`
+                          : `/history/${s.id}`,
+                    )
                   }
                   className="w-full rounded-xl border border-slate-200 bg-white px-5 py-4 text-left shadow-sm transition hover:border-sky-400 hover:shadow-md"
                 >

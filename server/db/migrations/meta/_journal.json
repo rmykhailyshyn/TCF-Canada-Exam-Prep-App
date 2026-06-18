@@ -22,6 +22,13 @@
       "when": 1781736375846,
       "tag": "0002_clumsy_sister_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781817765827,
+      "tag": "0003_new_shinko_yamashiro",
+      "breakpoints": true
     }
   ]
 }

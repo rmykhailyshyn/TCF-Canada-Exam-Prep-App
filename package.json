@@ -27,6 +27,7 @@
     "transcribe": "tsx scripts/transcribe.ts",
     "enrich": "tsx scripts/enrich.ts",
     "import:writing": "tsx scripts/import-writing.ts",
+    "import:speaking": "tsx scripts/import-speaking.ts",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

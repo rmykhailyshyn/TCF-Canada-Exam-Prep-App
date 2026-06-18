@@ -325,3 +325,29 @@ check** (the weighted-score cross-check, the `idStable` assertion, the "39 disti
 e2e) so reality has a way to contradict you. **Final lesson:** specs are necessary and they paid for
 themselves, but the integrity checks they prompted — not the prose — are what actually pinned the
 behaviour down. SDD's contribution was making those checks the natural thing to write.
+
+## Milestone 11 — Speaking section (the "parallel section" stress test)
+
+Milestone 11 was the strongest evidence yet for one specific SDD payoff: **specs as a reuse map.**
+Speaking is structurally a sibling of Writing (M10) — sessions, per-task draw, /20 + NCLC + feedback,
+training-vs-real — so almost every file had a named analog (`writing.ts` → `speaking.ts`,
+`writingEvaluation.ts` → `speakingEvaluation.ts`, `useWritingSession` → `useSpeakingSession`). Because
+the four specs were written *before* the M10 code was treated as a template, the diff between the two
+sections was legible up front: same shape, three deliberate differences (JSON import not markdown;
+audio → Whisper → Claude not typed text; per-task two-phase timing not one global clock). The spec
+made the *deltas* the thing to think about and let the rest be mechanical. Rework was near-zero.
+
+Two friction points worth recording:
+
+- **The spec resolved a decision the code would otherwise have fumbled.** `import:speaking` takes
+  `--file` (one JSON doc), not `--dir` like `import:writing` — a small divergence that's obvious in the
+  spec and would have been an easy copy-paste bug without it. Same for `sequence` being 0-based: the
+  spec flagged it as an open question and forced a choice before a line was written.
+- **SDD is still silent on the code↔reality boundary, and here that boundary is a hardware one.**
+  Whisper + Claude are Apple-Silicon/macOS-only, so on the Windows dev box the *spoken-answer →
+  transcript → score* path cannot actually run. The specs say what should happen; they cannot tell you
+  whether `mlx_whisper` ingests a browser `webm/opus` blob. That open question (transcode or not) is
+  marked in speaking-evaluation but is only truly closeable by running it on the target hardware — the
+  same "does reality match?" gap M9 called out, now wearing a platform hat. The mitigation was the M9
+  habit: keep the pure, testable seams (parser, prompt builders, JSON parsers) on the near side of the
+  CLI boundary so the untestable part is as small as possible.

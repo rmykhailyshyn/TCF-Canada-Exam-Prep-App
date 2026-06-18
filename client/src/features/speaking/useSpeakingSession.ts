@@ -1,0 +1,363 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ApiError,
+  type SpeakingCompleteResult,
+  type SpeakingCorrection,
+  type SpeakingEvaluation,
+  type SpeakingTask,
+  type TaskTiming,
+  completeSpeakingSession,
+  createSpeakingSession,
+  requestSpeakingCorrection,
+  submitSpeakingResponse,
+  uploadSpeakingRecording,
+} from '../../lib/api';
+import { type SpeakingConfig, preferredAudioMime } from './types';
+
+// spec: docs/specs/speaking-session.md + docs/specs/speaking-ui.md
+// Drives a speaking session: create, in-browser recording (getUserMedia + MediaRecorder), upload +
+// transcription, training submit/correct, and the real-mode two-phase (prep → record) per-task
+// timers with auto-stop and auto-advance. Mirrors useWritingSession but with audio instead of text.
+// Mutually-referencing callbacks (recorder onstop → upload → advance) are routed through refs so the
+// MediaRecorder callback never captures a stale `sessionId`.
+
+export type SpeakingStatus = 'loading' | 'error' | 'active' | 'finished';
+
+// Real-mode per-task phase: prep countdown (recording disabled) → recording countdown → uploading.
+export type RealPhase = 'prep' | 'recording' | 'uploading';
+
+export type LocalRecording = { url: string };
+
+export type SpeakingSession = {
+  status: SpeakingStatus;
+  error: string | null;
+  sessionId: number | null;
+  mode: SpeakingConfig['mode'];
+  tasks: SpeakingTask[];
+  timing: TaskTiming[] | null;
+  // Per-task client state, keyed by taskNumber.
+  recordings: Record<number, LocalRecording>;
+  transcripts: Record<number, string>;
+  evaluations: Record<number, SpeakingEvaluation>;
+  corrections: Record<number, SpeakingCorrection>;
+  uploading: Record<number, boolean>;
+  taskError: Record<number, string>;
+  recordingTask: number | null;
+  busyTask: number | null;
+  micError: string | null;
+  // Real-mode orchestration.
+  currentIndex: number;
+  realPhase: RealPhase;
+  phaseRemainingMs: number | null;
+  results: SpeakingCompleteResult | null;
+  elapsedMs: number | null;
+  // Actions.
+  startRecording: (taskNumber: number) => void;
+  stopRecording: () => void;
+  submit: (taskNumber: number) => void;
+  correct: (taskNumber: number) => void;
+  finish: () => void;
+  submitExam: () => void;
+};
+
+export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
+  const [status, setStatus] = useState<SpeakingStatus>('loading');
+  const [error, setError] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<number | null>(null);
+  const [tasks, setTasks] = useState<SpeakingTask[]>([]);
+  const [timing, setTiming] = useState<TaskTiming[] | null>(null);
+  const [recordings, setRecordings] = useState<Record<number, LocalRecording>>({});
+  const [transcripts, setTranscripts] = useState<Record<number, string>>({});
+  const [evaluations, setEvaluations] = useState<Record<number, SpeakingEvaluation>>({});
+  const [corrections, setCorrections] = useState<Record<number, SpeakingCorrection>>({});
+  const [uploading, setUploading] = useState<Record<number, boolean>>({});
+  const [taskError, setTaskError] = useState<Record<number, string>>({});
+  const [recordingTask, setRecordingTask] = useState<number | null>(null);
+  const [busyTask, setBusyTask] = useState<number | null>(null);
+  const [micError, setMicError] = useState<string | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [realPhase, setRealPhase] = useState<RealPhase>('prep');
+  const [phaseRemainingMs, setPhaseRemainingMs] = useState<number | null>(null);
+  const [results, setResults] = useState<SpeakingCompleteResult | null>(null);
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+
+  const startedRef = useRef(false);
+  const startTsRef = useRef(0);
+  const completedRef = useRef(false);
+  const sessionIdRef = useRef<number | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recordingTaskRef = useRef<number | null>(null);
+  const phaseDeadlineRef = useRef(0);
+  // Mutually-referencing callbacks resolved at call time so onstop never sees a stale closure.
+  const uploadTakeRef = useRef<(taskNumber: number, blob: Blob) => void>(() => {});
+  const advanceRealRef = useRef<() => void>(() => {});
+  const isReal = config.mode === 'real';
+
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    createSpeakingSession(config.mode, config.taskNumbers)
+      .then((res) => {
+        sessionIdRef.current = res.sessionId;
+        setSessionId(res.sessionId);
+        setTasks(res.tasks);
+        setTiming(res.timing);
+        startTsRef.current = Date.now();
+        setStatus('active');
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof ApiError ? err.message : 'Failed to start the speaking session.');
+        setStatus('error');
+      });
+  }, [config]);
+
+  // Stop any live stream/recorder on unmount.
+  useEffect(() => {
+    return () => {
+      try {
+        recorderRef.current?.stop();
+      } catch {
+        /* ignore */
+      }
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  const timingFor = useCallback(
+    (taskNumber: number): TaskTiming | undefined => timing?.find((t) => t.taskNumber === taskNumber),
+    [timing],
+  );
+
+  // spec: docs/specs/speaking-evaluation.md §Behaviour.3–5 — upload the take, store the transcript.
+  const uploadTake = useCallback(
+    async (taskNumber: number, blob: Blob): Promise<void> => {
+      const sid = sessionIdRef.current;
+      if (sid == null) return;
+      setUploading((u) => ({ ...u, [taskNumber]: true }));
+      setTaskError((e) => ({ ...e, [taskNumber]: '' }));
+      // A new take invalidates any prior transcript/evaluation for the task.
+      setEvaluations((ev) => {
+        const next = { ...ev };
+        delete next[taskNumber];
+        return next;
+      });
+      try {
+        const res = await uploadSpeakingRecording(sid, taskNumber, blob);
+        setTranscripts((t) => ({ ...t, [taskNumber]: res.transcript }));
+      } catch (err) {
+        setTaskError((e) => ({
+          ...e,
+          [taskNumber]:
+            err instanceof ApiError ? err.message : 'Failed to upload / transcribe the recording.',
+        }));
+      } finally {
+        setUploading((u) => ({ ...u, [taskNumber]: false }));
+        if (isReal) advanceRealRef.current();
+      }
+    },
+    [isReal],
+  );
+  uploadTakeRef.current = (taskNumber, blob) => void uploadTake(taskNumber, blob);
+
+  // spec: docs/specs/speaking-ui.md §Recorder (Behaviour.5–7) — capture a take via MediaRecorder.
+  const beginRecorder = useCallback(async (taskNumber: number): Promise<boolean> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const mime = preferredAudioMime();
+      const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+        const url = URL.createObjectURL(blob);
+        setRecordings((r) => {
+          const prev = r[taskNumber];
+          if (prev) URL.revokeObjectURL(prev.url);
+          return { ...r, [taskNumber]: { url } };
+        });
+        uploadTakeRef.current(taskNumber, blob);
+      };
+      recorder.start();
+      recorderRef.current = recorder;
+      recordingTaskRef.current = taskNumber;
+      setRecordingTask(taskNumber);
+      setMicError(null);
+      return true;
+    } catch {
+      setMicError('Microphone access was denied. Allow it in your browser and try again.');
+      return false;
+    }
+  }, []);
+
+  const startRecording = useCallback(
+    (taskNumber: number) => {
+      if (recordingTaskRef.current != null) return;
+      void beginRecorder(taskNumber);
+    },
+    [beginRecorder],
+  );
+
+  const stopRecording = useCallback(() => {
+    const recorder = recorderRef.current;
+    recorderRef.current = null;
+    recordingTaskRef.current = null;
+    setRecordingTask(null);
+    if (!recorder) return;
+    try {
+      if (recorder.state !== 'inactive') recorder.stop();
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const submit = useCallback(
+    (taskNumber: number) => {
+      if (sessionId == null || busyTask != null) return;
+      setBusyTask(taskNumber);
+      setTaskError((e) => ({ ...e, [taskNumber]: '' }));
+      submitSpeakingResponse(sessionId, taskNumber)
+        .then((evaluation) => setEvaluations((ev) => ({ ...ev, [taskNumber]: evaluation })))
+        .catch((err: unknown) =>
+          setTaskError((e) => ({
+            ...e,
+            [taskNumber]: err instanceof ApiError ? err.message : 'Failed to score the response.',
+          })),
+        )
+        .finally(() => setBusyTask(null));
+    },
+    [sessionId, busyTask],
+  );
+
+  const correct = useCallback(
+    (taskNumber: number) => {
+      if (sessionId == null || busyTask != null) return;
+      setBusyTask(taskNumber);
+      setTaskError((e) => ({ ...e, [taskNumber]: '' }));
+      requestSpeakingCorrection(sessionId, taskNumber)
+        .then((correction) => setCorrections((c) => ({ ...c, [taskNumber]: correction })))
+        .catch((err: unknown) =>
+          setTaskError((e) => ({
+            ...e,
+            [taskNumber]: err instanceof ApiError ? err.message : 'Failed to get a correction.',
+          })),
+        )
+        .finally(() => setBusyTask(null));
+    },
+    [sessionId, busyTask],
+  );
+
+  const finish = useCallback(
+    (elapsed: number | null) => {
+      if (completedRef.current || sessionId == null) return;
+      completedRef.current = true;
+      setElapsedMs(elapsed);
+      completeSpeakingSession(sessionId, elapsed)
+        .then((res) => {
+          setResults(res);
+          setStatus('finished');
+        })
+        .catch((err: unknown) => {
+          setError(err instanceof ApiError ? err.message : 'Failed to complete the session.');
+          setStatus('error');
+        });
+    },
+    [sessionId],
+  );
+
+  const finishLearning = useCallback(() => finish(null), [finish]);
+  const submitExam = useCallback(() => finish(Date.now() - startTsRef.current), [finish]);
+
+  // spec: docs/specs/speaking-ui.md §Real mode (Behaviour.12–14) — advance to the next task (or
+  // complete after the last), restarting the prep phase. Called after a recording uploads.
+  const advanceReal = useCallback(() => {
+    setCurrentIndex((idx) => {
+      const next = idx + 1;
+      if (next >= tasks.length) {
+        finish(Date.now() - startTsRef.current);
+        return idx;
+      }
+      setRealPhase('prep');
+      return next;
+    });
+  }, [tasks.length, finish]);
+  advanceRealRef.current = advanceReal;
+
+  // Real-mode two-phase driver: a single interval ticks the current phase's countdown and triggers
+  // the prep→record and record→stop transitions. spec: docs/specs/speaking-ui.md §Real mode.12–13.
+  useEffect(() => {
+    if (status !== 'active' || !isReal) return;
+    if (realPhase === 'uploading') return;
+    const task = tasks[currentIndex];
+    if (!task) return;
+    const t = timingFor(task.taskNumber);
+    const prepMs = (t?.prepSeconds ?? 0) * 1000;
+    const recordMs = (t?.recordSeconds ?? 0) * 1000;
+
+    // Entering a phase: set its deadline once, then tick toward it.
+    if (realPhase === 'prep') {
+      if (prepMs === 0) {
+        setRealPhase('recording');
+        return;
+      }
+      phaseDeadlineRef.current = Date.now() + prepMs;
+      setPhaseRemainingMs(prepMs);
+    } else if (realPhase === 'recording' && recordingTaskRef.current == null) {
+      phaseDeadlineRef.current = Date.now() + recordMs;
+      setPhaseRemainingMs(recordMs);
+      void beginRecorder(task.taskNumber);
+    }
+
+    const tick = (): void => {
+      const remaining = phaseDeadlineRef.current - Date.now();
+      if (remaining <= 0) {
+        setPhaseRemainingMs(0);
+        if (realPhase === 'prep') {
+          setRealPhase('recording');
+        } else if (realPhase === 'recording') {
+          setRealPhase('uploading');
+          stopRecording(); // onstop → upload → advanceReal
+        }
+      } else {
+        setPhaseRemainingMs(remaining);
+      }
+    };
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [status, isReal, realPhase, currentIndex, tasks, timingFor, beginRecorder, stopRecording]);
+
+  return {
+    status,
+    error,
+    sessionId,
+    mode: config.mode,
+    tasks,
+    timing,
+    recordings,
+    transcripts,
+    evaluations,
+    corrections,
+    uploading,
+    taskError,
+    recordingTask,
+    busyTask,
+    micError,
+    currentIndex,
+    realPhase,
+    phaseRemainingMs,
+    results,
+    elapsedMs,
+    startRecording,
+    stopRecording,
+    submit,
+    correct,
+    finish: finishLearning,
+    submitExam,
+  };
+}

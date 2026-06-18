@@ -10,7 +10,18 @@ export type Section = 'reading' | 'listening';
 type SectionConfig = { timeLimitMinutes: number; questionCount: number };
 // spec: docs/specs/writing-session.md §Configuration.17 — writing has a single time limit and a task count.
 type WritingConfig = { timeLimitMinutes: number; taskCount: number };
-type ExamConfig = { reading: SectionConfig; listening: SectionConfig; writing: WritingConfig };
+// spec: docs/specs/speaking-session.md §Configuration.18 — per-task prep + recording limits.
+type SpeakingTaskConfig = { prepSeconds: number; recordSeconds: number };
+type SpeakingConfig = Record<string, SpeakingTaskConfig>;
+type ExamConfig = {
+  reading: SectionConfig;
+  listening: SectionConfig;
+  writing: WritingConfig;
+  speaking: SpeakingConfig;
+};
+
+// spec: docs/specs/speaking-session.md §API contract — the per-task timing payload (real mode).
+export type TaskTiming = { taskNumber: number; prepSeconds: number; recordSeconds: number };
 
 let cached: ExamConfig | null = null;
 
@@ -37,4 +48,19 @@ export function getWritingTimeLimitMs(): number {
 // spec: docs/specs/writing-session.md §Task selection — the number of writing tasks (3).
 export function getWritingTaskCount(): number {
   return getExamConfig().writing.taskCount;
+}
+
+// spec: docs/specs/speaking-session.md §Configuration.18 — per-task prep + recording limits, read
+// from exam.config.json (never hardcoded), ordered by task number for the real-mode timing payload.
+export function getSpeakingTiming(): TaskTiming[] {
+  const speaking = getExamConfig().speaking;
+  return Object.keys(speaking)
+    .map((k) => Number(k))
+    .filter((n) => Number.isInteger(n))
+    .sort((a, b) => a - b)
+    .map((taskNumber) => ({
+      taskNumber,
+      prepSeconds: speaking[String(taskNumber)].prepSeconds,
+      recordSeconds: speaking[String(taskNumber)].recordSeconds,
+    }));
 }
