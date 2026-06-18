@@ -284,14 +284,20 @@ Apple-Silicon/macOS-only; the Claude scoring step is platform-agnostic.
 
 ---
 
-## Milestone 12 — On-screen virtual keyboard (French accents)
+## Milestone 12 — UI polish: on-screen French keyboard + unified section navigation
 **Status:** draft
 
-A frontend input aid for the Writing editor: an on-screen virtual keyboard / accent toolbar for typing
-French special characters (é, à, ç, …) by clicking, mirroring the keyboard provided by the real TCF
-Canada exam software. Removes the dependency on a French (AZERTY) physical keyboard or OS dead-key
-sequences. Presentation/input only — no backend, data-model, or scoring change; the already-approved
-writing-ui spec is unchanged (this spec augments its editor as the integration point).
+Two frontend-only UI improvements (no backend, data-model, or scoring change):
+
+**(a) On-screen virtual keyboard (French accents).** An accent toolbar for the Writing editor for
+typing French special characters (é, à, ç, …) by clicking, mirroring the keyboard provided by the real
+TCF Canada exam software. Removes the dependency on a French (AZERTY) physical keyboard or OS dead-key
+sequences. The already-approved writing-ui spec is unchanged (this augments its editor as the
+integration point).
+
+**(b) Unified section navigation.** All four sections (Reading, Listening, Writing, Speaking) become
+selectable from both the landing screen and a persistent top menu (quick navigation), replacing the
+current Reading/Listening-only picker plus ad-hoc Writing/Speaking nav links.
 
 - [ ] Reusable on-screen accent keyboard component matching the real TCF software: the exact 16-key 4×4
   grid (`é è ê ë / à â ù û / ô î ï ç / œ æ « »`) + a `⇧ abc` shift toggle to uppercase, inserted at the
@@ -302,7 +308,11 @@ writing-ui spec is unchanged (this spec augments its editor as the integration p
   word-count + autosave paths; toolbar interoperates with physical-keyboard typing
 - [ ] Accessible buttons (keyboard-operable, labelled); inserted French text stays within the
   `lang="fr"` textarea content
+- [ ] Unified navigation: all four sections selectable on the **landing screen** and in a **persistent
+  top menu** (plus History + Question Bank), consistent order/labels, active-section indication, and a
+  graceful empty state for a section with no imported content
 - [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass
 
 **Specs:**
 - `docs/specs/virtual-keyboard.md` (draft)
+- `docs/specs/section-navigation.md` (draft)
