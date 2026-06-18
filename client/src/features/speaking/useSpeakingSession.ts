@@ -90,6 +90,9 @@ export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
   const streamRef = useRef<MediaStream | null>(null);
   const recordingTaskRef = useRef<number | null>(null);
   const phaseDeadlineRef = useRef(0);
+  // Mirror of `recordings` so the unmount cleanup (empty deps) can revoke every blob URL it holds.
+  const recordingsRef = useRef<Record<number, LocalRecording>>({});
+  recordingsRef.current = recordings;
   // Mutually-referencing callbacks resolved at call time so onstop never sees a stale closure.
   const uploadTakeRef = useRef<(taskNumber: number, blob: Blob) => void>(() => {});
   const advanceRealRef = useRef<() => void>(() => {});
@@ -113,7 +116,7 @@ export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
       });
   }, [config]);
 
-  // Stop any live stream/recorder on unmount.
+  // Stop any live stream/recorder and release every captured blob URL on unmount.
   useEffect(() => {
     return () => {
       try {
@@ -122,6 +125,9 @@ export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
         /* ignore */
       }
       streamRef.current?.getTracks().forEach((t) => t.stop());
+      for (const rec of Object.values(recordingsRef.current)) {
+        URL.revokeObjectURL(rec.url);
+      }
     };
   }, []);
 
@@ -264,6 +270,8 @@ export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
           setStatus('finished');
         })
         .catch((err: unknown) => {
+          // Allow another attempt without reloading: clear the guard so finish/submitExam can re-run.
+          completedRef.current = false;
           setError(err instanceof ApiError ? err.message : 'Failed to complete the session.');
           setStatus('error');
         });

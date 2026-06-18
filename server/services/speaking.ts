@@ -328,36 +328,40 @@ export async function completeSpeakingSession(
 
   let evals = await loadEvaluations(responses.map((r) => r.id));
 
-  // spec: docs/specs/speaking-session.md §Behaviour.14 — real mode submits/evaluates any recorded
-  // task still unscored (best-effort: a CLI failure leaves that task unscored rather than blocking).
-  if (session.mode === 'real') {
-    for (const row of responses) {
-      if (evals.has(row.id)) continue;
-      if (!row.transcript || row.transcript.trim().length === 0) continue;
-      const task = await loadTaskForResponse(row);
-      try {
-        const result = scoreWithClaude({
-          taskNumber: task.taskNumber,
-          question: task.question,
-          transcript: row.transcript,
-        });
-        await db
-          .update(speakingResponses)
-          .set({ submittedAt: row.submittedAt ?? new Date() })
-          .where(eq(speakingResponses.id, row.id));
-        await persistEvaluation(row.id, result.score, result.feedback);
-      } catch (error) {
-        if (!(error instanceof ClaudeError)) throw error;
-        // leave unscored
+  // Idempotent: a session already finalised is not re-scored and its completion timestamp/elapsed
+  // time are left untouched — a repeated complete call just re-reports the persisted aggregate.
+  if (!session.completedAt) {
+    // spec: docs/specs/speaking-session.md §Behaviour.14 — real mode submits/evaluates any recorded
+    // task still unscored (best-effort: a CLI failure leaves that task unscored rather than blocking).
+    if (session.mode === 'real') {
+      for (const row of responses) {
+        if (evals.has(row.id)) continue;
+        if (!row.transcript || row.transcript.trim().length === 0) continue;
+        const task = await loadTaskForResponse(row);
+        try {
+          const result = scoreWithClaude({
+            taskNumber: task.taskNumber,
+            question: task.question,
+            transcript: row.transcript,
+          });
+          await db
+            .update(speakingResponses)
+            .set({ submittedAt: row.submittedAt ?? new Date() })
+            .where(eq(speakingResponses.id, row.id));
+          await persistEvaluation(row.id, result.score, result.feedback);
+        } catch (error) {
+          if (!(error instanceof ClaudeError)) throw error;
+          // leave unscored
+        }
       }
+      evals = await loadEvaluations(responses.map((r) => r.id));
     }
-    evals = await loadEvaluations(responses.map((r) => r.id));
-  }
 
-  await db
-    .update(sessions)
-    .set({ completedAt: new Date(), elapsedMs: session.mode === 'real' ? elapsedMs : null })
-    .where(eq(sessions.id, sessionId));
+    await db
+      .update(sessions)
+      .set({ completedAt: new Date(), elapsedMs: session.mode === 'real' ? elapsedMs : null })
+      .where(eq(sessions.id, sessionId));
+  }
 
   const tasks = responses.map((r) => {
     const score = evals.get(r.id)?.score ?? null;
