@@ -1,7 +1,7 @@
 # Spec: Speaking Quiz UI
 
 ## Status
-draft
+approved
 
 > Milestone 11. The React UI for the Speaking section. Consumes the speaking-session endpoints; the
 > transcript/score/feedback and correction shapes come from speaking-evaluation. Reuses the listening
@@ -124,3 +124,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 
 ## Revision history
 - 2026-06-17: Initial draft (Milestone 11).
+- 2026-06-18: Approved (Milestone 11).

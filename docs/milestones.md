@@ -260,7 +260,7 @@ A sample task bank lives in `samples/writing-tasks/` for `npm run import:writing
 ---
 
 ## Milestone 11 — Speaking section: tasks import + session/UI + Whisper transcription + LLM evaluation
-**Status:** draft
+**Status:** approved
 
 Introduces the fourth exam section (TCF *Expression orale*): three spoken tasks the user answers by
 **recording their voice** in the browser. On submit, the audio is saved, **transcribed by the local
@@ -293,10 +293,10 @@ Apple-Silicon/macOS-only; the Claude scoring step is platform-agnostic.
 - [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass
 
 **Specs:**
-- `docs/specs/speaking-import.md` (draft)
-- `docs/specs/speaking-session.md` (draft)
-- `docs/specs/speaking-evaluation.md` (draft)
-- `docs/specs/speaking-ui.md` (draft)
+- `docs/specs/speaking-import.md` (approved)
+- `docs/specs/speaking-session.md` (approved)
+- `docs/specs/speaking-evaluation.md` (approved)
+- `docs/specs/speaking-ui.md` (approved)
 - `docs/specs/progress-tracking.md` (revised — §Writing & speaking sessions, shared with Milestone 10)
 
 ---

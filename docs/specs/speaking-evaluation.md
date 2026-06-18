@@ -1,7 +1,7 @@
 # Spec: Speaking Transcription & Evaluation
 
 ## Status
-draft
+approved
 
 > Milestone 11. The request-time CLI layer for the Speaking section: **Whisper transcription** of a
 > recording, **Claude scoring + feedback** on submit (both modes), and **on-request correction**
@@ -192,3 +192,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - 2026-06-17: NCLC `level` is now **derived deterministically from `score`** via the shared
   writing-evaluation §Score → NCLC map (`server/lib/nclc.ts`), not produced by the model; dropped the
   stored `level` column. Resolved the NCLC-fidelity open question.
+- 2026-06-18: Approved (Milestone 11).

@@ -1,7 +1,7 @@
 # Spec: Speaking Session
 
 ## Status
-draft
+approved
 
 > Milestone 11. Session lifecycle for the Speaking section. The Whisper transcription and Claude
 > scoring/feedback produced on submit, plus the on-request correction, are defined in the
@@ -247,3 +247,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   retained with recordings/transcripts/scores/feedback and listed in the unified history; resolved the
   history open question and triggered the progress-tracking revision (Rule 4). (Tasks are already drawn
   at random from the imported task bank per §Task selection.)
+- 2026-06-18: Approved (Milestone 11).

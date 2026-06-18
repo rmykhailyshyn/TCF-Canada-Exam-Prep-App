@@ -1,7 +1,7 @@
 # Spec: Speaking Task Import
 
 ## Status
-draft
+approved
 
 > Milestone 11. First of the four Speaking-section specs (import → session → evaluation → ui).
 > Mirrors writing-import, but the source is a single JSON file rather than a directory of markdown.
@@ -116,3 +116,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 
 ## Revision history
 - 2026-06-17: Initial draft (Milestone 11).
+- 2026-06-18: Approved (Milestone 11).
