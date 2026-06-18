@@ -1,7 +1,7 @@
 # Spec: On-Screen Virtual Keyboard (French accents)
 
 ## Status
-draft
+approved
 
 > Milestone 12. A frontend input aid for typing French special characters (é, à, ç, …) that a
 > non-French physical keyboard makes awkward — mirroring the on-screen keyboard provided by the real
@@ -99,3 +99,5 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - 2026-06-17: Set the exact key set/layout to match a screenshot of the real TCF software — 16-key 4×4
   grid (`é è ê ë / à â ù û / ô î ï ç / œ æ « »`) + `⇧ abc` shift toggle; resolved the glyph-set open
   question.
+- 2026-06-18: Status moved draft → approved (Milestone 12), alongside section-navigation. Wireframe
+  added at docs/mockups.md §19.

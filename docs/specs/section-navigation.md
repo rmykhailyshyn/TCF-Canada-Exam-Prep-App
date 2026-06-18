@@ -1,7 +1,7 @@
 # Spec: Unified Section Navigation
 
 ## Status
-draft
+approved
 
 > Milestone 12. A navigation/landing-UX change so all four exam sections (Reading, Listening, Writing,
 > Speaking) are launchable from two consistent places: the landing screen and a persistent top menu.
@@ -75,3 +75,5 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 
 ## Revision history
 - 2026-06-18: Initial draft (Milestone 12).
+- 2026-06-18: Status moved draft → approved (Milestone 12), alongside virtual-keyboard. Wireframe
+  added at docs/mockups.md §20.

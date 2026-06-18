@@ -302,7 +302,7 @@ Apple-Silicon/macOS-only; the Claude scoring step is platform-agnostic.
 ---
 
 ## Milestone 12 — UI polish: on-screen French keyboard + unified section navigation
-**Status:** draft
+**Status:** approved
 
 Two frontend-only UI improvements (no backend, data-model, or scoring change):
 
@@ -331,5 +331,6 @@ current Reading/Listening-only picker plus ad-hoc Writing/Speaking nav links.
 - [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass
 
 **Specs:**
-- `docs/specs/virtual-keyboard.md` (draft)
-- `docs/specs/section-navigation.md` (draft)
+- `docs/specs/virtual-keyboard.md` (approved)
+- `docs/specs/section-navigation.md` (approved)
+- `docs/mockups.md` §19–20 (accent keyboard + unified navigation wireframes)
