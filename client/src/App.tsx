@@ -9,6 +9,8 @@ import { QuestionBankPage } from './pages/QuestionBankPage';
 import { ReadingQuizPage } from './pages/ReadingQuizPage';
 import { ReviewPage } from './pages/ReviewPage';
 import { SessionDetailPage } from './pages/SessionDetailPage';
+import { WritingPage } from './pages/WritingPage';
+import { WritingReviewPage } from './pages/WritingReviewPage';
 
 // spec: docs/specs/reading-quiz-ui.md + docs/specs/listening-quiz-ui.md + docs/specs/progress-tracking.md §Behaviour.4
 // Home shows the setup screen until a session is configured, then the reading or listening quiz
@@ -42,6 +44,13 @@ function Home(): JSX.Element {
         <nav className="flex items-center gap-4">
           <button
             type="button"
+            onClick={() => navigate('/writing')}
+            className="text-sm text-sky-600 transition hover:text-sky-700"
+          >
+            Writing
+          </button>
+          <button
+            type="button"
             onClick={() => navigate('/question-bank')}
             className="text-sm text-sky-600 transition hover:text-sky-700"
           >
@@ -70,6 +79,8 @@ function App(): JSX.Element {
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/history/:id" element={<SessionDetailPage />} />
         <Route path="/review/:id" element={<ReviewPage />} />
+        <Route path="/writing" element={<WritingPage />} />
+        <Route path="/writing/:id" element={<WritingReviewPage />} />
       </Routes>
     </BrowserRouter>
   );

@@ -6,5 +6,9 @@
   "listening": {
     "timeLimitMinutes": 35,
     "questionCount": 39
+  },
+  "writing": {
+    "timeLimitMinutes": 60,
+    "taskCount": 3
   }
 }

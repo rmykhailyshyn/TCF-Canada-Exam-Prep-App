@@ -1,6 +1,15 @@
 import { asc, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { db } from '../db';
-import { explanations, options, passages, questionResults, questions, sessions } from '../db/schema';
+import {
+  explanations,
+  options,
+  passages,
+  questionResults,
+  questions,
+  sessions,
+  writingEvaluations,
+  writingResponses,
+} from '../db/schema';
 import { ApiError } from '../lib/errors';
 import {
   type DifficultySlug,
@@ -299,6 +308,8 @@ export async function completeSession(
 }
 
 // spec: docs/specs/progress-tracking.md §API contract GET /api/sessions
+// `overallScore` / `tasksSubmitted` are populated for writing sessions (mean per-task /20 + answered
+// count) and null for reading/listening; `correct` / `total` / points are the reverse.
 export type SessionSummary = {
   id: number;
   section: string;
@@ -309,6 +320,8 @@ export type SessionSummary = {
   total: number;
   pointsScored: number | null;
   pointsPossible: number | null;
+  overallScore: number | null;
+  tasksSubmitted: number | null;
   elapsedMs: number | null;
 };
 
@@ -344,7 +357,30 @@ export async function listSessions(): Promise<SessionSummary[]> {
     resultsBySession.set(r.sessionId, list);
   }
 
+  // spec: docs/specs/progress-tracking.md §Writing & speaking sessions (Behaviour.9) — writing rows
+  // carry an overall /20 average + tasks-submitted instead of correct/total/points.
+  const writingBySession = await loadWritingAggregates(
+    completed.filter((s) => s.section === 'writing').map((s) => s.id),
+  );
+
   return completed.map((s) => {
+    if (s.section === 'writing') {
+      const agg = writingBySession.get(s.id) ?? { overallScore: 0, tasksSubmitted: 0 };
+      return {
+        id: s.id,
+        section: s.section,
+        mode: s.mode,
+        difficulty: null,
+        completedAt: s.completedAt!.toISOString(),
+        correct: 0,
+        total: 0,
+        pointsScored: null,
+        pointsPossible: null,
+        overallScore: agg.overallScore,
+        tasksSubmitted: agg.tasksSubmitted,
+        elapsedMs: s.elapsedMs ?? null,
+      };
+    }
     const sessionResults = resultsBySession.get(s.id) ?? [];
     const correct = sessionResults.filter((r) => r.isCorrect).length;
     const total = sessionResults.length;
@@ -369,9 +405,44 @@ export async function listSessions(): Promise<SessionSummary[]> {
       total,
       pointsScored,
       pointsPossible,
+      overallScore: null,
+      tasksSubmitted: null,
       elapsedMs: s.elapsedMs ?? null,
     };
   });
+}
+
+// Per writing session: the mean of per-task /20 scores (unscored tasks counting 0) and the number of
+// scored tasks. spec: docs/specs/progress-tracking.md §Writing & speaking sessions.
+async function loadWritingAggregates(
+  sessionIds: number[],
+): Promise<Map<number, { overallScore: number; tasksSubmitted: number }>> {
+  const out = new Map<number, { overallScore: number; tasksSubmitted: number }>();
+  if (sessionIds.length === 0) return out;
+
+  const rows = await db
+    .select({
+      sessionId: writingResponses.sessionId,
+      score: writingEvaluations.score,
+    })
+    .from(writingResponses)
+    .leftJoin(writingEvaluations, eq(writingEvaluations.responseId, writingResponses.id))
+    .where(inArray(writingResponses.sessionId, sessionIds));
+
+  const bySession = new Map<number, (number | null)[]>();
+  for (const r of rows) {
+    const list = bySession.get(r.sessionId) ?? [];
+    list.push(r.score ?? null);
+    bySession.set(r.sessionId, list);
+  }
+
+  for (const [sessionId, scores] of bySession) {
+    const tasksSubmitted = scores.filter((s) => s != null).length;
+    const sum = scores.reduce<number>((acc, s) => acc + (s ?? 0), 0);
+    const overallScore = scores.length ? Math.round(sum / scores.length) : 0;
+    out.set(sessionId, { overallScore, tasksSubmitted });
+  }
+  return out;
 }
 
 // spec: docs/specs/progress-tracking.md §API contract GET /api/sessions/:id
@@ -509,6 +580,8 @@ export async function getSession(sessionId: number): Promise<SessionDetail> {
       total,
       pointsScored,
       pointsPossible,
+      overallScore: null,
+      tasksSubmitted: null,
       elapsedMs: session.elapsedMs ?? null,
     },
     results: reviewRows,

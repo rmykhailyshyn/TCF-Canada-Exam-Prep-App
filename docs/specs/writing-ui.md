@@ -1,7 +1,7 @@
 # Spec: Writing Quiz UI
 
 ## Status
-approved
+implemented
 
 > Milestone 10. The React UI for the Writing section. Consumes the writing-session endpoints; the
 > scoring/feedback and correction shapes come from writing-evaluation. Mirrors the

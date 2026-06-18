@@ -218,6 +218,15 @@ npm run ocr -- --dir <path>
 # Directory must contain one results PDF and up to 39 MP3 files
 npm run transcribe -- --dir <path>
 
+# Import Writing tasks from a directory of markdown files (Milestone 10; platform-agnostic).
+# Each *.md file is one task: front-matter (taskNumber 1-3, optional title/minWords/maxWords) +
+# `## Prompt` (required) / `## Sample answer` / `## Template`. Idempotent on (source_file, task_number).
+npm run import:writing -- --dir samples/writing-tasks      # sample bank included in the repo
+npm run import:writing -- --dir <path> --dry-run           # parse + print, write nothing
+# Writing responses are scored at submit time by the LOCAL Claude CLI (per-task /20 + NCLC + feedback);
+# configure CLAUDE_CLI_BIN / CLAUDE_CLI_MODEL in .env (same as enrichment). NCLC is derived from the
+# score (server/lib/nclc.ts), never produced by the model.
+
 # Generate per-question explanations via the LOCAL Claude CLI (Milestone 7; needs `claude` on PATH).
 # Idempotent (skips questions that already have one). Reading uses the passage, listening the
 # transcript, as the clue source; explanations are in English. Configure CLAUDE_CLI_BIN /

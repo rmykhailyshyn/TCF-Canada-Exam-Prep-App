@@ -1,7 +1,7 @@
 # Spec: Writing Session
 
 ## Status
-approved
+implemented
 
 > Milestone 10. Session lifecycle for the Writing section. The scoring/feedback produced on submit
 > and the on-request correction are defined in the writing-evaluation spec; the editor and results
