@@ -1,7 +1,7 @@
 # Spec: Speaking Task Import
 
 ## Status
-approved
+implemented
 
 > Milestone 11. First of the four Speaking-section specs (import → session → evaluation → ui).
 > Mirrors writing-import, but the source is a single JSON file rather than a directory of markdown.
@@ -117,3 +117,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 ## Revision history
 - 2026-06-17: Initial draft (Milestone 11).
 - 2026-06-18: Approved (Milestone 11).
+- 2026-06-18: Implemented — `scripts/import-speaking.ts` + pure parser `scripts/lib/speaking-tasks.ts`; `sequence` is the 0-based array index. Sample bank at `samples/speaking-tasks/sample-bank.json`.

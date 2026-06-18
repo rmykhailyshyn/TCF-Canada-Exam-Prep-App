@@ -110,8 +110,12 @@ export const sessions = pgTable(
     elapsedMs: integer('elapsed_ms'),
   },
   (table) => [
-    // Writing sessions reuse this table (spec: docs/specs/writing-session.md §Data model changes).
-    check('sessions_section_check', sql`${table.section} in ('reading', 'listening', 'writing')`),
+    // Writing + speaking sessions reuse this table (spec: docs/specs/writing-session.md +
+    // docs/specs/speaking-session.md §Data model changes).
+    check(
+      'sessions_section_check',
+      sql`${table.section} in ('reading', 'listening', 'writing', 'speaking')`,
+    ),
     check('sessions_mode_check', sql`${table.mode} in ('learning', 'real')`),
     check(
       'sessions_difficulty_check',
@@ -229,4 +233,74 @@ export const writingEvaluations = pgTable(
     generatedAt: timestamp('generated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [check('writing_evaluations_score_check', sql`${table.score} between 0 and 20`)],
+);
+
+// spec: docs/specs/speaking-import.md §Data model changes
+// The authored Speaking task bank. Natural key (source_file, sequence) mirrors questions; a
+// task_number (1–3) may have multiple candidates (distinct sequences) that the per-session draw
+// selects from. No correct answer — each task is a spoken prompt + optional sample answer.
+export const speakingTasks = pgTable(
+  'speaking_tasks',
+  {
+    id: serial('id').primaryKey(),
+    sourceFile: text('source_file').notNull(),
+    sequence: integer('sequence').notNull(),
+    taskNumber: integer('task_number').notNull(),
+    question: text('question').notNull(),
+    sampleAnswer: text('sample_answer'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('speaking_tasks_source_file_sequence_unique').on(table.sourceFile, table.sequence),
+    check('speaking_tasks_task_number_check', sql`${table.taskNumber} between 1 and 3`),
+    // Session creation filters/draws by task_number.
+    index('speaking_tasks_task_number_idx').on(table.taskNumber),
+  ],
+);
+
+// spec: docs/specs/speaking-session.md §Data model changes
+// One voice recording per task per speaking session: the saved audio path, its Whisper transcript,
+// and the recording length. submitted_at is set on submit / session end.
+export const speakingResponses = pgTable(
+  'speaking_responses',
+  {
+    id: serial('id').primaryKey(),
+    sessionId: integer('session_id')
+      .notNull()
+      .references(() => sessions.id),
+    speakingTaskId: integer('speaking_task_id')
+      .notNull()
+      .references(() => speakingTasks.id),
+    taskNumber: integer('task_number').notNull(),
+    audioPath: text('audio_path'),
+    transcript: text('transcript'),
+    durationMs: integer('duration_ms'),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }),
+  },
+  (table) => [
+    unique('speaking_responses_session_task_unique').on(table.sessionId, table.taskNumber),
+    check('speaking_responses_task_number_check', sql`${table.taskNumber} between 1 and 3`),
+    index('speaking_responses_session_id_idx').on(table.sessionId),
+  ],
+);
+
+// spec: docs/specs/speaking-evaluation.md §Data model changes
+// Claude's score (0–20) + feedback for one speaking response. The NCLC level is NOT stored — it is
+// derived deterministically from `score` on read (shared with writing via server/lib/nclc.ts).
+export const speakingEvaluations = pgTable(
+  'speaking_evaluations',
+  {
+    id: serial('id').primaryKey(),
+    responseId: integer('response_id')
+      .notNull()
+      .unique()
+      .references(() => speakingResponses.id),
+    score: integer('score').notNull(),
+    strengths: text('strengths').notNull(),
+    errors: text('errors').notNull(),
+    improvements: text('improvements').notNull(),
+    generatedBy: text('generated_by').notNull(),
+    generatedAt: timestamp('generated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [check('speaking_evaluations_score_check', sql`${table.score} between 0 and 20`)],
 );

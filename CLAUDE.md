@@ -227,6 +227,16 @@ npm run import:writing -- --dir <path> --dry-run           # parse + print, writ
 # configure CLAUDE_CLI_BIN / CLAUDE_CLI_MODEL in .env (same as enrichment). NCLC is derived from the
 # score (server/lib/nclc.ts), never produced by the model.
 
+# Import Speaking tasks from a single JSON file (Milestone 11; platform-agnostic — no audio at import).
+# The file is a JSON array of { task (1-3), question, answer? } objects; the array index is the task's
+# `sequence`. Idempotent on (source_file, sequence). Skip-and-continue on bad elements.
+npm run import:speaking -- --file samples/speaking-tasks/sample-bank.json   # sample bank in the repo
+npm run import:speaking -- --file <path.json> --dry-run                     # parse + print, write nothing
+# Speaking sessions record voice in the browser; on upload the recording is transcribed by the LOCAL
+# Whisper CLI (scripts/lib/whisper.ts — Apple Silicon/macOS only, like the listening import), and on
+# submit the transcript is scored by the LOCAL Claude CLI (/20 + NCLC + feedback). Recordings are saved
+# under MEDIA_DIR. NCLC is derived from the score (server/lib/nclc.ts), never produced by the model.
+
 # Generate per-question explanations via the LOCAL Claude CLI (Milestone 7; needs `claude` on PATH).
 # Idempotent (skips questions that already have one). Reading uses the passage, listening the
 # transcript, as the clue source; explanations are in English. Configure CLAUDE_CLI_BIN /

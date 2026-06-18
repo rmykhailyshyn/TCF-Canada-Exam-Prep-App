@@ -1,7 +1,7 @@
 # Spec: Speaking Session
 
 ## Status
-approved
+implemented
 
 > Milestone 11. Session lifecycle for the Speaking section. The Whisper transcription and Claude
 > scoring/feedback produced on submit, plus the on-request correction, are defined in the
@@ -248,3 +248,4 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   history open question and triggered the progress-tracking revision (Rule 4). (Tasks are already drawn
   at random from the imported task bank per §Task selection.)
 - 2026-06-18: Approved (Milestone 11).
+- 2026-06-18: Implemented — `server/services/speaking.ts` + `server/routes/speaking.ts` (multipart upload, range-aware audio streaming), client `client/src/features/speaking/` + pages; history integration in `server/services/sessions.ts`. Real-mode prep enforced (recording disabled until prep elapses); auto-advance after upload; un-recorded tasks count 0 in the mean.

@@ -4,6 +4,7 @@ import { fail } from './lib/envelope';
 import { healthRouter } from './routes/health';
 import { questionsRouter } from './routes/questions';
 import { sessionsRouter } from './routes/sessions';
+import { speakingRouter } from './routes/speaking';
 import { writingRouter } from './routes/writing';
 
 const app = express();
@@ -14,6 +15,7 @@ app.use('/api/health', healthRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/questions', questionsRouter);
 app.use('/api/writing', writingRouter);
+app.use('/api/speaking', speakingRouter);
 
 // Fallback 404 in the standard envelope shape for unknown API routes.
 app.use('/api', (_req, res) => {

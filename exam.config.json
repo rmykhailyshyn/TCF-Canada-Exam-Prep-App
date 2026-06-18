@@ -10,5 +10,10 @@
   "writing": {
     "timeLimitMinutes": 60,
     "taskCount": 3
+  },
+  "speaking": {
+    "1": { "prepSeconds": 0, "recordSeconds": 120 },
+    "2": { "prepSeconds": 120, "recordSeconds": 210 },
+    "3": { "prepSeconds": 120, "recordSeconds": 270 }
   }
 }

@@ -9,6 +9,8 @@ import { QuestionBankPage } from './pages/QuestionBankPage';
 import { ReadingQuizPage } from './pages/ReadingQuizPage';
 import { ReviewPage } from './pages/ReviewPage';
 import { SessionDetailPage } from './pages/SessionDetailPage';
+import { SpeakingPage } from './pages/SpeakingPage';
+import { SpeakingReviewPage } from './pages/SpeakingReviewPage';
 import { WritingPage } from './pages/WritingPage';
 import { WritingReviewPage } from './pages/WritingReviewPage';
 
@@ -51,6 +53,13 @@ function Home(): JSX.Element {
           </button>
           <button
             type="button"
+            onClick={() => navigate('/speaking')}
+            className="text-sm text-sky-600 transition hover:text-sky-700"
+          >
+            Speaking
+          </button>
+          <button
+            type="button"
             onClick={() => navigate('/question-bank')}
             className="text-sm text-sky-600 transition hover:text-sky-700"
           >
@@ -81,6 +90,8 @@ function App(): JSX.Element {
         <Route path="/review/:id" element={<ReviewPage />} />
         <Route path="/writing" element={<WritingPage />} />
         <Route path="/writing/:id" element={<WritingReviewPage />} />
+        <Route path="/speaking" element={<SpeakingPage />} />
+        <Route path="/speaking/:id" element={<SpeakingReviewPage />} />
       </Routes>
     </BrowserRouter>
   );

@@ -1,0 +1,32 @@
+[
+  {
+    "task": 1,
+    "question": "Vous rencontrez votre nouveau voisin pour la première fois. Présentez-vous : parlez de votre travail, de vos loisirs et de la raison pour laquelle vous avez emménagé dans ce quartier.",
+    "answer": "Bonjour ! Je m'appelle Camille, je viens d'emménager dans l'appartement du deuxième étage. Je travaille comme infirmière à l'hôpital du centre-ville, donc j'ai souvent des horaires un peu décalés. Pendant mon temps libre, j'adore faire de la randonnée et lire des romans policiers. J'ai choisi ce quartier parce qu'il est calme, proche d'un parc, et bien desservi par les transports en commun. J'espère qu'on aura l'occasion de mieux se connaître !"
+  },
+  {
+    "task": 1,
+    "question": "Au bureau, un collègue vous demande de lui parler de votre dernier week-end. Décrivez ce que vous avez fait, avec qui, et ce que vous avez préféré.",
+    "answer": "Ce week-end, je suis allé à la campagne avec deux amis d'enfance. Samedi, nous avons visité un petit marché local et goûté des fromages de la région. Le soir, nous avons préparé un grand repas ensemble. Dimanche, nous avons fait une longue balade à vélo le long de la rivière. Ce que j'ai préféré, c'est le calme et le fait de déconnecter complètement du travail. Je suis revenu vraiment reposé."
+  },
+  {
+    "task": 2,
+    "question": "Vous souhaitez vous inscrire à un cours de cuisine. Vous appelez l'école pour obtenir des informations. Posez des questions sur les horaires, le prix, le niveau requis et le matériel à apporter.",
+    "answer": "Bonjour, je vous appelle car je voudrais m'inscrire à un de vos cours de cuisine. Pourriez-vous me dire quels jours et à quelles heures les cours ont lieu ? J'aimerais aussi connaître le tarif : est-ce qu'on paie par séance ou pour un trimestre complet ? Faut-il déjà avoir de l'expérience, ou acceptez-vous les débutants ? Et enfin, est-ce que je dois apporter mon propre matériel, comme un tablier ou des couteaux, ou est-ce fourni sur place ? Merci beaucoup pour ces précisions."
+  },
+  {
+    "task": 2,
+    "question": "Un ami français vient passer une semaine dans votre ville. Vous l'aidez à organiser son séjour. Renseignez-vous auprès de l'office de tourisme sur les visites, les transports et les bons restaurants.",
+    "answer": "Bonjour, un ami vient me rendre visite la semaine prochaine et je voudrais lui faire découvrir la ville. Quelles sont les visites incontournables à ne pas manquer ? Y a-t-il un pass touristique pour les musées ? Concernant les déplacements, est-ce qu'il vaut mieux prendre les transports en commun ou louer un vélo ? Auriez-vous aussi des recommandations de restaurants typiques, pas trop chers, dans le centre ? Je vous remercie pour votre aide."
+  },
+  {
+    "task": 3,
+    "question": "Certaines personnes pensent que le télétravail devrait devenir la norme pour tous les emplois de bureau. Qu'en pensez-vous ? Donnez votre opinion et justifiez-la avec des exemples.",
+    "answer": "À mon avis, le télétravail présente de nombreux avantages, mais il ne devrait pas devenir une obligation pour tous. D'un côté, travailler à domicile fait gagner du temps de transport et permet une meilleure conciliation entre vie professionnelle et vie privée. Par exemple, des parents peuvent plus facilement s'occuper de leurs enfants. D'un autre côté, l'isolement peut nuire à la motivation et à la créativité, car les échanges spontanés entre collègues disparaissent. Je pense donc qu'une formule hybride, avec quelques jours au bureau et quelques jours à la maison, serait la solution la plus équilibrée."
+  },
+  {
+    "task": 3,
+    "question": "De plus en plus de villes limitent la circulation des voitures en centre-ville. Pensez-vous que ce soit une bonne décision ? Développez votre point de vue.",
+    "answer": "Je trouve que limiter la circulation des voitures en centre-ville est globalement une bonne décision. Tout d'abord, cela réduit la pollution de l'air et le bruit, ce qui améliore la qualité de vie des habitants. Ensuite, en rendant les rues aux piétons et aux vélos, on crée des espaces plus agréables et plus sûrs. Bien sûr, il faut accompagner cette mesure de transports en commun efficaces, sinon certaines personnes, notamment celles qui habitent loin, seraient pénalisées. En somme, c'est une bonne orientation, à condition de prévoir des alternatives accessibles à tous."
+  }
+]
