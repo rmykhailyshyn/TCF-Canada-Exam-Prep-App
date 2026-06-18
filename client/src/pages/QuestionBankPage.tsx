@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { TopNav } from '../components/TopNav';
 import {
   ApiError,
   type DifficultyFilter,
@@ -43,22 +43,13 @@ function triggerDownload(doc: ExportDocument): void {
 }
 
 export function QuestionBankPage(): JSX.Element {
-  const navigate = useNavigate();
-
   return (
     <main className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-4">
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="text-slate-500 hover:text-slate-900 transition text-sm"
-        >
-          ← Back
-        </button>
-        <span className="font-semibold text-slate-900">Question Bank</span>
-      </header>
+      {/* spec: section-navigation §Behaviour.2 — Question Bank is reachable via the persistent top menu. */}
+      <TopNav active="questionBank" />
 
       <div className="mx-auto max-w-2xl space-y-6 p-6">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Question Bank</h1>
         <ExportPanel />
         <ImportPanel />
       </div>

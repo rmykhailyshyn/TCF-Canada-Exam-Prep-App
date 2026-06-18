@@ -50,12 +50,19 @@ function fakeSession(overrides: Partial<QuizSession> = {}): QuizSession {
 }
 
 describe('render smoke tests', () => {
-  // spec: docs/specs/reading-quiz-ui.md §Session setup.1
-  it('renders the setup screen with the difficulty bands hidden until learning is picked', () => {
-    const html = renderToStaticMarkup(<SetupScreen onStart={vi.fn()} />);
+  // spec: docs/specs/reading-quiz-ui.md §Session setup.1 + section-navigation §Behaviour.1,6
+  it('renders the setup screen with all four sections and bands hidden until learning is picked', () => {
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <SetupScreen onStart={vi.fn()} />
+      </MemoryRouter>,
+    );
     expect(html).toContain('Start a session');
+    // All four sections are selectable from the landing picker (Milestone 12).
     expect(html).toContain('Reading');
     expect(html).toContain('Listening');
+    expect(html).toContain('Writing');
+    expect(html).toContain('Speaking');
     // Difficulty list only appears after choosing Learning (not on first render).
     expect(html).not.toContain('Upper-Intermediate');
   });

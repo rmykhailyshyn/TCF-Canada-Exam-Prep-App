@@ -1,7 +1,7 @@
 # Spec: On-Screen Virtual Keyboard (French accents)
 
 ## Status
-approved
+implemented
 
 > Milestone 12. A frontend input aid for typing French special characters (é, à, ç, …) that a
 > non-French physical keyboard makes awkward — mirroring the on-screen keyboard provided by the real
@@ -76,12 +76,12 @@ endpoints unchanged.
 ## Acceptance criteria
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
-- [ ] The Writing editor shows an on-screen accent keyboard next to each task's textarea in both training and real modes. (Behaviour.1)
-- [ ] Clicking a character inserts it at the caret (replacing any selection) and returns focus to the textarea with the caret after the glyph. (Behaviour.2)
-- [ ] An inserted character updates the word count and triggers autosave the same way typed input does, and is undoable. (Behaviour.3)
-- [ ] The keyboard renders the exact 16-key 4×4 grid (`é è ê ë / à â ù û / ô î ï ç / œ æ « »`) with a `⇧ abc` shift toggle that switches the 14 letters to uppercase (guillemets unchanged), matching the official TCF software. (Behaviour.4, 5)
-- [ ] Each character button is keyboard-operable (Enter/Space) with an accessible label, and inserted text remains within the `lang="fr"` textarea content. (Behaviour.6)
-- [ ] Using the toolbar does not disrupt normal physical-keyboard typing into the same textarea. (Behaviour.7)
+- [x] The Writing editor shows an on-screen accent keyboard next to each task's textarea in both training and real modes. (Behaviour.1)
+- [x] Clicking a character inserts it at the caret (replacing any selection) and returns focus to the textarea with the caret after the glyph. (Behaviour.2)
+- [x] An inserted character updates the word count and triggers autosave the same way typed input does, and is undoable. (Behaviour.3)
+- [x] The keyboard renders the exact 16-key 4×4 grid (`é è ê ë / à â ù û / ô î ï ç / œ æ « »`) with a `⇧ abc` shift toggle that switches the 14 letters to uppercase (guillemets unchanged), matching the official TCF software. (Behaviour.4, 5)
+- [x] Each character button is keyboard-operable (Enter/Space) with an accessible label, and inserted text remains within the `lang="fr"` textarea content. (Behaviour.6)
+- [x] Using the toolbar does not disrupt normal physical-keyboard typing into the same textarea. (Behaviour.7)
 
 ## Open questions
 - ~~**Exact glyph set & layout.**~~ **Resolved 2026-06-17:** confirmed from a screenshot of the real
@@ -101,3 +101,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   question.
 - 2026-06-18: Status moved draft → approved (Milestone 12), alongside section-navigation. Wireframe
   added at docs/mockups.md §19.
+- 2026-06-18: Implemented. `client/src/features/writing/VirtualKeyboard.tsx` renders the 16-key 4×4
+  grid + `⇧ abc` toggle above each Writing textarea (both modes); insertion uses
+  `execCommand('insertText')` (native undo + reuses the existing onChange → word-count/autosave path),
+  with a value-setter + dispatched-`input` fallback. Status approved → implemented.

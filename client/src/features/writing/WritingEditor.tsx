@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { BrandMark } from '../../components/BrandMark';
 import { CountdownTimer } from '../quiz/CountdownTimer';
 import { ConfirmDialog } from '../quiz/ConfirmDialog';
+import { VirtualKeyboard } from './VirtualKeyboard';
 import { WordCounter } from './WordCounter';
 import type { WritingSession } from './useWritingSession';
 
@@ -15,6 +16,9 @@ type Props = { session: WritingSession };
 export function WritingEditor({ session }: Props): JSX.Element {
   const [active, setActive] = useState(0);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // spec: docs/specs/virtual-keyboard.md §Behaviour.2 — the accent keyboard inserts into the active
+  // task's textarea via this ref (the element is reused across task tabs, so the ref stays valid).
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isReal = session.mode === 'real';
   const task = session.tasks[active];
   if (!task) return <div className="p-6 text-slate-500">No writing tasks available.</div>;
@@ -124,7 +128,11 @@ export function WritingEditor({ session }: Props): JSX.Element {
             )}
           </div>
 
+          {/* spec: virtual-keyboard.md §Behaviour.1 — shown above each textarea in both modes. */}
+          <VirtualKeyboard textareaRef={textareaRef} />
+
           <textarea
+            ref={textareaRef}
             value={session.drafts[n] ?? ''}
             onChange={(e) => session.setDraft(n, e.target.value)}
             onBlur={() => session.saveNow(n)}

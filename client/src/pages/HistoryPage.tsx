@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { TopNav } from '../components/TopNav';
 import { type SessionSummary, fetchSessions } from '../lib/api';
 import { bandName } from '../lib/bands';
 import { formatClock } from '../lib/format';
@@ -48,18 +49,11 @@ export function HistoryPage(): JSX.Element {
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-4">
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="text-slate-500 hover:text-slate-900 transition text-sm"
-        >
-          ← Back
-        </button>
-        <span className="font-semibold text-slate-900">Session History</span>
-      </header>
+      {/* spec: section-navigation §Behaviour.2 — History is reachable via the persistent top menu. */}
+      <TopNav active="history" />
 
       <div className="mx-auto max-w-2xl p-6">
+        <h1 className="mb-4 text-2xl font-bold tracking-tight text-slate-900">Session History</h1>
         {loading && <p className="text-slate-500">Loading…</p>}
         {error && <p className="text-red-600">{error}</p>}
         {!loading && !error && sessions.length === 0 && (

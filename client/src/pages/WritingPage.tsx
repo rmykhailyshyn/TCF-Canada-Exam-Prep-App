@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Spinner } from '../components/Spinner';
+import { TopNav } from '../components/TopNav';
 import { WritingEditor } from '../features/writing/WritingEditor';
 import { WritingResults } from '../features/writing/WritingResults';
 import { WritingSetup } from '../features/writing/WritingSetup';
@@ -15,9 +16,10 @@ export function WritingPage(): JSX.Element {
   const [config, setConfig] = useState<WritingConfig | null>(null);
 
   if (!config) {
+    // spec: section-navigation §Behaviour.2 — persistent top menu on the section setup screen.
     return (
       <main className="min-h-screen">
-        <Header onHome={() => navigate('/')} />
+        <TopNav active="writing" />
         <WritingSetup onStart={setConfig} />
       </main>
     );
@@ -70,16 +72,6 @@ function WritingRunner({
   }
 
   return <WritingEditor session={session} />;
-}
-
-function Header({ onHome }: { onHome: () => void }): JSX.Element {
-  return (
-    <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/70 bg-white/80 px-6 py-3 backdrop-blur-md">
-      <button type="button" onClick={onHome} className="text-sm text-sky-600 hover:text-sky-700">
-        ← Home
-      </button>
-    </header>
-  );
 }
 
 function Centered({ children }: { children: ReactNode }): JSX.Element {

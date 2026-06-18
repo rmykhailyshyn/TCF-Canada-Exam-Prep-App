@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { DifficultySlug, Mode, Section } from '../../lib/api';
 import { DIFFICULTY_BANDS } from '../../lib/bands';
 import type { SessionConfig } from './types';
 
-// spec: docs/specs/reading-quiz-ui.md §Session setup.1–2 + docs/specs/listening-quiz-ui.md §1–2
-// Choose section + mode (+ difficulty in learning). Start is disabled until the selection is
-// complete. Both Reading and Listening sections are wired up as of Milestone 3.
+// spec: docs/specs/reading-quiz-ui.md §Session setup.1–2 + docs/specs/listening-quiz-ui.md §1–2 +
+// docs/specs/section-navigation.md §Behaviour.1,3,6
+// The landing picker offers all four sections in a consistent order. Reading/Listening continue
+// inline into the Mode (+ difficulty in learning) flow; Writing/Speaking hand off to their own setup
+// screens (/writing, /speaking). Start is disabled until the Reading/Listening selection is complete.
 
 type Props = { onStart: (config: SessionConfig) => void };
 
@@ -17,7 +20,11 @@ const REAL_SUBTITLE: Record<Section, string> = {
 };
 
 export function SetupScreen({ onStart }: Props): JSX.Element {
-  const [section, setSection] = useState<Section>('reading');
+  const navigate = useNavigate();
+  const location = useLocation();
+  // The top menu may pre-select Reading/Listening via router state (section-navigation §Behaviour.3).
+  const presetSection = (location.state as { section?: Section } | null)?.section;
+  const [section, setSection] = useState<Section>(presetSection ?? 'reading');
   const [mode, setMode] = useState<Mode | null>(null);
   const [difficulty, setDifficulty] = useState<DifficultySlug | null>(null);
 
@@ -37,7 +44,7 @@ export function SetupScreen({ onStart }: Props): JSX.Element {
 
       <section className="mt-9">
         <SectionLabel>Section</SectionLabel>
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Card
             selected={section === 'reading'}
             onClick={() => setSection('reading')}
@@ -51,6 +58,19 @@ export function SetupScreen({ onStart }: Props): JSX.Element {
             icon="🎧"
             title="Listening"
             subtitle="Compréhension orale"
+          />
+          {/* spec: section-navigation §Behaviour.1,3 — Writing/Speaking hand off to their own setup. */}
+          <Card
+            onClick={() => navigate('/writing')}
+            icon="📝"
+            title="Writing"
+            subtitle="Expression écrite"
+          />
+          <Card
+            onClick={() => navigate('/speaking')}
+            icon="🎤"
+            title="Speaking"
+            subtitle="Expression orale"
           />
         </div>
       </section>
