@@ -351,3 +351,28 @@ Two friction points worth recording:
   same "does reality match?" gap M9 called out, now wearing a platform hat. The mitigation was the M9
   habit: keep the pure, testable seams (parser, prompt builders, JSON parsers) on the near side of the
   CLI boundary so the untestable part is as small as possible.
+
+## Milestone 12 — UI polish (two presentation-only specs from detailed mockups)
+
+M12 was the first milestone where the specs were **frontend-only and explicitly tied to mockups** —
+both `virtual-keyboard.md` and `section-navigation.md` cited `docs/mockups.md` §19/§20, and the
+keyboard spec even froze its 16-key layout from a screenshot of the real exam software. Two
+observations:
+
+- **A mockup closes the "what does it look like?" gap a behaviour list leaves open.** The keyboard
+  spec's prose ("a 4×4 grid of 16 keys") plus the §19 wireframe and the exact glyph table left almost
+  nothing to invent — the component was transcription, not design. Where the spec was prose-only
+  (where to place the keyboard relative to the textarea) it deferred to "implementation detail," and
+  that was the one spot that needed a judgement call. **Lesson:** for presentation specs, a pinned
+  visual reference is worth more than more behaviour prose.
+- **The spec's open questions were the real design decisions, and resolving them up front (via the
+  approval gate) prevented a refactor.** Section-navigation listed two open questions — does the top
+  menu show mid-session, and do Reading/Listening keep their shared inline setup — whose answers
+  determined whether this was a small additive change or a routing rewrite. Deciding both *before*
+  coding (in-session header stays; R/L inline, W/S route out) kept the change additive: one new
+  `TopNav`, four cards in the existing `SetupScreen`, and header swaps — no session-flow changes.
+- **The code↔reality gap reappeared, smaller.** The one behaviour SDD couldn't pin from prose was
+  native-undo + autosave-on-insert (§Behaviour.3): it hinges on `execCommand('insertText')` firing the
+  same `input` event React's `onChange` listens for, which the `node` test env can't exercise. The M9
+  habit applied again — the pure seams (`glyphFor`, `computeInsertion`) are unit-tested; only the thin
+  DOM wrapper is left to manual/e2e verification.

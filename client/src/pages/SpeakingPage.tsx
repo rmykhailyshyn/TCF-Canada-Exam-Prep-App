@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Spinner } from '../components/Spinner';
+import { TopNav } from '../components/TopNav';
 import { SpeakingResults } from '../features/speaking/SpeakingResults';
 import { SpeakingSession } from '../features/speaking/SpeakingSession';
 import { SpeakingSetup } from '../features/speaking/SpeakingSetup';
@@ -15,11 +16,15 @@ export function SpeakingPage(): JSX.Element {
   const [config, setConfig] = useState<SpeakingConfig | null>(null);
 
   if (!config) {
+    // spec: section-navigation §Behaviour.2 — persistent top menu on the section setup screen.
+    // TopNav (a <header>/banner) sits outside <main> so its landmark role is preserved.
     return (
-      <main className="min-h-screen">
-        <Header onHome={() => navigate('/')} />
-        <SpeakingSetup onStart={setConfig} />
-      </main>
+      <>
+        <TopNav active="speaking" />
+        <main className="min-h-screen">
+          <SpeakingSetup onStart={setConfig} />
+        </main>
+      </>
     );
   }
 
@@ -57,16 +62,6 @@ function SpeakingRunner({ config, onHome }: { config: SpeakingConfig; onHome: ()
   }
 
   return <SpeakingSession session={session} />;
-}
-
-function Header({ onHome }: { onHome: () => void }): JSX.Element {
-  return (
-    <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/70 bg-white/80 px-6 py-3 backdrop-blur-md">
-      <button type="button" onClick={onHome} className="text-sm text-sky-600 hover:text-sky-700">
-        ← Home
-      </button>
-    </header>
-  );
 }
 
 function Centered({ children }: { children: ReactNode }): JSX.Element {

@@ -1,6 +1,9 @@
+import { createRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { WritingCompleteResult, WritingTask } from '../../lib/api';
+import { VirtualKeyboard } from './VirtualKeyboard';
+import { VK_KEYS, computeInsertion, glyphFor } from './vkKeys';
 import { WordCounter } from './WordCounter';
 import { WritingEditor } from './WritingEditor';
 import { WritingResults } from './WritingResults';
@@ -96,6 +99,36 @@ describe('WritingEditor', () => {
     expect(html).toContain('Submit exam');
     expect(html).not.toContain('Get correction');
     expect(html).toContain('⏱');
+  });
+});
+
+describe('VirtualKeyboard', () => {
+  // spec: docs/specs/virtual-keyboard.md §Behaviour.4 — exact 16-key 4×4 grid + ⇧ abc toggle.
+  it('renders the exact 16-key grid and the shift toggle', () => {
+    const html = renderToStaticMarkup(<VirtualKeyboard textareaRef={createRef()} />);
+    for (const glyph of ['é', 'è', 'ê', 'ë', 'à', 'â', 'ù', 'û', 'ô', 'î', 'ï', 'ç', 'œ', 'æ', '«', '»']) {
+      expect(html).toContain(`Insert ${glyph}`);
+    }
+    expect(html).toContain('⇧ abc');
+    expect(VK_KEYS).toHaveLength(16);
+  });
+
+  // spec: §Behaviour.4 — shift uppercases the 14 letter keys; guillemets are unaffected.
+  it('maps letters to uppercase under shift and leaves guillemets unchanged', () => {
+    expect(glyphFor({ lower: 'é', upper: 'É' }, true)).toBe('É');
+    expect(glyphFor({ lower: 'ç', upper: 'Ç' }, true)).toBe('Ç');
+    expect(glyphFor({ lower: 'œ', upper: 'Œ' }, true)).toBe('Œ');
+    expect(glyphFor({ lower: 'é', upper: 'É' }, false)).toBe('é');
+    // Guillemets have no `upper`, so shift does not change them.
+    expect(glyphFor({ lower: '«' }, true)).toBe('«');
+    expect(glyphFor({ lower: '»' }, true)).toBe('»');
+  });
+
+  // spec: §Behaviour.2 — caret-aware insertion replaces the selection and advances the caret.
+  it('inserts at the caret and reports the new caret position', () => {
+    expect(computeInsertion('abc', 1, 1, 'é')).toEqual({ value: 'aébc', caret: 2 });
+    // A selection [1,3) is replaced by the glyph.
+    expect(computeInsertion('abc', 1, 3, 'œ')).toEqual({ value: 'aœ', caret: 2 });
   });
 });
 

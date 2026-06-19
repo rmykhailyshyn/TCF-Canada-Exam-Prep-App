@@ -30,7 +30,9 @@ function optionByText(page: Page, text: string) {
 
 async function startListeningLearning(page: Page): Promise<void> {
   await page.goto('/');
-  await page.getByRole('button', { name: /Listening/ }).click();
+  // Select the Listening *card* by its French subtitle (section-navigation M12 adds a "Listening"
+  // top-menu link with the same name, so a bare /Listening/ would be ambiguous).
+  await page.getByRole('button', { name: /Compréhension orale/ }).click();
   await page.getByRole('button', { name: /Learning/ }).click();
   await page.getByRole('button', { name: /Beginner/ }).click();
   await page.getByRole('button', { name: 'Start session', exact: true }).click();

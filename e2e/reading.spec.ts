@@ -6,7 +6,9 @@ import { expect, test } from '@playwright/test';
 
 test('reading learning flow renders a passage and reveals feedback on confirm', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: /Reading/ }).click();
+  // The Reading section *card* (section-navigation M12 also adds a "Reading" top-menu link, so select
+  // the card by its French subtitle to stay unambiguous).
+  await page.getByRole('button', { name: /Compréhension écrite/ }).click();
   await page.getByRole('button', { name: /Learning/ }).click();
   await page.getByRole('button', { name: /Beginner/ }).click();
   await page.getByRole('button', { name: 'Start session', exact: true }).click();

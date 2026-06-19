@@ -302,7 +302,7 @@ Apple-Silicon/macOS-only; the Claude scoring step is platform-agnostic.
 ---
 
 ## Milestone 12 — UI polish: on-screen French keyboard + unified section navigation
-**Status:** approved
+**Status:** implemented
 
 Two frontend-only UI improvements (no backend, data-model, or scoring change):
 
@@ -316,21 +316,21 @@ integration point).
 selectable from both the landing screen and a persistent top menu (quick navigation), replacing the
 current Reading/Listening-only picker plus ad-hoc Writing/Speaking nav links.
 
-- [ ] Reusable on-screen accent keyboard component matching the real TCF software: the exact 16-key 4×4
+- [x] Reusable on-screen accent keyboard component matching the real TCF software: the exact 16-key 4×4
   grid (`é è ê ë / à â ù û / ô î ï ç / œ æ « »`) + a `⇧ abc` shift toggle to uppercase, inserted at the
-  caret of the focused input
-- [ ] Integrated into the Writing editor next to each task's textarea, in both training and real modes
+  caret of the focused input (`client/src/features/writing/VirtualKeyboard.tsx`)
+- [x] Integrated into the Writing editor next to each task's textarea, in both training and real modes
   (the real TCF software provides it during the timed exam)
-- [ ] Inserted characters behave like typed input: caret-aware insertion, native undo, and the same
-  word-count + autosave paths; toolbar interoperates with physical-keyboard typing
-- [ ] Accessible buttons (keyboard-operable, labelled); inserted French text stays within the
+- [x] Inserted characters behave like typed input: caret-aware insertion, native undo, and the same
+  word-count + autosave paths (via `execCommand('insertText')`); toolbar interoperates with physical-keyboard typing
+- [x] Accessible buttons (keyboard-operable, labelled); inserted French text stays within the
   `lang="fr"` textarea content
-- [ ] Unified navigation: all four sections selectable on the **landing screen** and in a **persistent
-  top menu** (plus History + Question Bank), consistent order/labels, active-section indication, and a
-  graceful empty state for a section with no imported content
+- [x] Unified navigation: all four sections selectable on the **landing screen** and in a **persistent
+  top menu** (`client/src/components/TopNav.tsx`, plus History + Question Bank), consistent order/labels,
+  active-section indication, and a graceful empty state for a section with no imported content
 - [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass
 
 **Specs:**
-- `docs/specs/virtual-keyboard.md` (approved)
-- `docs/specs/section-navigation.md` (approved)
+- `docs/specs/virtual-keyboard.md` (implemented)
+- `docs/specs/section-navigation.md` (implemented)
 - `docs/mockups.md` §19–20 (accent keyboard + unified navigation wireframes)

@@ -1,13 +1,19 @@
 import { expect, test } from '@playwright/test';
 
-// spec: docs/specs/listening-quiz-ui.md §Session setup (Behaviour.1–2) + reading-quiz-ui.md §1–2
-// The setup screen now offers both sections; difficulty appears only in learning mode and gates Start.
+// spec: docs/specs/listening-quiz-ui.md §Session setup (Behaviour.1–2) + reading-quiz-ui.md §1–2 +
+// section-navigation.md §Behaviour.1 (all four sections on the landing). The setup screen offers all
+// four sections; difficulty appears only in learning mode and gates Start.
+//
+// Note: the persistent top menu (section-navigation, M12) also exposes "Reading"/"Listening" links, so
+// section *cards* are selected by their French subtitle (unique to the card) to stay unambiguous.
+const listeningCard = (page: import('@playwright/test').Page) =>
+  page.getByRole('button', { name: /Compréhension orale/ });
 
 test.describe('setup screen', () => {
   test('offers Listening as a selectable section (no longer "coming soon")', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Start a session' })).toBeVisible();
-    const listening = page.getByRole('button', { name: /Listening/ });
+    const listening = listeningCard(page);
     await expect(listening).toBeVisible();
     await expect(listening).toBeEnabled();
     await expect(page.getByText('Coming soon')).toHaveCount(0);
@@ -33,7 +39,7 @@ test.describe('setup screen', () => {
 
   test('real-mode subtitle reflects the listening time limit (35 min)', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /Listening/ }).click();
+    await listeningCard(page).click();
     await page.getByRole('button', { name: /Real/ }).click();
     await expect(page.getByText('35 min · 39 questions · no feedback')).toBeVisible();
   });

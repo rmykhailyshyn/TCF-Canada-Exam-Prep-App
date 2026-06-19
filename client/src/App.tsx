@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { BrandMark } from './components/BrandMark';
+import { TopNav } from './components/TopNav';
 import { SetupScreen } from './features/quiz/SetupScreen';
 import type { SessionConfig } from './features/quiz/types';
 import { HistoryPage } from './pages/HistoryPage';
@@ -39,43 +39,15 @@ function Home(): JSX.Element {
     );
   }
 
+  // spec: docs/specs/section-navigation.md §Behaviour.1–2 — the landing shows the persistent top menu
+  // and the four-section picker. No active section is highlighted here (the user is not yet inside one).
   return (
-    <main className="min-h-screen">
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/70 bg-white/80 px-6 py-3 backdrop-blur-md">
-        <BrandMark />
-        <nav className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => navigate('/writing')}
-            className="text-sm text-sky-600 transition hover:text-sky-700"
-          >
-            Writing
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/speaking')}
-            className="text-sm text-sky-600 transition hover:text-sky-700"
-          >
-            Speaking
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/question-bank')}
-            className="text-sm text-sky-600 transition hover:text-sky-700"
-          >
-            Question Bank
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/history')}
-            className="text-sm text-sky-600 transition hover:text-sky-700"
-          >
-            History
-          </button>
-        </nav>
-      </header>
-      <SetupScreen onStart={setConfig} />
-    </main>
+    <>
+      <TopNav />
+      <main className="min-h-screen">
+        <SetupScreen onStart={setConfig} />
+      </main>
+    </>
   );
 }
 

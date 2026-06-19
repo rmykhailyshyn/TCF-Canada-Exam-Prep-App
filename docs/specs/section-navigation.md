@@ -1,7 +1,7 @@
 # Spec: Unified Section Navigation
 
 ## Status
-approved
+implemented
 
 > Milestone 12. A navigation/landing-UX change so all four exam sections (Reading, Listening, Writing,
 > Speaking) are launchable from two consistent places: the landing screen and a persistent top menu.
@@ -56,24 +56,29 @@ None. Consumes the existing per-section entry routes and the existing History / 
 ## Acceptance criteria
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
-- [ ] The landing screen offers all four sections (Reading, Listening, Writing, Speaking) as selectable entries, each launching that section's setup/start. (Behaviour.1)
-- [ ] A persistent top menu exposes quick links to all four sections plus History and Question Bank, available on the landing screen and reachable from section screens. (Behaviour.2)
-- [ ] Selecting a section from either the landing picker or the top menu routes to that section's setup/start consistently. (Behaviour.3)
-- [ ] The top menu indicates the active section when the user is inside one. (Behaviour.4)
-- [ ] A section with no imported content shows a friendly empty state rather than erroring. (Behaviour.5)
-- [ ] Sections appear in a consistent order with consistent labels/icons in both the landing picker and the top menu. (Behaviour.6)
+- [x] The landing screen offers all four sections (Reading, Listening, Writing, Speaking) as selectable entries, each launching that section's setup/start. (Behaviour.1)
+- [x] A persistent top menu exposes quick links to all four sections plus History and Question Bank, available on the landing screen and reachable from section screens. (Behaviour.2)
+- [x] Selecting a section from either the landing picker or the top menu routes to that section's setup/start consistently. (Behaviour.3)
+- [x] The top menu indicates the active section when the user is inside one. (Behaviour.4)
+- [x] A section with no imported content shows a friendly empty state rather than erroring. (Behaviour.5)
+- [x] Sections appear in a consistent order with consistent labels/icons in both the landing picker and the top menu. (Behaviour.6)
 
 ## Open questions
-- **Header on session screens.** Whether the persistent top menu replaces or sits alongside each
-  section's in-session header (which shows the timer / progress). Default: the in-session header stays;
-  the global menu is the landing/section-select chrome and the per-section "Home" affordance returns to
-  it. Confirm whether quick section-switching should also be available mid-session.
-- **Reading vs. Listening share one setup.** They currently share the quiz `SetupScreen` (section +
-  mode + difficulty). Unifying the picker may mean the landing cards pre-select the section and drop
-  into that shared setup, while Writing/Speaking have their own setup screens — confirm the picker
-  hands off cleanly to each.
+- ~~**Header on session screens.**~~ **Resolved 2026-06-18:** the in-session header (timer/progress)
+  stays; the persistent top menu is landing/setup chrome only and is **not** shown mid-session (no
+  quick section-switching during an active quiz/editor/recorder), to avoid abandoning a timed session.
+- ~~**Reading vs. Listening share one setup.**~~ **Resolved 2026-06-18:** the landing picker keeps
+  Reading/Listening inline in the shared `SetupScreen` (section + mode + difficulty); the
+  Writing/Speaking cards route to their own setup screens (`/writing`, `/speaking`). The top menu
+  pre-selects Reading/Listening via router state.
 
 ## Revision history
 - 2026-06-18: Initial draft (Milestone 12).
 - 2026-06-18: Status moved draft → approved (Milestone 12), alongside virtual-keyboard. Wireframe
   added at docs/mockups.md §20.
+- 2026-06-18: Implemented. New `client/src/components/TopNav.tsx` is the persistent top menu (four
+  sections + History + Question Bank, active-section highlight) on the landing and the Writing/Speaking
+  setup, History and Question Bank screens; `SetupScreen` now shows all four section cards
+  (Reading/Listening inline; Writing/Speaking route to their own setup, per the §Open-questions
+  resolution). In-session headers are unchanged (no mid-session switching). Status approved →
+  implemented.
