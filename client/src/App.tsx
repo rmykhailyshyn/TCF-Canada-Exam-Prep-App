@@ -42,10 +42,12 @@ function Home(): JSX.Element {
   // spec: docs/specs/section-navigation.md §Behaviour.1–2 — the landing shows the persistent top menu
   // and the four-section picker. No active section is highlighted here (the user is not yet inside one).
   return (
-    <main className="min-h-screen">
+    <>
       <TopNav />
-      <SetupScreen onStart={setConfig} />
-    </main>
+      <main className="min-h-screen">
+        <SetupScreen onStart={setConfig} />
+      </main>
+    </>
   );
 }
 

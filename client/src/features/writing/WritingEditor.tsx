@@ -128,8 +128,9 @@ export function WritingEditor({ session }: Props): JSX.Element {
             )}
           </div>
 
-          {/* spec: virtual-keyboard.md §Behaviour.1 — shown above each textarea in both modes. */}
-          <VirtualKeyboard textareaRef={textareaRef} />
+          {/* spec: virtual-keyboard.md §Behaviour.1 — shown above each textarea in both modes.
+              `key={active}` remounts it per task tab so the shift toggle resets to lowercase. */}
+          <VirtualKeyboard key={active} textareaRef={textareaRef} />
 
           <textarea
             ref={textareaRef}

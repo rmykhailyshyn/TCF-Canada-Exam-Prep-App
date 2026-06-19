@@ -44,16 +44,18 @@ function triggerDownload(doc: ExportDocument): void {
 
 export function QuestionBankPage(): JSX.Element {
   return (
-    <main className="min-h-screen bg-slate-50">
-      {/* spec: section-navigation §Behaviour.2 — Question Bank is reachable via the persistent top menu. */}
+    <>
+      {/* spec: section-navigation §Behaviour.2 — Question Bank is reachable via the persistent top menu.
+          TopNav (a <header>/banner) sits outside <main> so its landmark role is preserved. */}
       <TopNav active="questionBank" />
-
-      <div className="mx-auto max-w-2xl space-y-6 p-6">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Question Bank</h1>
-        <ExportPanel />
-        <ImportPanel />
-      </div>
-    </main>
+      <main className="min-h-screen bg-slate-50">
+        <div className="mx-auto max-w-2xl space-y-6 p-6">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Question Bank</h1>
+          <ExportPanel />
+          <ImportPanel />
+        </div>
+      </main>
+    </>
   );
 }
 

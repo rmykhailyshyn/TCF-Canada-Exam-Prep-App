@@ -17,11 +17,14 @@ export function WritingPage(): JSX.Element {
 
   if (!config) {
     // spec: section-navigation §Behaviour.2 — persistent top menu on the section setup screen.
+    // TopNav (a <header>/banner) sits outside <main> so its landmark role is preserved.
     return (
-      <main className="min-h-screen">
+      <>
         <TopNav active="writing" />
-        <WritingSetup onStart={setConfig} />
-      </main>
+        <main className="min-h-screen">
+          <WritingSetup onStart={setConfig} />
+        </main>
+      </>
     );
   }
 

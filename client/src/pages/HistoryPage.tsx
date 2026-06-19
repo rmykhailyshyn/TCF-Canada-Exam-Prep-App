@@ -48,12 +48,13 @@ export function HistoryPage(): JSX.Element {
   }, []);
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      {/* spec: section-navigation §Behaviour.2 — History is reachable via the persistent top menu. */}
+    <>
+      {/* spec: section-navigation §Behaviour.2 — History is reachable via the persistent top menu.
+          TopNav (a <header>/banner) sits outside <main> so its landmark role is preserved. */}
       <TopNav active="history" />
-
-      <div className="mx-auto max-w-2xl p-6">
-        <h1 className="mb-4 text-2xl font-bold tracking-tight text-slate-900">Session History</h1>
+      <main className="min-h-screen bg-slate-50">
+        <div className="mx-auto max-w-2xl p-6">
+          <h1 className="mb-4 text-2xl font-bold tracking-tight text-slate-900">Session History</h1>
         {loading && <p className="text-slate-500">Loading…</p>}
         {error && <p className="text-red-600">{error}</p>}
         {!loading && !error && sessions.length === 0 && (
@@ -92,7 +93,8 @@ export function HistoryPage(): JSX.Element {
             ))}
           </ul>
         )}
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   );
 }

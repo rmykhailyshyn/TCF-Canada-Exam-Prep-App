@@ -67,7 +67,7 @@ export function TopNav({ active }: Props): JSX.Element {
       <button type="button" onClick={() => navigate('/')} aria-label="Home" className="text-left">
         <BrandMark />
       </button>
-      <nav className="flex items-center gap-4">
+      <nav aria-label="Sections" className="flex items-center gap-4">
         {SECTIONS.map((s) => (
           <button
             key={s.key}

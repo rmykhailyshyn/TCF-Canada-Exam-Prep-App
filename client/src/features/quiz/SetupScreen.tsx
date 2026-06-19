@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { DifficultySlug, Mode, Section } from '../../lib/api';
@@ -27,6 +27,12 @@ export function SetupScreen({ onStart }: Props): JSX.Element {
   const [section, setSection] = useState<Section>(presetSection ?? 'reading');
   const [mode, setMode] = useState<Mode | null>(null);
   const [difficulty, setDifficulty] = useState<DifficultySlug | null>(null);
+
+  // The top menu's Reading/Listening links can fire while we're already on `/` (Home renders TopNav),
+  // so Home never remounts — sync the pre-selected section on later navigations, not just on mount.
+  useEffect(() => {
+    if (presetSection) setSection(presetSection);
+  }, [presetSection]);
 
   const canStart = mode === 'real' || (mode === 'learning' && difficulty !== null);
 

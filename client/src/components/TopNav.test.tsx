@@ -18,8 +18,12 @@ describe('TopNav', () => {
     expect(html).toContain('Speaking');
     expect(html).toContain('History');
     expect(html).toContain('Question Bank');
-    // Reading appears before Speaking in the markup (consistent order, §Behaviour.6).
-    expect(html.indexOf('Reading')).toBeLessThan(html.indexOf('Speaking'));
+    // Full consistent order Reading < Listening < Writing < Speaking < History (§Behaviour.6).
+    const order = ['Reading', 'Listening', 'Writing', 'Speaking', 'History'].map((s) =>
+      html.indexOf(s),
+    );
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(order.every((i) => i >= 0)).toBe(true);
   });
 
   it('marks the active section with aria-current', () => {
