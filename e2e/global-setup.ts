@@ -30,9 +30,18 @@ function deriveE2eDatabaseUrl(): string {
 }
 
 function run(label: string, cmd: string, args: string[], env: Record<string, string> = {}): void {
-  const result = spawnSync(cmd, args, { cwd: ROOT, stdio: 'inherit', env: { ...process.env, ...env } });
+  // shell:true on Windows so `npx` (a .cmd shim) is launchable — CreateProcess can't exec .cmd files
+  // directly, so a bare spawnSync('npx', …) fails with ENOENT. Our args are simple tokens (no spaces
+  // or shell metacharacters), so this is quoting-safe. POSIX needs no shell, so keep it off there.
+  const result = spawnSync(cmd, args, {
+    cwd: ROOT,
+    stdio: 'inherit',
+    env: { ...process.env, ...env },
+    shell: process.platform === 'win32',
+  });
   if (result.status !== 0) {
-    throw new Error(`Global setup step "${label}" failed (${cmd} ${args.join(' ')}).`);
+    const detail = result.error ? `: ${result.error.message}` : '';
+    throw new Error(`Global setup step "${label}" failed (${cmd} ${args.join(' ')})${detail}.`);
   }
 }
 
