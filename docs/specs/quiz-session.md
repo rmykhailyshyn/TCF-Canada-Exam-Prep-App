@@ -281,3 +281,8 @@ _None._
   imports at one position no longer double-count (review/history already reconstruct from the
   per-position `question_results`). Verified by e2e: real-mode reading returns 39 distinct
   positions ascending; learning order varies across sessions. Status approved → implemented.
+- 2026-06-20: **Database is migrating PostgreSQL → SQLite** (`docs/specs/database-sqlite.md`,
+  Milestone 13). This spec's behaviour and scoring are dialect-agnostic (all access is via Drizzle), so
+  no behaviour change is expected; the existing end-to-end verification (real-mode all-correct 699/699,
+  all-wrong 0/699) is to be re-confirmed against SQLite. The "Verified end-to-end against PostgreSQL"
+  note above is retained as the historical record of the Milestone 2 verification.

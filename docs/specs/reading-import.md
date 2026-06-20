@@ -5,7 +5,7 @@ implemented
 
 ## Goal
 Allow a developer to import reading comprehension questions from a source directory into the
-local PostgreSQL database via a CLI script. The source directory contains exactly one **results
+local database via a CLI script. The source directory contains exactly one **results
 PDF** (the "Afficher les questions" review page exported from the Réussir TCF Canada site) and
 **one passage image per question** (a PNG whose filename contains the question's sequence number).
 The PDF encodes question order, the option text, and the **correct answer** (the green-highlighted
@@ -225,6 +225,9 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   end-to-end against the real PDF + the real Q39 image (passage + prompt + 4 options, correct = the
   green option; idempotent). Removed the embedded-text caveat; status now fully **implemented**.
   Goal/Scope/PDF structure/Behaviour.4–5/Data model/Open questions updated to match.
+- 2026-06-20: Made the Goal dialect-agnostic ("local PostgreSQL database" → "local database") ahead of
+  the PostgreSQL → SQLite migration (`docs/specs/database-sqlite.md`, Milestone 13). The import behaviour
+  is unchanged — all DB access is via Drizzle — and runs identically on the SQLite local DB.
 - 2026-06-08: **Robustness fixes from a third real export (test 7).** (a) The answer-row `x0`/width
   scale with the export's page width (test 7 is 1512pt wide → `x0 ≈ 349` vs ≈ 844), so the
   hard-coded `x0` band wrongly rejected every row and detected no green ("no green option" for all

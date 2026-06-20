@@ -5,7 +5,7 @@ implemented
 
 ## Goal
 Allow a developer to import listening comprehension questions from a source directory into the
-local PostgreSQL database via a CLI script. The source directory contains exactly one **results
+local database via a CLI script. The source directory contains exactly one **results
 PDF** (the "Afficher les questions" review page exported from the Réussir TCF Canada site after
 completing a quiz) and one local MP3 audio file per question. The PDF encodes question order,
 question text, option text, and — critically — the **correct answer**, which is the option
@@ -217,3 +217,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   Resolved the Whisper-variant, JSON-format, media-naming, and score-mismatch open questions
   (see §Open questions). Image-bearing questions (Q1–6) remain out of scope. Status
   approved → implemented.
+- 2026-06-20: Made the Goal dialect-agnostic ("local PostgreSQL database" → "local database") ahead of
+  the PostgreSQL → SQLite migration (`docs/specs/database-sqlite.md`, Milestone 13). Import behaviour is
+  unchanged — all DB access is via Drizzle. (Whisper transcription remains Apple-Silicon/macOS-only and
+  local-only; it is never run in the Cloudflare deployment.)
