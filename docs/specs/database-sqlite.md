@@ -18,7 +18,9 @@ handlers, services, seed scripts, and import scripts are untouched at the logic 
   - Rewrite `server/db/schema.ts` from `drizzle-orm/pg-core` to `drizzle-orm/sqlite-core`, preserving
     every table, column, constraint, index, and natural key.
   - Replace the `pg` / `drizzle-orm/node-postgres` client in `server/db/index.ts` with libSQL
-    (`@libsql/client` + `drizzle-orm/libsql`), keeping the exported `db` symbol stable.
+    (`@libsql/client` + `drizzle-orm/libsql`), keeping the exported `db` symbol stable. Note: this
+    milestone intentionally retains the module-singleton pattern; the singleton is replaced by an
+    injected factory in Milestone 14 (`server-runtime.md`).
   - Switch `drizzle.config.ts` to `dialect: 'sqlite'` and a libSQL file URL.
   - Update the migration runner `server/db/migrate.ts` to the libSQL migrator.
   - Delete the existing PostgreSQL migrations and regenerate a single clean SQLite baseline (there is

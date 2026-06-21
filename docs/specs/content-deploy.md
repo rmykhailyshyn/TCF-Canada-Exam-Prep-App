@@ -63,6 +63,9 @@ Writing/Speaking when AI scoring is unavailable.
    scoring on submit, correction on request, full Question Bank import — with **no change**.
 7. Completing a session online still records history (sessions + responses) consistent with the existing
    schema; unscored writing/speaking responses appear in history without a /20 (no fabricated score).
+8. If `/api/health` is unreachable at load, the client defaults to the most restrictive capability set
+   (all capabilities `false`) — no capability-gated action buttons are shown to the user; no broken
+   affordances appear.
 
 ## Data model changes
 None. Online submit reuses the existing `writing_responses` / `speaking_responses` rows and simply omits
@@ -87,6 +90,7 @@ portable endpoints (Milestone 15):
 - [ ] With `transcription = false`, Speaking supports record + playback + sample answer but produces no transcript/score. (Behaviour.5, 7)
 - [ ] On the local runtime (all capabilities `true`), Writing/Speaking/Question Bank behave exactly as before this milestone — verified by the existing suites passing unchanged. (Behaviour.6)
 - [ ] Online-completed writing/speaking sessions appear in history without a fabricated /20 (missing evaluation reads as unscored). (Behaviour.7)
+- [ ] If `/api/health` returns an error or is unreachable at load, the client defaults to the most-restrictive capability set (all `false`) and shows no capability-gated actions. (Behaviour.8)
 - [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass; e2e (local, full-capability) shows no behaviour change. (Behaviour.6)
 
 ## Open questions
@@ -102,9 +106,10 @@ portable endpoints (Milestone 15):
   playback within the session; lifecycle/retention is a minor follow-up, not blocking.
 - **Export availability online.** Export is a pure read and harmless online, but it is an "admin" action.
   Whether to also hide it under a capability is a small UX call; default keep export, hide only import.
-- **Capabilities fetch failure.** If `/api/health` is unreachable at load, the client should fail safe
-  (assume the most restrictive capabilities) rather than show actions that will 404. To confirm the
-  default-deny behaviour during implementation.
+- **Capabilities fetch failure.** ~~To confirm the default-deny behaviour during implementation.~~
+  Resolved: the default-deny fallback is now a committed behaviour (Behaviour.8) with a matching
+  acceptance criterion. Implementation detail (how the fetch error is caught and the default object
+  substituted) is left to the implementer.
 
 ## Revision history
 - 2026-06-20: Initial draft (Milestone 16). Part of the Cloudflare-hosting initiative; depends on

@@ -25,6 +25,8 @@ they live only in the Node entry and never enter the Worker bundle.
   - Replace `multer` (speaking audio upload) with Hono's built-in `formData`/`parseBody`.
   - Introduce a **DB factory** so the Drizzle instance is constructed from the runtime's binding
     (libSQL on Node; D1 on Workers — Milestone 15) rather than imported as a module singleton.
+    Note: Milestone 13 (`database-sqlite.md`) deliberately keeps the singleton to scope its own
+    change; this milestone removes it and switches all services to receive the DB via the factory.
   - Introduce a **`MediaStore` interface** (range read, put, exists) with a Node/filesystem
     implementation, replacing direct `fs` access in the audio / passage-image / speaking-recording
     routes. The R2 implementation lands in Milestone 15.

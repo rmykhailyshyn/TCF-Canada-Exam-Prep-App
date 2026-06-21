@@ -81,6 +81,7 @@ Bindings (operational contract):
 - [ ] `wrangler.toml` defines one Worker with `main: server/worker.ts`, an `[assets]` binding for `client/dist`, a `DB` D1 binding, and a `MEDIA` R2 binding. (Behaviour.1, 6, 7)
 - [ ] `wrangler deploy` (after `npm run build`) publishes successfully and the root URL serves the SPA; deep links fall back to `index.html`. (Behaviour.1)
 - [ ] Cloudflare Access gates the deployed URL to the permitted user; an unauthenticated request is challenged before reaching the Worker. (Behaviour.2)
+- [ ] The shared-secret header middleware fallback is documented in CLAUDE.md with setup instructions; when enabled, a request carrying the correct secret header reaches the Worker without going through the Access gate. (Scope)
 - [ ] `GET /api/health` on the deployed Worker returns `capabilities` all-`false`. (Behaviour.3, API contract)
 - [ ] The portable read/practice endpoints succeed against D1; the CLI-backed routes return `NOT_FOUND` (not a 500). (Behaviour.4, 5)
 - [ ] Audio/image/recording range requests stream from R2 with HTTP 206 and correct `Content-Range`; browser audio seeking works. (Behaviour.6)

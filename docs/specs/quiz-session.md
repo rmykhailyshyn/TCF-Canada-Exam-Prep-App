@@ -119,6 +119,11 @@ how a session resolves these per-position candidate pools into the set it presen
     - Listening: 35 minutes, 39 questions
 
 ## Data model changes
+
+> **Note (Milestone 13):** The types below reflect the original PostgreSQL schema. Post-migration the
+> equivalent SQLite types are: `serial` → `integer primary key autoincrement`, `timestamptz` →
+> `integer (timestamp mode)`, `boolean` → `integer (boolean mode)`. See `docs/specs/database-sqlite.md`.
+
 ```
 sessions
   id           serial primary key

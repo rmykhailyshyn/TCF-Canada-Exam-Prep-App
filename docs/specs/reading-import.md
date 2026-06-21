@@ -121,6 +121,11 @@ after `88`.)
     imported, number skipped, and whether the recomputed score matched the PDF.
 
 ## Data model changes
+
+> **Note (Milestone 13):** The types below reflect the original PostgreSQL schema. Post-migration the
+> equivalent SQLite types are: `serial` → `integer primary key autoincrement`, `timestamptz` →
+> `integer (timestamp mode)`, `boolean` → `integer (boolean mode)`. See `docs/specs/database-sqlite.md`.
+
 ```
 passages
   id          serial primary key
