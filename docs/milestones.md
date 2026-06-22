@@ -359,7 +359,7 @@ Local dev is unchanged: Vite proxies `/api` to Hono-on-Node.
 ---
 
 ## Milestone 13 — Database migration to SQLite (local)
-**Status:** planned (spec drafted, pending approval)
+**Status:** approved (ready to implement)
 
 Move persistence from PostgreSQL to SQLite with **no observable behaviour change**, as the foundation for
 Cloudflare D1 (itself SQLite) and a local-dev simplification (no Docker/Postgres → the app + DB also run
@@ -389,7 +389,7 @@ client, config, generated migrations, and a few tooling scripts.
 ---
 
 ## Milestone 14 — Portable server runtime (Express → Hono)
-**Status:** planned (spec drafted, pending approval)
+**Status:** approved (ready to implement)
 
 Replace Express with **Hono** so one backend codebase runs on Node locally (via `@hono/node-server`) and
 on Cloudflare Workers later, with no API/behaviour change locally. Introduces three small abstractions

@@ -1,7 +1,7 @@
 # Spec: Portable Server Runtime (Express → Hono)
 
 ## Status
-draft
+approved
 
 ## Goal
 Make the backend run unchanged on two runtimes — **Node.js locally** (full feature set) and a
@@ -139,3 +139,4 @@ All other endpoints retain their exact paths, methods, request shapes, response 
   milestone — run right after M13, once that migration has happened — deletes the script and the `pg`
   dependencies and strips residual Postgres references from code/config, leaving only historical mentions
   in `docs/`.
+- 2026-06-22: Status moved draft → approved (Milestone 14). Ready to implement (after Milestone 13).

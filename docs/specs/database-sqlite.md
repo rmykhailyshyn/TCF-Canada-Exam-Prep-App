@@ -1,7 +1,7 @@
 # Spec: Database Migration to SQLite
 
 ## Status
-draft
+approved
 
 ## Goal
 Move the application's persistence layer from PostgreSQL to SQLite, with **no change to any
@@ -169,3 +169,4 @@ None — no API changes. The JSON envelope and all endpoints are unchanged.
   out-of-scope item from "data migration (none exists)" to "production migration only". Added
   Behaviour.9, two acceptance criteria, and two open questions (id/order preservation; reading PG
   without the app client).
+- 2026-06-22: Status moved draft → approved (Milestone 13). Ready to implement.
