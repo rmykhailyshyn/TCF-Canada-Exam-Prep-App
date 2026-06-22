@@ -35,8 +35,9 @@ script (and the `pg` dependency it needs) can be retired.
   - Update `server/config/env.ts` `DATABASE_URL` default + error text and `.env.example`.
   - Remove the Postgres Docker tooling: `db:up` / `db:down` scripts and `docker-compose.yml`.
   - Update dependencies in `server/package.json`: add `@libsql/client`; move `pg` / `@types/pg` from
-    runtime dependencies to **devDependencies** (needed only by the one-time migration script), to be
-    removed entirely in a later cleanup once dev data has been migrated.
+    runtime dependencies to **devDependencies** (needed only by the one-time migration script). The
+    script and these dependencies are deleted entirely in Milestone 14 (`server-runtime.md`), which runs
+    once dev data has been migrated.
   - Verify (and adjust only if required) the seed scripts and the CLI import scripts run on SQLite.
   - A **one-time data-migration script** (`npm run db:migrate-from-postgres`, e.g.
     `scripts/migrate-pg-to-sqlite.ts`) that reads every table from an existing PostgreSQL database

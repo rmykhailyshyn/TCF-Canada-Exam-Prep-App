@@ -37,6 +37,14 @@ they live only in the Node entry and never enter the Worker bundle.
     not reachable from the (future) Worker entry.
   - Keep the local dev experience identical: `npm run dev` still runs Vite + the Node server; the Vite
     `/api` proxy and the e2e harness are unchanged.
+  - **Remove all remaining PostgreSQL code and files.** Milestone 13 deliberately kept `pg`/`@types/pg`
+    (as devDependencies) and the one-time `db:migrate-from-postgres` script so developers could carry
+    their data across. This milestone assumes that migration has happened (it runs right after M13) and
+    deletes the leftovers: the `scripts/migrate-pg-to-sqlite.ts` script and its `db:migrate-from-postgres`
+    npm script, the `pg` / `@types/pg` dependencies, and any residual Postgres references in code
+    comments, `.env.example`, and `server/db/` (e.g. the schema's "Postgres auto-indexes…" note). A repo
+    grep for `pg`/`postgres`/`postgresql`/`timestamptz` should return only historical mentions in
+    `docs/` revision histories afterward.
 - Out of scope:
   - Cloudflare Worker entry, `wrangler.toml`, D1, R2, and Cloudflare Access (Milestone 15).
   - The online practice-mode behaviour and client capability-gating (Milestone 16). This milestone only
@@ -63,6 +71,10 @@ From a developer's perspective; no end-user behaviour changes on the local app:
    server.
 8. The modules that spawn local CLIs (OCR/Whisper/Claude) and the import service are registered only by
    the Node entry; the portable core can be imported without pulling in `node:child_process`/`node:fs`.
+9. No PostgreSQL code, dependency, script, or config remains: `pg`/`@types/pg` are gone from
+   `package.json`, the `db:migrate-from-postgres` script and `scripts/migrate-pg-to-sqlite.ts` are
+   deleted, and `npm install` pulls no Postgres driver. The only `postgres`/`postgresql` mentions left
+   in the repo are historical notes in `docs/` revision histories.
 
 ## Data model changes
 None.
@@ -99,6 +111,8 @@ All other endpoints retain their exact paths, methods, request shapes, response 
 - [ ] Services obtain the Drizzle DB from `createDb(...)`; no service imports a DB singleton directly. (Behaviour.5)
 - [ ] The portable core module can be imported in isolation without loading any module that imports `node:child_process` or `node:fs` (so the future Worker bundle excludes the CLI/import code). (Behaviour.8)
 - [ ] `npm run dev` works with the unchanged Vite proxy; `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass. (Behaviour.1, 7)
+- [ ] `pg` / `@types/pg` are gone from `package.json`, the `db:migrate-from-postgres` script and `scripts/migrate-pg-to-sqlite.ts` are deleted, and a fresh `npm install` installs no Postgres driver. (Behaviour.9)
+- [ ] A repo-wide grep for `pg`/`postgres`/`postgresql`/`timestamptz` (excluding `docs/`) returns no matches in code, config, or `.env.example`. (Behaviour.9)
 
 ## Open questions
 - **Hono body-size limits & multipart parity with multer.** Hono's `parseBody`/`formData` must accept
@@ -120,3 +134,8 @@ All other endpoints retain their exact paths, methods, request shapes, response 
   `database-sqlite.md` (M13, libSQL DB factory) and is the prerequisite for `cloud-deployment.md` (M15,
   Worker entry + D1/R2 implementations of these abstractions) and `content-deploy.md` (M16, client
   capability-gating that consumes the new `/api/health` capabilities).
+- 2026-06-21: Added **PostgreSQL cleanup** to scope (Behaviour.9 + two acceptance criteria). M13 keeps
+  `pg`/`@types/pg` and the one-time `db:migrate-from-postgres` script so data can be carried over; this
+  milestone — run right after M13, once that migration has happened — deletes the script and the `pg`
+  dependencies and strips residual Postgres references from code/config, leaving only historical mentions
+  in `docs/`.

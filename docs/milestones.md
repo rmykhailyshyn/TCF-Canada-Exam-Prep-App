@@ -406,6 +406,9 @@ that let the same route code bind to Node resources or Worker resources: a **DB 
 - [ ] Structure the app as a **portable core** + a **Node-only extension** for the CLI-backed routes
   (imports, enrichment, AI scoring submit, correction, transcription), so `node:child_process`/`node:fs`
   never enter the future Worker bundle
+- [ ] **PostgreSQL cleanup** (data already migrated in M13): delete `scripts/migrate-pg-to-sqlite.ts` +
+  the `db:migrate-from-postgres` script, drop `pg`/`@types/pg`, and strip residual Postgres references
+  from code/config — only historical mentions in `docs/` remain
 - [ ] Dev DX unchanged (`npm run dev`, Vite proxy, e2e); all checks pass
 
 **Specs:**
