@@ -376,3 +376,39 @@ observations:
   same `input` event React's `onChange` listens for, which the `node` test env can't exercise. The M9
   habit applied again — the pure seams (`glyphFor`, `computeInsertion`) are unit-tested; only the thin
   DOM wrapper is left to manual/e2e verification.
+
+## Milestones 13–16 — Cloudflare hosting initiative (planning phase)
+
+This is the first **cross-cutting infrastructure** change the project has attempted (everything M1–M12
+was a vertical feature slice), and it surfaced two SDD observations *before any code was written* —
+worth recording while the specs are still drafts pending approval.
+
+- **The architecture the earlier specs enforced is what makes this migration small — and the specs
+  predicted its own blast radius.** Two long-standing conventions, each written down and held across
+  milestones, are exactly what bound the change: "no raw SQL, all access via Drizzle" means the
+  PostgreSQL → SQLite swap is confined to the schema definition + client + config (M13), not scattered
+  across services; "route handlers are thin, business logic in services" means the Express → Hono swap
+  (M14) touches handlers only, leaving every service untouched. The planning exploration could state the
+  blast radius *with confidence* because the invariants in CLAUDE.md had been enforced, not just
+  aspirational. **Lesson (provisional, to confirm at implementation):** the payoff of a strict layering
+  rule isn't visible in the feature that introduces it; it's visible the first time an orthogonal change
+  (database, framework, runtime) has to pass through the layer and finds a clean seam instead of a smear.
+
+- **A platform constraint, not a product decision, drove the scope — and writing it into specs forced
+  the product decision into the open.** Cloudflare's free serverless cannot run the local CLI binaries
+  (Whisper/Tesseract/Claude). That single fact dictates that the online instance is *practice-only*, which
+  is a **user-facing** product change (online Writing/Speaking show sample answers, no AI score). Rather
+  than let that leak out as an emergent property of "what happened to deploy," the specs name it directly:
+  a `capabilities` flag (M14) is the one mechanism, and M16 spells out the degraded online behaviour as
+  explicit numbered behaviours. **Lesson (provisional):** when an infrastructure limit forces a
+  product-visible compromise, the spec is the right place to make it a *decision* (named, gated, testable)
+  instead of a *surprise*. The capabilities flag is the M2-style "parameterise the seam" move applied to a
+  runtime difference rather than a request parameter.
+
+- **All four milestones were spec'd up front (drafts) before approving any.** Unlike the M1 kickoff (seven
+  specs drafted together for independent features), these four are a *dependency chain* — M14 needs M13's
+  DB factory, M15 needs M14's portable core, M16 needs M15's runtime. Drafting them together made the
+  chain's seams (the DB factory, the `MediaStore` interface, the capabilities flag) visible as the three
+  things that must be introduced in M14 to keep M15/M16 small. Whether front-loading the whole chain helps
+  or whether the later specs churn once the earlier ones are implemented is the open SDD question to
+  revisit in the retrospective.

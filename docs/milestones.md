@@ -334,3 +334,131 @@ current Reading/Listening-only picker plus ad-hoc Writing/Speaking nav links.
 - `docs/specs/virtual-keyboard.md` (implemented)
 - `docs/specs/section-navigation.md` (implemented)
 - `docs/mockups.md` §19–20 (accent keyboard + unified navigation wireframes)
+
+---
+
+# Cloudflare hosting initiative (Milestones 13–16)
+
+Milestones 13–16 add the ability to **host the app online on Cloudflare's free tier** while keeping the
+**full local experience** working on macOS (app + import scripts) and Windows (app; scripts optional).
+
+Two facts drive the design: (1) all data access already goes through Drizzle and the services are
+framework-agnostic, so the database and web-framework swaps touch a small, isolated surface; (2)
+Cloudflare's serverless free tier **cannot run the local CLI binaries** (Tesseract OCR, Whisper, Claude
+CLI) nor native `pg`/`better-sqlite3`. Decisions locked with the user: the online instance is
+**practice-only** (pre-imported content + all four sections playable; imports, AI scoring, transcription,
+and enrichment stay local-only — online Writing/Speaking show sample answers, no AI score); **single
+user** (Cloudflare Access gate, no per-user data model); the backend is **unified on Hono** (one codebase
+runs on Node locally and on Cloudflare Workers). Unifying insight: local SQLite and Cloudflare **D1 are
+both SQLite**, so one Drizzle `sqlite-core` schema serves both runtimes.
+
+Target topology: a **single Cloudflare Worker** serving the built client (Workers Static Assets) + the
+Hono `/api/*` routes, bound to **D1** (database) and **R2** (media), gated by **Cloudflare Access**.
+Local dev is unchanged: Vite proxies `/api` to Hono-on-Node.
+
+---
+
+## Milestone 13 — Database migration to SQLite (local)
+**Status:** approved (ready to implement)
+
+Move persistence from PostgreSQL to SQLite with **no observable behaviour change**, as the foundation for
+Cloudflare D1 (itself SQLite) and a local-dev simplification (no Docker/Postgres → the app + DB also run
+on **Windows**). Because all DB access is Drizzle, the change is confined to the schema definition,
+client, config, generated migrations, and a few tooling scripts.
+
+- [ ] Rewrite `server/db/schema.ts` from `drizzle-orm/pg-core` to `drizzle-orm/sqlite-core`, preserving
+  every table/column/constraint/index (`serial`→`integer autoincrement`, `boolean`→`integer {mode:
+  'boolean'}`, `timestamp`→`integer {mode: 'timestamp'}` to keep JS `Date` semantics)
+- [ ] Swap the DB client in `server/db/index.ts` to libSQL (`@libsql/client` + `drizzle-orm/libsql`),
+  same exported `db` symbol, FK enforcement on; update `server/db/migrate.ts`
+- [ ] `drizzle.config.ts` → `dialect: 'sqlite'`; delete the PostgreSQL migrations and regenerate one
+  clean SQLite baseline (no production data to preserve)
+- [ ] `server/config/env.ts` + `.env.example` → `file:` `DATABASE_URL`; remove `db:up`/`db:down` +
+  `docker-compose.yml`; add `@libsql/client`; move `pg`/`@types/pg` to devDependencies (kept only for
+  the migration script below)
+- [ ] One-time data-migration script `npm run db:migrate-from-postgres -- --from <PG_DATABASE_URL>`:
+  copy every table from an existing PostgreSQL dev DB into SQLite, preserving primary-key ids and
+  foreign-key links (FK dependency order), converting `boolean`/`timestamptz`; `--dry-run` + per-table
+  row-count summary
+- [ ] Verify seeds + CLI imports + `npm test` + `npm run test:e2e` pass on SQLite; app + DB run on Windows
+  with no Docker
+
+**Specs:**
+- `docs/specs/database-sqlite.md` (draft)
+
+---
+
+## Milestone 14 — Portable server runtime (Express → Hono)
+**Status:** approved (ready to implement)
+
+Replace Express with **Hono** so one backend codebase runs on Node locally (via `@hono/node-server`) and
+on Cloudflare Workers later, with no API/behaviour change locally. Introduces three small abstractions
+that let the same route code bind to Node resources or Worker resources: a **DB factory**, a
+**`MediaStore` interface** (range read / put / exists), and a **capabilities flag**
+(`GET /api/health` → `{ aiScoring, transcription, imports }`, all `true` on Node).
+
+- [ ] Translate `server/index.ts` + the five route modules to Hono; services in `server/services/`
+  unchanged; envelope (`server/lib/envelope.ts`) reused; replace `multer` with Hono `formData`
+- [ ] DB factory (`createDb(env)`): libSQL on Node, D1 on Workers (M15); services receive the DB instead
+  of importing a singleton
+- [ ] `MediaStore` interface with a Node/filesystem implementation wrapping today's range-aware streaming
+  (R2 implementation in M15)
+- [ ] Structure the app as a **portable core** + a **Node-only extension** for the CLI-backed routes
+  (imports, enrichment, AI scoring submit, correction, transcription), so `node:child_process`/`node:fs`
+  never enter the future Worker bundle
+- [ ] **PostgreSQL cleanup** (data already migrated in M13): delete `scripts/migrate-pg-to-sqlite.ts` +
+  the `db:migrate-from-postgres` script, drop `pg`/`@types/pg`, and strip residual Postgres references
+  from code/config — only historical mentions in `docs/` remain
+- [ ] Dev DX unchanged (`npm run dev`, Vite proxy, e2e); all checks pass
+
+**Specs:**
+- `docs/specs/server-runtime.md` (draft)
+
+---
+
+## Milestone 15 — Cloudflare deployment (Worker + Assets + D1 + R2 + Access)
+**Status:** planned (spec drafted, pending approval)
+
+Establish the running, access-gated cloud runtime: a single Worker serving the SPA (Workers Static
+Assets) + the Hono portable core, bound to **D1** and **R2**, gated by **Cloudflare Access** (single
+user, no app auth code). Online capabilities are all-`false` (practice-only); the CLI-backed routes are
+never mounted.
+
+- [ ] `wrangler.toml`: one Worker (`main: server/worker.ts`), `[assets]` = `client/dist` (SPA fallback),
+  `DB` D1 binding, `MEDIA` R2 binding
+- [ ] `server/worker.ts`: import the portable core, build DB from the `DB` binding, wire the **R2
+  `MediaStore`**, set capabilities all-`false`
+- [ ] Apply the M13 SQLite baseline to D1 (`wrangler d1 migrations apply`); range/206 media streaming
+  from R2; `/api/*` routing takes precedence over static assets
+- [ ] Cloudflare Access in front of the Worker (documented shared-secret middleware fallback)
+- [ ] Build + `wrangler deploy` scripts; optional `wrangler dev` parity; CLAUDE.md deployment runbook
+
+**Specs:**
+- `docs/specs/cloud-deployment.md` (draft)
+
+---
+
+## Milestone 16 — Content seeding + online practice mode + client gating
+**Status:** planned (spec drafted, pending approval)
+
+Make the deployed instance usable: push locally-imported content to D1/R2 (**import locally → push to
+cloud**) and gate the client UI on `capabilities` so the practice-only online experience has no broken
+buttons. Defines the online behaviour of Writing/Speaking when AI scoring is unavailable (sample answers,
+no score).
+
+- [ ] `npm run deploy:content` (local): reuse the **export** service to load D1 (via the portable import
+  endpoint, idempotent on the natural keys) and upload referenced media (MP3s, passage images) to R2
+  keyed to `file_path`/`source_file`
+- [ ] Online practice-mode behaviour (gated by `aiScoring=false`/`transcription=false`): Writing submit
+  locks the response without scoring and shows the sample answer/template; Speaking = record + playback +
+  sample answer, no transcript/score; correction unavailable online
+- [ ] Client capability-gating: `client/src/lib/api.ts` `fetchCapabilities()`; hide AI-score/feedback,
+  "Get correction", and import affordances when off (fail safe to most-restrictive on fetch error)
+- [ ] Local runtime (all capabilities `true`) behaves exactly as before — no regression in the existing
+  suites
+- [ ] History shows online-completed sessions without a fabricated /20 (missing evaluation = unscored)
+
+**Specs:**
+- `docs/specs/content-deploy.md` (draft)
+- `docs/specs/writing-evaluation.md` / `docs/specs/speaking-evaluation.md` / `docs/specs/progress-tracking.md`
+  (to be annotated: AI scoring is a local/full-runtime capability; online sessions are unscored practice)
