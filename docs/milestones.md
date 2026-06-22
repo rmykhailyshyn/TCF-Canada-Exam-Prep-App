@@ -374,7 +374,12 @@ client, config, generated migrations, and a few tooling scripts.
 - [ ] `drizzle.config.ts` → `dialect: 'sqlite'`; delete the PostgreSQL migrations and regenerate one
   clean SQLite baseline (no production data to preserve)
 - [ ] `server/config/env.ts` + `.env.example` → `file:` `DATABASE_URL`; remove `db:up`/`db:down` +
-  `docker-compose.yml`; drop `pg`/`@types/pg`, add `@libsql/client`
+  `docker-compose.yml`; add `@libsql/client`; move `pg`/`@types/pg` to devDependencies (kept only for
+  the migration script below)
+- [ ] One-time data-migration script `npm run db:migrate-from-postgres -- --from <PG_DATABASE_URL>`:
+  copy every table from an existing PostgreSQL dev DB into SQLite, preserving primary-key ids and
+  foreign-key links (FK dependency order), converting `boolean`/`timestamptz`; `--dry-run` + per-table
+  row-count summary
 - [ ] Verify seeds + CLI imports + `npm test` + `npm run test:e2e` pass on SQLite; app + DB run on Windows
   with no Docker
 
