@@ -104,7 +104,10 @@ audio play range per question; it is ignored — transcript timing comes from Wh
    (text, start_ms, end_ms).
 8. A question row is inserted (section = 'listening'); its options are persisted with
    `is_correct = true` for the green option and `false` for the other three.
-9. Audio metadata (file path) and transcript segments are persisted linked to the question.
+9. The matched MP3 is copied into `MEDIA_DIR/listening/` (the canonical media store; MEDIA_DIR
+   defaults to `<repo-root>/data/media`). Audio metadata and transcript segments are persisted
+   linked to the question; `audio_files.file_path` stores the path RELATIVE to MEDIA_DIR (e.g.
+   `listening/q07.mp3`), so the data is portable and the serve layer resolves it against MEDIA_DIR.
 10. After processing, the script recomputes the weighted score from the imported answer key
     using the point map (quiz-session spec §Scoring) against the PDF's per-question
     Correcte/Incorrecte labels, and compares it to the "<P> of 699" value parsed in step 3.
@@ -131,7 +134,8 @@ audio play range per question; it is ignored — transcript timing comes from Wh
 audio_files
   id           serial primary key
   question_id  integer not null unique references questions(id)
-  file_path    text not null unique    -- absolute or repo-relative path to MP3
+  file_path    text not null unique    -- path RELATIVE to MEDIA_DIR (e.g. listening/q07.mp3);
+                                        -- legacy absolute paths still resolve (back-compat)
   duration_ms  integer                 -- optional, populated if Whisper reports it
 
 transcript_segments
@@ -221,3 +225,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   the PostgreSQL → SQLite migration (`docs/specs/database-sqlite.md`, Milestone 13). Import behaviour is
   unchanged — all DB access is via Drizzle. (Whisper transcription remains Apple-Silicon/macOS-only and
   local-only; it is never run in the Cloudflare deployment.)
+- 2026-06-23: Media made portable. The MP3 is now COPIED into `MEDIA_DIR/listening/` and
+  `audio_files.file_path` stores a path RELATIVE to MEDIA_DIR (default `<repo-root>/data/media`)
+  rather than the absolute source path (Behaviour.9, Data model). Legacy absolute rows still
+  resolve; `npm run db:migrate-media` rewrites them in place.

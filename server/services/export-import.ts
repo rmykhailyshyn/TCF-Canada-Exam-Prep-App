@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { basename, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { db } from '../db';
 import { audioFiles, options, passages, questions, transcriptSegments } from '../db/schema';
@@ -193,14 +193,16 @@ export async function importQuestions(rawDocument: unknown, override: boolean): 
           );
         }
 
-        const filePath = resolve(mediaDir, q.audio.fileName);
-        if (!existsSync(filePath)) {
+        // Store the path RELATIVE to MEDIA_DIR (the portable form the serve layer resolves);
+        // the export carries the basename only, which lands under the listening/ subfolder.
+        const relPath = join('listening', q.audio.fileName);
+        if (!existsSync(resolve(mediaDir, relPath))) {
           warnings.push(
-            `Audio file not found on disk: ${filePath} (question listening/${q.sequence}). ` +
+            `Audio file not found on disk: ${resolve(mediaDir, relPath)} (question listening/${q.sequence}). ` +
               'Imported the reference; playback needs the MP3 placed in the media directory.',
           );
         }
-        await upsertAudio(tx, questionId, filePath, q.audio.durationMs);
+        await upsertAudio(tx, questionId, relPath, q.audio.durationMs);
       } else {
         // Reading (or audio-less): ensure no stale listening rows remain after an override.
         await tx.delete(transcriptSegments).where(eq(transcriptSegments.questionId, questionId));

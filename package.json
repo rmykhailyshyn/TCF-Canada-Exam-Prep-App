@@ -20,6 +20,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx server/db/migrate.ts",
     "db:migrate-from-postgres": "tsx scripts/migrate-pg-to-sqlite.ts",
+    "db:migrate-media": "tsx scripts/migrate-media-paths.ts",
     "seed:dev": "tsx scripts/seed-dev.ts",
     "seed:listening-dev": "tsx scripts/seed-listening-dev.ts",
     "ocr": "tsx scripts/ocr.ts",

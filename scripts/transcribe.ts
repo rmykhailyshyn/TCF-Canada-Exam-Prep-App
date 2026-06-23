@@ -1,8 +1,9 @@
-import { existsSync, readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { basename, join, resolve } from 'node:path';
 import { and, eq } from 'drizzle-orm';
 import { db, client } from '../server/db';
 import { audioFiles, options, questions, transcriptSegments } from '../server/db/schema';
+import { getMediaDir } from '../server/config/env';
 import { runPdfParser } from './lib/parse';
 import { crossCheckScore, extractSequenceFromFilename, resolveCorrectLabel } from './lib/results';
 import { WhisperError, runWhisper } from './lib/whisper';
@@ -82,6 +83,8 @@ async function main(): Promise<void> {
   let segmentsImported = 0;
   let skipped = 0;
 
+  mkdirSync(resolve(getMediaDir(), 'listening'), { recursive: true });
+
   for (const q of parsed.questions) {
     // Answer key: exactly one green option (Behaviour.13).
     const resolved = resolveCorrectLabel(q);
@@ -110,11 +113,15 @@ async function main(): Promise<void> {
       continue;
     }
 
+    // The MP3 is copied into MEDIA_DIR/listening/ and the DB stores the path RELATIVE to MEDIA_DIR,
+    // so the data is portable (the source --dir can move/disappear). spec: docs/specs/listening-import.md
+    const relAudioPath = join('listening', basename(audioPath));
+
     // Duplicate audio path → skip without inserting (Behaviour.11).
     const existingAudio = await db
       .select({ id: audioFiles.id })
       .from(audioFiles)
-      .where(eq(audioFiles.filePath, audioPath));
+      .where(eq(audioFiles.filePath, relAudioPath));
     if (existingAudio.length > 0) {
       console.warn(`• Audio for question ${q.sequence} already imported — skipping.`);
       skipped += 1;
@@ -133,6 +140,10 @@ async function main(): Promise<void> {
       }
       throw error;
     }
+
+    // Copy the source MP3 into the media store (idempotent: skip if already there).
+    const audioDest = resolve(getMediaDir(), relAudioPath);
+    if (!existsSync(audioDest)) copyFileSync(audioPath, audioDest);
 
     await db.transaction(async (tx) => {
       const [questionRow] = await tx
@@ -157,7 +168,7 @@ async function main(): Promise<void> {
 
       await tx.insert(audioFiles).values({
         questionId: questionRow.id,
-        filePath: audioPath,
+        filePath: relAudioPath,
         durationMs: transcript.durationMs,
       });
 

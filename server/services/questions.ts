@@ -1,9 +1,9 @@
-import { isAbsolute, extname, resolve } from 'node:path';
+import { extname } from 'node:path';
 import { asc, eq } from 'drizzle-orm';
 import { db } from '../db';
 import { audioFiles, passages, questions, transcriptSegments } from '../db/schema';
 import { ApiError } from '../lib/errors';
-import { getMediaDir } from '../config/env';
+import { resolveMediaPath } from '../config/env';
 
 // spec: docs/specs/listening-player.md §API contract
 // Business logic for the listening player's two read endpoints. Services return plain typed values
@@ -29,8 +29,8 @@ export type PassageImageInfo = {
 // spec: docs/specs/reading-quiz-ui.md §API contract GET /api/questions/:id/passage-image
 // Resolves the original passage image path for a reading question's linked passage. Throws
 // PASSAGE_IMAGE_NOT_FOUND when the question has no passage (a listening question, or an unknown
-// id). The stored `passages.source_file` may be absolute (real OCR import) or a bare basename
-// (dev seed / export-import); a relative path is resolved against MEDIA_DIR, mirroring audio.
+// id). The stored `passages.source_file` is normally a path relative to MEDIA_DIR (e.g.
+// `reading/…Q39.png`); resolveMediaPath joins it onto MEDIA_DIR (legacy absolute rows pass through).
 export async function getPassageImage(questionId: number): Promise<PassageImageInfo> {
   const [row] = await db
     .select({ sourceFile: passages.sourceFile })
@@ -44,16 +44,16 @@ export async function getPassageImage(questionId: number): Promise<PassageImageI
       404,
     );
   }
-  const filePath = isAbsolute(row.sourceFile)
-    ? row.sourceFile
-    : resolve(getMediaDir(), row.sourceFile);
+  const filePath = resolveMediaPath(row.sourceFile);
   const contentType = /\.jpe?g$/i.test(extname(filePath)) ? 'image/jpeg' : 'image/png';
   return { filePath, contentType };
 }
 
 // spec: docs/specs/listening-player.md §API contract GET /api/questions/:id/audio
 // Resolves the MP3 path for a question. Throws NOT_FOUND when the question has no audio (e.g. a
-// reading question, or an unknown id). The route streams the file with range support.
+// reading question, or an unknown id). The stored `audio_files.file_path` is normally relative to
+// MEDIA_DIR (e.g. `listening/30q2.mp3`); resolveMediaPath joins it onto MEDIA_DIR (legacy absolute
+// rows pass through). The route streams the file with range support.
 export async function getAudioFile(questionId: number): Promise<AudioFileInfo> {
   const [row] = await db
     .select({ filePath: audioFiles.filePath, durationMs: audioFiles.durationMs })
@@ -62,7 +62,7 @@ export async function getAudioFile(questionId: number): Promise<AudioFileInfo> {
   if (!row) {
     throw new ApiError('NOT_FOUND', `No audio found for question ${questionId}.`, 404);
   }
-  return row;
+  return { filePath: resolveMediaPath(row.filePath), durationMs: row.durationMs };
 }
 
 // spec: docs/specs/listening-player.md §API contract GET /api/questions/:id/transcript

@@ -109,12 +109,19 @@ export function ListeningPlayer({
         )}
       </div>
 
-      {!player.ready && (
+      {/* spec: docs/specs/listening-player.md §Behaviour.1 — surface a load failure instead of
+          leaving the play button silently disabled with a perpetual "Loading audio…". */}
+      {player.error ? (
+        <p className="flex items-center gap-2 border-t border-rose-100 bg-rose-50/60 px-4 py-2 text-xs font-medium text-rose-500">
+          <span aria-hidden>⚠</span>
+          Audio failed to load — the MP3 may be missing on disk.
+        </p>
+      ) : !player.ready ? (
         <p className="flex items-center gap-2 border-t border-slate-100 px-4 py-2 text-xs font-medium text-slate-400">
           <span className="h-2 w-2 animate-pulse rounded-full bg-brand-400" aria-hidden />
           Loading audio…
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

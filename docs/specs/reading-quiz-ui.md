@@ -77,8 +77,9 @@ serve the passage image bytes:
 
 ### GET /api/questions/:id/passage-image
 Streams the original passage image for the question's linked passage (analogous to the listening
-`GET /api/questions/:id/audio` route). The image is read from the linked `passages.source_file`
-path on disk and served with the appropriate `Content-Type` (`image/png` / `image/jpeg`).
+`GET /api/questions/:id/audio` route). The linked `passages.source_file` is normally a path relative
+to `MEDIA_DIR` (e.g. `reading/…Q39.png`), resolved against `MEDIA_DIR` (default `<repo-root>/data/media`;
+legacy absolute paths pass through) and served with the appropriate `Content-Type` (`image/png` / `image/jpeg`).
 ```
 Response (200): <binary image bytes>, Content-Type: image/png | image/jpeg
 Error (no passage / not a reading question): 404  { "data": null, "error": { "code": "PASSAGE_IMAGE_NOT_FOUND", "message": "..." } }
@@ -134,3 +135,6 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   end. Verified by e2e (image serves with `image/png`; 404 `PASSAGE_IMAGE_NOT_FOUND` for a
   listening/unknown id; the image renders in the browser with `naturalWidth > 0`). Status
   approved → implemented.
+- 2026-06-23: `passages.source_file` is now stored RELATIVE to `MEDIA_DIR` (under the `reading/`
+  subfolder); `getPassageImage` resolves it against `MEDIA_DIR` (default `<repo-root>/data/media`).
+  The dev seed writes placeholder PNGs into `MEDIA_DIR/reading/`. Serve behaviour is unchanged.
