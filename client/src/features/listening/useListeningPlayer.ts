@@ -9,6 +9,7 @@ import type { TranscriptSegment } from '../../lib/api';
 
 export type ListeningPlayer = {
   ready: boolean;
+  error: boolean;
   isPlaying: boolean;
   currentMs: number;
   durationMs: number;
@@ -38,6 +39,7 @@ export function useListeningPlayer(
   volume: number,
 ): ListeningPlayer {
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentMs, setCurrentMs] = useState(0);
   const [durationMs, setDurationMs] = useState(0);
@@ -49,6 +51,10 @@ export function useListeningPlayer(
     if (!el) return;
 
     const onCanPlay = (): void => setReady(true);
+    // The <audio> element fires `error` when the src fails to load (e.g. the MP3 is missing on
+    // disk → server 404). Without this, `canplay` never fires and the play button is disabled
+    // forever with no feedback; surface the failure instead.
+    const onError = (): void => setError(true);
     const onLoaded = (): void => setDurationMs((el.duration || 0) * 1000);
     const onTimeUpdate = (): void => setCurrentMs(el.currentTime * 1000);
     const onPlay = (): void => setIsPlaying(true);
@@ -61,6 +67,7 @@ export function useListeningPlayer(
     };
 
     el.addEventListener('canplay', onCanPlay);
+    el.addEventListener('error', onError);
     el.addEventListener('loadedmetadata', onLoaded);
     el.addEventListener('timeupdate', onTimeUpdate);
     el.addEventListener('play', onPlay);
@@ -68,6 +75,7 @@ export function useListeningPlayer(
     el.addEventListener('ended', onEnded);
     return () => {
       el.removeEventListener('canplay', onCanPlay);
+      el.removeEventListener('error', onError);
       el.removeEventListener('loadedmetadata', onLoaded);
       el.removeEventListener('timeupdate', onTimeUpdate);
       el.removeEventListener('play', onPlay);
@@ -122,6 +130,7 @@ export function useListeningPlayer(
 
   return {
     ready,
+    error,
     isPlaying,
     currentMs,
     durationMs,
