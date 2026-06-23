@@ -28,11 +28,20 @@ export function getPort(): number {
 }
 
 // spec: docs/specs/question-export-import.md §Export document format
-// Directory that listening audio basenames resolve against on import. The export carries the
-// MP3 basename only (never the bytes); import joins it onto this directory to form the stored
-// file_path. Defaults to `<repo-root>/media` when MEDIA_DIR is unset.
+// The canonical on-disk store for all media (listening audio, reading passage images, speaking
+// recordings), laid out in section subfolders (listening/, reading/, speaking/). Importers copy
+// source files in here and the DB stores paths RELATIVE to this directory, so the data is
+// self-contained and portable. Defaults to `<repo-root>/data/media` (alongside the SQLite DB)
+// when MEDIA_DIR is unset.
 export function getMediaDir(): string {
   const fromEnv = process.env.MEDIA_DIR;
   if (fromEnv) return resolve(fromEnv);
-  return resolve(here, '../../media');
+  return resolve(here, '../../data/media');
+}
+
+// Resolve a media path stored in the DB to an absolute filesystem path. Relative values (the
+// portable form, e.g. `listening/30q2.mp3`) join onto MEDIA_DIR; absolute values (legacy rows
+// pre-migration) are returned as-is. Shared by the audio and passage-image serve paths.
+export function resolveMediaPath(stored: string): string {
+  return isAbsolute(stored) ? stored : resolve(getMediaDir(), stored);
 }

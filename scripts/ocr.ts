@@ -1,8 +1,9 @@
-import { closeSync, existsSync, openSync, readSync, readdirSync } from 'node:fs';
-import { basename, resolve } from 'node:path';
+import { closeSync, copyFileSync, existsSync, mkdirSync, openSync, readSync, readdirSync } from 'node:fs';
+import { basename, join, resolve } from 'node:path';
 import { and, eq } from 'drizzle-orm';
 import { db, client } from '../server/db';
 import { options, passages, questions } from '../server/db/schema';
+import { getMediaDir } from '../server/config/env';
 import { runPdfParser } from './lib/parse';
 import {
   crossCheckScore,
@@ -125,11 +126,15 @@ async function main(): Promise<void> {
       continue;
     }
 
+    // The image is copied into MEDIA_DIR/reading/ and the DB stores the path RELATIVE to MEDIA_DIR,
+    // so the data is portable (the source --dir can move/disappear). spec: docs/specs/reading-import.md
+    const relImagePath = join('reading', basename(imagePath));
+
     // Duplicate passage path → skip without inserting (Behaviour.8).
     const existingPassage = await db
       .select({ id: passages.id })
       .from(passages)
-      .where(eq(passages.sourceFile, imagePath));
+      .where(eq(passages.sourceFile, relImagePath));
     if (existingPassage.length > 0) {
       console.warn(`• Passage for question ${q.sequence} already imported — skipping.`);
       skipped += 1;
@@ -167,10 +172,15 @@ async function main(): Promise<void> {
       throw error;
     }
 
+    // Copy the source image into the media store (idempotent: skip if already there).
+    const imageDest = resolve(getMediaDir(), relImagePath);
+    mkdirSync(resolve(getMediaDir(), 'reading'), { recursive: true });
+    if (!existsSync(imageDest)) copyFileSync(imagePath, imageDest);
+
     await db.transaction(async (tx) => {
       const [passageRow] = await tx
         .insert(passages)
-        .values({ sourceFile: imagePath, text: passageText })
+        .values({ sourceFile: relImagePath, text: passageText })
         .returning({ id: passages.id });
 
       const [questionRow] = await tx

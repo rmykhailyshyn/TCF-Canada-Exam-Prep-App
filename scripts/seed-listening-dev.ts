@@ -1,8 +1,9 @@
-import { existsSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { eq, inArray } from 'drizzle-orm';
 import { db, client } from '../server/db';
+import { getMediaDir } from '../server/config/env';
 import {
   audioFiles,
   explanations,
@@ -107,9 +108,15 @@ async function main(): Promise<void> {
       await tx.delete(questions).where(eq(questions.sourceFile, SOURCE));
     }
 
+    // Copy the dev clips into the media store; the DB stores paths relative to MEDIA_DIR, matching
+    // the real import (audio_files.file_path is relative). spec parity: docs/specs/listening-import.md
+    mkdirSync(resolve(getMediaDir(), 'listening'), { recursive: true });
+
     for (let i = 0; i < QUESTIONS.length; i += 1) {
       const q = QUESTIONS[i];
-      const audioPath = resolve(AUDIO_DIR, `listening-dev-q${String(i + 1).padStart(2, '0')}.mp3`);
+      const srcPath = resolve(AUDIO_DIR, `listening-dev-q${String(i + 1).padStart(2, '0')}.mp3`);
+      const relAudioPath = join('listening', basename(srcPath));
+      copyFileSync(srcPath, resolve(getMediaDir(), relAudioPath));
 
       const [qRow] = await tx
         .insert(questions)
@@ -133,7 +140,7 @@ async function main(): Promise<void> {
 
       await tx
         .insert(audioFiles)
-        .values({ questionId: qRow.id, filePath: audioPath, durationMs: 6000 });
+        .values({ questionId: qRow.id, filePath: relAudioPath, durationMs: 6000 });
 
       await tx.insert(transcriptSegments).values(
         q.segments.map((s, idx) => ({

@@ -215,11 +215,20 @@ python3 -m venv scripts/.venv && scripts/.venv/bin/pip install -r scripts/requir
 # Import reading questions from a directory (Apple Silicon only)
 # Directory must contain one results PDF and one passage image per question
 # (filename contains the question's sequence number, e.g. comprehension-ecrite-25Q39.png)
+# Each image is COPIED into MEDIA_DIR/reading/ and the DB stores the path relative to MEDIA_DIR.
 npm run ocr -- --dir <path>
 
 # Import listening questions from a directory (Apple Silicon only)
 # Directory must contain one results PDF and up to 39 MP3 files
+# Each MP3 is COPIED into MEDIA_DIR/listening/ and the DB stores the path relative to MEDIA_DIR.
 npm run transcribe -- --dir <path>
+
+# Media (listening audio, reading images, speaking recordings) lives under MEDIA_DIR — defaults to
+# ./data/media (alongside the SQLite DB), in section subfolders listening/ reading/ speaking/. The
+# DB stores paths RELATIVE to MEDIA_DIR so the data is portable; the serve layer resolves them.
+# Override the location with MEDIA_DIR in .env. Rewrite any legacy absolute paths to the relative
+# form (and copy files into the store) with:
+npm run db:migrate-media
 
 # Import Writing tasks from a directory of markdown files (Milestone 10; platform-agnostic).
 # Each *.md file is one task: front-matter (taskNumber 1-3, optional title/minWords/maxWords) +

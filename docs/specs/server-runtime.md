@@ -98,7 +98,9 @@ All other endpoints retain their exact paths, methods, request shapes, response 
   `put(key, bytes, contentType)`, `exists(key)`. Node: filesystem under `MEDIA_DIR` (wrapping today's
   `fs.createReadStream` + Range logic). Worker (M15): R2 bucket (`bucket.get(key, { range })`,
   `bucket.put`). The stored `audio_files.file_path` / `passages.source_file` / recording path is the
-  key the store resolves.
+  key the store resolves — a path relative to `MEDIA_DIR` under section subfolders (`listening/`,
+  `reading/`, `speaking/`); `MEDIA_DIR` defaults to `<repo-root>/data/media` on Node. This relative
+  key maps cleanly onto an R2 object key in the Worker runtime.
 - **Capabilities** — a per-runtime object `{ aiScoring, transcription, imports }`. Node: all `true`.
   Worker (M15): all `false`. Surfaced via `/api/health` and used to decide which routes are mounted.
 

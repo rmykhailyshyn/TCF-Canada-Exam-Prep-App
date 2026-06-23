@@ -131,7 +131,8 @@ Key points that make override safe without a schema change:
 ```
 The natural key is `(section, sourceFile, sequence)`; `section` is carried for clarity but the
 DB-level match is on `(source_file, sequence)`. The `audio.fileName` is the **basename** only;
-import resolves it against the configured media directory.
+import records it as `listening/<fileName>` (relative to `MEDIA_DIR`) and resolves it against the
+configured media directory under the `listening/` subfolder.
 
 ## API contract
 
@@ -202,3 +203,8 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   Verified end-to-end against the dev DB: export→import round trip, override-in-place preserves
   `questions.id`, and the `INVALID_SECTION`/`INVALID_DIFFICULTY`/`INVALID_FORMAT`/`VALIDATION_FAILED`
   error paths.
+- 2026-06-23: `MEDIA_DIR` default moved to `<repo-root>/data/media` (alongside the SQLite DB) and
+  media is now laid out in section subfolders. Import records the exported audio basename as
+  `listening/<fileName>` (relative to `MEDIA_DIR`) instead of an absolute path; the missing-file
+  warning checks the `listening/` subfolder. Exported passage `source_file` values are likewise
+  MEDIA_DIR-relative. No format/schema change.

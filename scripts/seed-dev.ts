@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { eq, inArray, like } from 'drizzle-orm';
 import { db, client } from '../server/db';
 import { explanations, options, passages, questionResults, questions } from '../server/db/schema';
@@ -115,12 +115,12 @@ async function main(): Promise<void> {
     }
     await tx.delete(passages).where(like(passages.sourceFile, '%dev-seed-passage-%'));
 
-    // Generate a real, browser-renderable placeholder image per passage into MEDIA_DIR, so the
-    // reading UI's "image on top, OCR text below" path (reading-quiz-ui §Layout.3a) is exercised
-    // without a real OCR import. Distinct hue per passage; sourceFile stores the absolute path the
-    // passage-image route serves.
+    // Generate a real, browser-renderable placeholder image per passage into MEDIA_DIR/reading/, so
+    // the reading UI's "image on top, OCR text below" path (reading-quiz-ui §Layout.3a) is exercised
+    // without a real OCR import. Distinct hue per passage; sourceFile stores the path RELATIVE to
+    // MEDIA_DIR that the passage-image route resolves and serves (matching the real OCR import).
     const mediaDir = getMediaDir();
-    mkdirSync(mediaDir, { recursive: true });
+    mkdirSync(resolve(mediaDir, 'reading'), { recursive: true });
     const HUES: [number, number, number][] = [
       [219, 234, 254], // blue
       [220, 252, 231], // green
@@ -133,11 +133,11 @@ async function main(): Promise<void> {
     // Insert passages.
     const passageIds: number[] = [];
     for (let i = 0; i < PASSAGES.length; i += 1) {
-      const imagePath = resolve(mediaDir, `dev-seed-passage-${i}.png`);
-      writeFileSync(imagePath, solidColorPng(640, 360, HUES[i % HUES.length]));
+      const relImagePath = join('reading', `dev-seed-passage-${i}.png`);
+      writeFileSync(resolve(mediaDir, relImagePath), solidColorPng(640, 360, HUES[i % HUES.length]));
       const [row] = await tx
         .insert(passages)
-        .values({ sourceFile: imagePath, text: PASSAGES[i].text })
+        .values({ sourceFile: relImagePath, text: PASSAGES[i].text })
         .returning({ id: passages.id });
       passageIds.push(row.id);
     }

@@ -104,7 +104,10 @@ after `88`.)
    text at the `www.reussir-tcfcanada.com` footer: text before the footer is the passage, text
    after it (minus the leading badge number) is the question prompt.
 6. Each question is inserted (section = 'reading') and linked to its passage; its options are
-   persisted with `is_correct = true` for the green option and `false` for the other three.
+   persisted with `is_correct = true` for the green option and `false` for the other three. The
+   passage image is copied into `MEDIA_DIR/reading/` (the canonical media store; MEDIA_DIR defaults
+   to `<repo-root>/data/media`) and `passages.source_file` stores the path RELATIVE to MEDIA_DIR
+   (e.g. `reading/…Q39.png`), so the data is portable and the serve layer resolves it against MEDIA_DIR.
 7. After processing, the script recomputes the weighted score from the imported answer key
    (point map, quiz-session spec §Scoring) against the PDF's per-question Correcte/Incorrecte
    labels and compares it to the "<P> of 699" value. A mismatch is reported as a warning.
@@ -129,9 +132,11 @@ after `88`.)
 ```
 passages
   id          serial primary key
-  source_file text not null unique   -- passage image path; used for duplicate detection, and
-                                      -- served at quiz time as the passage image (reading-quiz-ui
-                                      -- spec, GET /api/questions/:id/passage-image).
+  source_file text not null unique   -- passage image path RELATIVE to MEDIA_DIR (e.g.
+                                      -- reading/…Q39.png; legacy absolute paths still resolve);
+                                      -- used for duplicate detection, and served at quiz time as
+                                      -- the passage image (reading-quiz-ui spec, GET
+                                      -- /api/questions/:id/passage-image).
                                       -- One image per question, so passage:question is 1:1 here.
   text        text not null          -- passage content (OCR of the image, before the footer)
   created_at  timestamptz not null default now()
@@ -241,3 +246,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   PNG/JPEG magic-byte guard (Behaviour.9) so passage "images" that are actually HTML (a real export
   hazard — saved web pages with a `.png` extension) are skipped with a clear message instead of a
   cryptic Tesseract/leptonica error.
+- 2026-06-23: Media made portable. The passage image is now COPIED into `MEDIA_DIR/reading/` and
+  `passages.source_file` stores a path RELATIVE to MEDIA_DIR (default `<repo-root>/data/media`)
+  rather than the absolute source path (Behaviour.6, Data model). Legacy absolute rows still
+  resolve; `npm run db:migrate-media` rewrites them in place.

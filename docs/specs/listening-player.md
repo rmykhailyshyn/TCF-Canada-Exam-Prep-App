@@ -58,7 +58,9 @@ None — audio_files and transcript_segments are defined in the listening-import
 ## API contract
 
 ### GET /api/questions/:id/audio
-Stream or redirect to the MP3 file for a question.
+Stream or redirect to the MP3 file for a question. The stored `audio_files.file_path` is normally a
+path relative to `MEDIA_DIR` (e.g. `listening/q07.mp3`); the service resolves it against `MEDIA_DIR`
+(default `<repo-root>/data/media`) before streaming (legacy absolute paths pass through unchanged).
 ```
 Response: audio/mpeg stream, or 302 redirect to a local static file URL
 Error:    { "data": null, "error": { "code": "NOT_FOUND", "message": "..." } }
