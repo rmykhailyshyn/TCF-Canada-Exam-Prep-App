@@ -1,5 +1,5 @@
 import { asc, eq } from 'drizzle-orm';
-import { db, pool } from '../server/db';
+import { db, client } from '../server/db';
 import { explanations, options, passages, questions, transcriptSegments } from '../server/db/schema';
 import {
   ClaudeError,
@@ -164,4 +164,4 @@ main()
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
   })
-  .finally(() => pool.end());
+  .finally(() => client.close());

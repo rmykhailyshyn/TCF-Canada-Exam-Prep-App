@@ -1,39 +1,57 @@
 {
-  "id": "f0022fa4-cfb1-40bd-8d9f-294fd33fc9a3",
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "bc0de226-1744-4503-b683-47d6ff0497f2",
   "prevId": "00000000-0000-0000-0000-000000000000",
-  "version": "7",
-  "dialect": "postgresql",
   "tables": {
-    "public.audio_files": {
+    "audio_files": {
       "name": "audio_files",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
+          "type": "integer",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": true
         },
         "question_id": {
           "name": "question_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "file_path": {
           "name": "file_path",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "duration_ms": {
           "name": "duration_ms",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "audio_files_question_id_unique": {
+          "name": "audio_files_question_id_unique",
+          "columns": [
+            "question_id"
+          ],
+          "isUnique": true
+        },
+        "audio_files_file_path_unique": {
+          "name": "audio_files_file_path_unique",
+          "columns": [
+            "file_path"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "audio_files_question_id_questions_id_fk": {
           "name": "audio_files_question_id_questions_id_fk",
@@ -50,87 +68,86 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "audio_files_question_id_unique": {
-          "name": "audio_files_question_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "question_id"
-          ]
-        },
-        "audio_files_file_path_unique": {
-          "name": "audio_files_file_path_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "file_path"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
-    "public.explanations": {
+    "explanations": {
       "name": "explanations",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
+          "type": "integer",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": true
         },
         "question_id": {
           "name": "question_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "correct_reason": {
           "name": "correct_reason",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "option_a_reason": {
           "name": "option_a_reason",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "option_b_reason": {
           "name": "option_b_reason",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "option_c_reason": {
           "name": "option_c_reason",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "option_d_reason": {
           "name": "option_d_reason",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "generated_by": {
           "name": "generated_by",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "generated_at": {
           "name": "generated_at",
-          "type": "timestamp with time zone",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
+          "autoincrement": false,
+          "default": "(unixepoch())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "explanations_question_id_unique": {
+          "name": "explanations_question_id_unique",
+          "columns": [
+            "question_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "explanations_question_id_questions_id_fk": {
           "name": "explanations_question_id_questions_id_fk",
@@ -147,55 +164,57 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "explanations_question_id_unique": {
-          "name": "explanations_question_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "question_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
-    "public.options": {
+    "options": {
       "name": "options",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
+          "type": "integer",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": true
         },
         "question_id": {
           "name": "question_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "label": {
           "name": "label",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "text": {
           "name": "text",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "is_correct": {
           "name": "is_correct",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "options_question_id_idx": {
+          "name": "options_question_id_idx",
+          "columns": [
+            "question_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "options_question_id_questions_id_fk": {
           "name": "options_question_id_questions_id_fk",
@@ -213,104 +232,123 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {
         "options_label_check": {
           "name": "options_label_check",
           "value": "\"options\".\"label\" in ('A', 'B', 'C', 'D')"
         }
-      },
-      "isRLSEnabled": false
+      }
     },
-    "public.passages": {
+    "passages": {
       "name": "passages",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
+          "type": "integer",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": true
         },
         "source_file": {
           "name": "source_file",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "text": {
           "name": "text",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
+          "autoincrement": false,
+          "default": "(unixepoch())"
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
+      "indexes": {
         "passages_source_file_unique": {
           "name": "passages_source_file_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "source_file"
-          ]
+          ],
+          "isUnique": true
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
-    "public.question_results": {
+    "question_results": {
       "name": "question_results",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
+          "type": "integer",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": true
         },
         "session_id": {
           "name": "session_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "question_id": {
           "name": "question_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "chosen_label": {
           "name": "chosen_label",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "is_correct": {
           "name": "is_correct",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "answered_at": {
           "name": "answered_at",
-          "type": "timestamp with time zone",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
+          "autoincrement": false,
+          "default": "(unixepoch())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "question_results_session_id_idx": {
+          "name": "question_results_session_id_idx",
+          "columns": [
+            "session_id"
+          ],
+          "isUnique": false
+        },
+        "question_results_question_id_idx": {
+          "name": "question_results_question_id_idx",
+          "columns": [
+            "question_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "question_results_session_id_sessions_id_fk": {
           "name": "question_results_session_id_sessions_id_fk",
@@ -341,64 +379,91 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {
         "question_results_chosen_label_check": {
           "name": "question_results_chosen_label_check",
           "value": "\"question_results\".\"chosen_label\" in ('A', 'B', 'C', 'D')"
         }
-      },
-      "isRLSEnabled": false
+      }
     },
-    "public.questions": {
+    "questions": {
       "name": "questions",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
+          "type": "integer",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": true
         },
         "passage_id": {
           "name": "passage_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         },
         "source_file": {
           "name": "source_file",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "sequence": {
           "name": "sequence",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "text": {
           "name": "text",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "section": {
           "name": "section",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp with time zone",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
+          "autoincrement": false,
+          "default": "(unixepoch())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "questions_section_idx": {
+          "name": "questions_section_idx",
+          "columns": [
+            "section"
+          ],
+          "isUnique": false
+        },
+        "questions_passage_id_idx": {
+          "name": "questions_passage_id_idx",
+          "columns": [
+            "passage_id"
+          ],
+          "isUnique": false
+        },
+        "questions_source_file_sequence_unique": {
+          "name": "questions_source_file_sequence_unique",
+          "columns": [
+            "source_file",
+            "sequence"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "questions_passage_id_passages_id_fk": {
           "name": "questions_passage_id_passages_id_fk",
@@ -415,82 +480,76 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "questions_source_file_sequence_unique": {
-          "name": "questions_source_file_sequence_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "source_file",
-            "sequence"
-          ]
-        }
-      },
-      "policies": {},
+      "uniqueConstraints": {},
       "checkConstraints": {
         "questions_section_check": {
           "name": "questions_section_check",
           "value": "\"questions\".\"section\" in ('reading', 'listening')"
         }
-      },
-      "isRLSEnabled": false
+      }
     },
-    "public.sessions": {
+    "sessions": {
       "name": "sessions",
-      "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
+          "type": "integer",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": true
         },
         "section": {
           "name": "section",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "mode": {
           "name": "mode",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "difficulty": {
           "name": "difficulty",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         },
         "started_at": {
           "name": "started_at",
-          "type": "timestamp with time zone",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
+          "autoincrement": false,
+          "default": "(unixepoch())"
         },
         "completed_at": {
           "name": "completed_at",
-          "type": "timestamp with time zone",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         },
         "elapsed_ms": {
           "name": "elapsed_ms",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {
         "sessions_section_check": {
           "name": "sessions_section_check",
-          "value": "\"sessions\".\"section\" in ('reading', 'listening')"
+          "value": "\"sessions\".\"section\" in ('reading', 'listening', 'writing', 'speaking')"
         },
         "sessions_mode_check": {
           "name": "sessions_mode_check",
@@ -500,51 +559,352 @@
           "name": "sessions_difficulty_check",
           "value": "\"sessions\".\"difficulty\" is null or \"sessions\".\"difficulty\" in ('beginner', 'elementary', 'intermediate', 'upper-intermediate', 'advanced', 'expert')"
         }
-      },
-      "isRLSEnabled": false
+      }
     },
-    "public.transcript_segments": {
-      "name": "transcript_segments",
-      "schema": "",
+    "speaking_evaluations": {
+      "name": "speaking_evaluations",
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
+          "type": "integer",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": true
         },
-        "question_id": {
-          "name": "question_id",
+        "response_id": {
+          "name": "response_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
+        },
+        "score": {
+          "name": "score",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "strengths": {
+          "name": "strengths",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "errors": {
+          "name": "errors",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "improvements": {
+          "name": "improvements",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "generated_by": {
+          "name": "generated_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "generated_at": {
+          "name": "generated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "speaking_evaluations_response_id_unique": {
+          "name": "speaking_evaluations_response_id_unique",
+          "columns": [
+            "response_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "speaking_evaluations_response_id_speaking_responses_id_fk": {
+          "name": "speaking_evaluations_response_id_speaking_responses_id_fk",
+          "tableFrom": "speaking_evaluations",
+          "tableTo": "speaking_responses",
+          "columnsFrom": [
+            "response_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "speaking_evaluations_score_check": {
+          "name": "speaking_evaluations_score_check",
+          "value": "\"speaking_evaluations\".\"score\" between 0 and 20"
+        }
+      }
+    },
+    "speaking_responses": {
+      "name": "speaking_responses",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "speaking_task_id": {
+          "name": "speaking_task_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "task_number": {
+          "name": "task_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "audio_path": {
+          "name": "audio_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "transcript": {
+          "name": "transcript",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "duration_ms": {
+          "name": "duration_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "speaking_responses_session_id_idx": {
+          "name": "speaking_responses_session_id_idx",
+          "columns": [
+            "session_id"
+          ],
+          "isUnique": false
+        },
+        "speaking_responses_session_task_unique": {
+          "name": "speaking_responses_session_task_unique",
+          "columns": [
+            "session_id",
+            "task_number"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "speaking_responses_session_id_sessions_id_fk": {
+          "name": "speaking_responses_session_id_sessions_id_fk",
+          "tableFrom": "speaking_responses",
+          "tableTo": "sessions",
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "speaking_responses_speaking_task_id_speaking_tasks_id_fk": {
+          "name": "speaking_responses_speaking_task_id_speaking_tasks_id_fk",
+          "tableFrom": "speaking_responses",
+          "tableTo": "speaking_tasks",
+          "columnsFrom": [
+            "speaking_task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "speaking_responses_task_number_check": {
+          "name": "speaking_responses_task_number_check",
+          "value": "\"speaking_responses\".\"task_number\" between 1 and 3"
+        }
+      }
+    },
+    "speaking_tasks": {
+      "name": "speaking_tasks",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "source_file": {
+          "name": "source_file",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
         },
         "sequence": {
           "name": "sequence",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
+        },
+        "task_number": {
+          "name": "task_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "question": {
+          "name": "question",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sample_answer": {
+          "name": "sample_answer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "speaking_tasks_task_number_idx": {
+          "name": "speaking_tasks_task_number_idx",
+          "columns": [
+            "task_number"
+          ],
+          "isUnique": false
+        },
+        "speaking_tasks_source_file_sequence_unique": {
+          "name": "speaking_tasks_source_file_sequence_unique",
+          "columns": [
+            "source_file",
+            "sequence"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "speaking_tasks_task_number_check": {
+          "name": "speaking_tasks_task_number_check",
+          "value": "\"speaking_tasks\".\"task_number\" between 1 and 3"
+        }
+      }
+    },
+    "transcript_segments": {
+      "name": "transcript_segments",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "question_id": {
+          "name": "question_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
         },
         "text": {
           "name": "text",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "start_ms": {
           "name": "start_ms",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         },
         "end_ms": {
           "name": "end_ms",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "transcript_segments_question_id_idx": {
+          "name": "transcript_segments_question_id_idx",
+          "columns": [
+            "question_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "transcript_segments_question_id_questions_id_fk": {
           "name": "transcript_segments_question_id_questions_id_fk",
@@ -562,20 +922,328 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
+      "checkConstraints": {}
+    },
+    "writing_evaluations": {
+      "name": "writing_evaluations",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "response_id": {
+          "name": "response_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "score": {
+          "name": "score",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "strengths": {
+          "name": "strengths",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "errors": {
+          "name": "errors",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "improvements": {
+          "name": "improvements",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "generated_by": {
+          "name": "generated_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "generated_at": {
+          "name": "generated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "writing_evaluations_response_id_unique": {
+          "name": "writing_evaluations_response_id_unique",
+          "columns": [
+            "response_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "writing_evaluations_response_id_writing_responses_id_fk": {
+          "name": "writing_evaluations_response_id_writing_responses_id_fk",
+          "tableFrom": "writing_evaluations",
+          "tableTo": "writing_responses",
+          "columnsFrom": [
+            "response_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "writing_evaluations_score_check": {
+          "name": "writing_evaluations_score_check",
+          "value": "\"writing_evaluations\".\"score\" between 0 and 20"
+        }
+      }
+    },
+    "writing_responses": {
+      "name": "writing_responses",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "writing_task_id": {
+          "name": "writing_task_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "task_number": {
+          "name": "task_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "response_text": {
+          "name": "response_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "word_count": {
+          "name": "word_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "writing_responses_session_id_idx": {
+          "name": "writing_responses_session_id_idx",
+          "columns": [
+            "session_id"
+          ],
+          "isUnique": false
+        },
+        "writing_responses_session_task_unique": {
+          "name": "writing_responses_session_task_unique",
+          "columns": [
+            "session_id",
+            "task_number"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "writing_responses_session_id_sessions_id_fk": {
+          "name": "writing_responses_session_id_sessions_id_fk",
+          "tableFrom": "writing_responses",
+          "tableTo": "sessions",
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "writing_responses_writing_task_id_writing_tasks_id_fk": {
+          "name": "writing_responses_writing_task_id_writing_tasks_id_fk",
+          "tableFrom": "writing_responses",
+          "tableTo": "writing_tasks",
+          "columnsFrom": [
+            "writing_task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "writing_responses_task_number_check": {
+          "name": "writing_responses_task_number_check",
+          "value": "\"writing_responses\".\"task_number\" between 1 and 3"
+        }
+      }
+    },
+    "writing_tasks": {
+      "name": "writing_tasks",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "source_file": {
+          "name": "source_file",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "task_number": {
+          "name": "task_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "prompt": {
+          "name": "prompt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "instructions": {
+          "name": "instructions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "min_words": {
+          "name": "min_words",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "max_words": {
+          "name": "max_words",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "sample_answer": {
+          "name": "sample_answer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "template": {
+          "name": "template",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch())"
+        }
+      },
+      "indexes": {
+        "writing_tasks_task_number_idx": {
+          "name": "writing_tasks_task_number_idx",
+          "columns": [
+            "task_number"
+          ],
+          "isUnique": false
+        },
+        "writing_tasks_source_file_task_number_unique": {
+          "name": "writing_tasks_source_file_task_number_unique",
+          "columns": [
+            "source_file",
+            "task_number"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "writing_tasks_task_number_check": {
+          "name": "writing_tasks_task_number_check",
+          "value": "\"writing_tasks\".\"task_number\" between 1 and 3"
+        }
+      }
     }
   },
-  "enums": {},
-  "schemas": {},
-  "sequences": {},
-  "roles": {},
-  "policies": {},
   "views": {},
+  "enums": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
   }
 }

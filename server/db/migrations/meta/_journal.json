@@ -1,33 +1,12 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1780872351593,
-      "tag": "0000_cynical_shriek",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1781394956912,
-      "tag": "0001_known_war_machine",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1781736375846,
-      "tag": "0002_clumsy_sister_grimm",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1781817765827,
-      "tag": "0003_new_shinko_yamashiro",
+      "version": "6",
+      "when": 1782172349612,
+      "tag": "0000_living_chimera",
       "breakpoints": true
     }
   ]

@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { eq, inArray } from 'drizzle-orm';
-import { db, pool } from '../server/db';
+import { db, client } from '../server/db';
 import {
   audioFiles,
   explanations,
@@ -148,7 +148,7 @@ async function main(): Promise<void> {
   });
 
   console.log(`Seeded ${QUESTIONS.length} listening questions (Beginner band Q1–4) with audio + transcripts.`);
-  await pool.end();
+  client.close();
 }
 
 main().catch((error: unknown) => {

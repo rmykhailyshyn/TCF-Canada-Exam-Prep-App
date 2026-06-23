@@ -28,6 +28,12 @@ __pycache__/
 # Local media directory (MEDIA_DIR): imported audio + dev-seed placeholder images, all generated
 /media/
 
+# Local SQLite database files (DATABASE_URL defaults to file:./data/tcf_prep.db; e2e uses its own)
+/data/
+*.db
+*.db-shm
+*.db-wal
+
 # Generated listening dev clips (e2e global-setup regenerates them with ffmpeg)
 scripts/dev-audio/
 

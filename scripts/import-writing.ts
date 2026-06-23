@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { and, eq } from 'drizzle-orm';
-import { db, pool } from '../server/db';
+import { db, client } from '../server/db';
 import { writingTasks } from '../server/db/schema';
 import { TaskParseError, parseTaskFile } from './lib/writing-tasks';
 
@@ -107,4 +107,4 @@ main()
     console.error('Import failed:', error instanceof Error ? error.message : error);
     process.exitCode = 1;
   })
-  .finally(() => pool.end());
+  .finally(() => client.close());

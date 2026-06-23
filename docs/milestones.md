@@ -359,32 +359,46 @@ Local dev is unchanged: Vite proxies `/api` to Hono-on-Node.
 ---
 
 ## Milestone 13 — Database migration to SQLite (local)
-**Status:** approved (ready to implement)
+**Status:** complete
 
 Move persistence from PostgreSQL to SQLite with **no observable behaviour change**, as the foundation for
 Cloudflare D1 (itself SQLite) and a local-dev simplification (no Docker/Postgres → the app + DB also run
 on **Windows**). Because all DB access is Drizzle, the change is confined to the schema definition,
 client, config, generated migrations, and a few tooling scripts.
 
-- [ ] Rewrite `server/db/schema.ts` from `drizzle-orm/pg-core` to `drizzle-orm/sqlite-core`, preserving
+- [x] Rewrite `server/db/schema.ts` from `drizzle-orm/pg-core` to `drizzle-orm/sqlite-core`, preserving
   every table/column/constraint/index (`serial`→`integer autoincrement`, `boolean`→`integer {mode:
   'boolean'}`, `timestamp`→`integer {mode: 'timestamp'}` to keep JS `Date` semantics)
-- [ ] Swap the DB client in `server/db/index.ts` to libSQL (`@libsql/client` + `drizzle-orm/libsql`),
+- [x] Swap the DB client in `server/db/index.ts` to libSQL (`@libsql/client` + `drizzle-orm/libsql`),
   same exported `db` symbol, FK enforcement on; update `server/db/migrate.ts`
-- [ ] `drizzle.config.ts` → `dialect: 'sqlite'`; delete the PostgreSQL migrations and regenerate one
-  clean SQLite baseline (no production data to preserve)
-- [ ] `server/config/env.ts` + `.env.example` → `file:` `DATABASE_URL`; remove `db:up`/`db:down` +
+- [x] `drizzle.config.ts` → `dialect: 'sqlite'`; delete the PostgreSQL migrations and regenerate one
+  clean SQLite baseline (`0000_living_chimera.sql` — every CHECK/UNIQUE/index/FK round-tripped)
+- [x] `server/config/env.ts` + `.env.example` → `file:` `DATABASE_URL`; remove `db:up`/`db:down` +
   `docker-compose.yml`; add `@libsql/client`; move `pg`/`@types/pg` to devDependencies (kept only for
   the migration script below)
-- [ ] One-time data-migration script `npm run db:migrate-from-postgres -- --from <PG_DATABASE_URL>`:
+- [x] One-time data-migration script `npm run db:migrate-from-postgres -- --from <PG_DATABASE_URL>`:
   copy every table from an existing PostgreSQL dev DB into SQLite, preserving primary-key ids and
   foreign-key links (FK dependency order), converting `boolean`/`timestamptz`; `--dry-run` + per-table
   row-count summary
-- [ ] Verify seeds + CLI imports + `npm test` + `npm run test:e2e` pass on SQLite; app + DB run on Windows
+- [x] Verify seeds + `npm test` (136) + `npm run test:e2e` (15) pass on SQLite; app + DB run on Windows
   with no Docker
 
+**Implementation notes (SDD Rule 4):** (1) **cwd-relative `file:` paths.** libSQL resolves a relative
+`file:` URL against `process.cwd()`, which differs between the server workspace (`server/`) and the
+root-run tooling (migrate/seed/e2e) — they would otherwise open *different* DB files. `getDatabaseUrl()`
+now anchors a relative `file:` path to the repo root so all entry points agree; a new
+`server/db/sqlite-path.ts` `ensureSqliteDir()` creates the parent dir libSQL won't. Not anticipated by
+the spec (Postgres URLs are host-based, cwd-independent). (2) **`pool` → `client`.** `pg.Pool.end()` has
+no libSQL analogue, so the `db/index.ts` `pool` export became `client` and the 7 CLI/seed scripts now
+call `client.close()` (within the spec's "adjust seed/CLI scripts if required"). (3) **e2e reset is
+best-effort.** On Windows the previous run's server / an AV scan can hold the e2e `.db` handle for
+seconds; the delete is best-effort and falls back to idempotent migrate + seeds — matching the old
+Postgres flow, which never dropped the DB either. (4) **Not exercised live:** the source Postgres dev DB
+was empty (0 rows in every table), so the data-copy *write* path had nothing to copy; the dry-run
+confirmed all 14 tables are read in FK order, and the verbatim type conversion is straightforward.
+
 **Specs:**
-- `docs/specs/database-sqlite.md` (draft)
+- `docs/specs/database-sqlite.md` (implemented)
 
 ---
 

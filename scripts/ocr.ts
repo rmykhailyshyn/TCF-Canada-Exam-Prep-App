@@ -1,7 +1,7 @@
 import { closeSync, existsSync, openSync, readSync, readdirSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { and, eq } from 'drizzle-orm';
-import { db, pool } from '../server/db';
+import { db, client } from '../server/db';
 import { options, passages, questions } from '../server/db/schema';
 import { runPdfParser } from './lib/parse';
 import {
@@ -203,7 +203,7 @@ async function main(): Promise<void> {
       `${skipped} skipped. Score cross-check ${check.matches ? 'matched' : 'MISMATCHED'} ` +
       `(${check.pdfCorrect} correct / ${check.pdfPoints} of ${parsed.scoreSummary.maxPoints} pts).`,
   );
-  await pool.end();
+  client.close();
 }
 
 main().catch((error: unknown) => {

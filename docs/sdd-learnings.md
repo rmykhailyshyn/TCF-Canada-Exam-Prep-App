@@ -412,3 +412,39 @@ worth recording while the specs are still drafts pending approval.
   things that must be introduced in M14 to keep M15/M16 small. Whether front-loading the whole chain helps
   or whether the later specs churn once the earlier ones are implemented is the open SDD question to
   revisit in the retrospective.
+
+## Milestone 13 — Database migration to SQLite (the layering bet pays off)
+
+M13 was the first milestone to *implement* a cross-cutting infrastructure change, and it confirmed the
+provisional lesson logged during planning: the "all access via Drizzle" invariant made the blast radius
+exactly what the spec predicted. Not one service, route, or seed had a *logic* change — the diff is the
+schema definition, the client, the config, the generated baseline, and mechanical `pool`→`client` renames
+in seven scripts. The strict layering rule, written down and enforced across twelve feature milestones,
+is what let an orthogonal engine swap pass through one seam instead of smearing across the codebase.
+
+- **Where the spec was silent was the code-vs-reality boundary again — twice.** The spec's type-mapping
+  table and behaviours were complete and correct, and `drizzle-kit generate` reproduced every
+  CHECK/UNIQUE/index/FK faithfully (one open question closed positively). But two implementation realities
+  the spec couldn't have known surfaced only when the code ran: (1) **libSQL resolves a relative `file:`
+  path against `process.cwd()`**, and the server workspace (`server/`) has a different cwd than the
+  root-run tooling — so they silently opened *different* database files (the e2e suite failed with "no
+  data" until `getDatabaseUrl()` was changed to anchor relative paths to the repo root). Postgres URLs are
+  host-based and cwd-independent, so nothing in the prior twelve milestones could have flagged this. (2)
+  **Windows holds the SQLite file handle** (server teardown / AV scan) for seconds after a run, breaking a
+  delete-then-recreate e2e reset; the fix was to make the reset best-effort and lean on the *already-spec'd*
+  idempotency of migrate + seeds. **Lesson:** SDD specs are strong at *what* and *which seam*; they remain
+  blind to host/runtime mechanics (cwd, file locks, driver quirks) that only the running system reveals —
+  exactly the boundary M9 named. Rule 4 worked as intended: both findings went into the spec's revision
+  history as discovered facts, not silent patches.
+
+- **A "no behaviour change" spec is the easiest kind to verify — because the old tests *are* the spec.**
+  The acceptance criteria were almost entirely "the existing suites still pass on the new engine." 136 unit
+  tests (pure, no DB) and 15 e2e tests (against an isolated SQLite file) carried the whole correctness
+  argument with no new test-writing — the inherited suite doubled as the regression contract for the swap.
+
+- **The data-migration script is a spec'd dead-end, and that's a feature.** The spec deliberately scoped a
+  one-time, best-effort, local-only PG→SQLite copy with `pg` demoted to a devDependency, *and* pre-declared
+  (in M14's spec) that the script and `pg` get deleted once dev data is carried over. Writing the throwaway's
+  obsolescence into the next milestone's spec stops it from rotting into permanent surface area — the
+  retirement is planned, not hoped for. (Here the source dev DB happened to be empty, so only the read path
+  ran live; the verbatim type-conversion write path is simple enough to carry on inspection.)

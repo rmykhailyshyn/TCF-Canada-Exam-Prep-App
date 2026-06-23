@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { eq, inArray, like } from 'drizzle-orm';
-import { db, pool } from '../server/db';
+import { db, client } from '../server/db';
 import { explanations, options, passages, questionResults, questions } from '../server/db/schema';
 import { getMediaDir } from '../server/config/env';
 import { solidColorPng } from './lib/png';
@@ -172,7 +172,7 @@ async function main(): Promise<void> {
     `Seeded ${PASSAGES.length} passages (+ placeholder images in ${getMediaDir()}) and ` +
       `${QUESTIONS.length} reading questions.`,
   );
-  await pool.end();
+  client.close();
 }
 
 main().catch((error: unknown) => {

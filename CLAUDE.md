@@ -24,14 +24,14 @@ This project also serves as a **testbed for evaluating spec-driven development**
 |---|---|
 | Frontend | React 18, Vite, Tailwind CSS, TypeScript |
 | Backend | Express (Node.js), TypeScript |
-| Database | PostgreSQL via Drizzle ORM |
+| Database | SQLite (libSQL) via Drizzle ORM |
 | Audio transcription | Whisper CLI (Apple Silicon, `mlx-whisper` or `whisper.cpp`) |
 | OCR | Tesseract OCR (CLI) |
 | Package manager | npm |
 
 All tooling is local-first. No cloud services, no external APIs, no auth layer.
 
-**Platform note:** The frontend and backend are platform-agnostic (Windows and macOS). The OCR and audio transcription pipelines (`scripts/`, `server/services/`) require Apple Silicon and must only be invoked on macOS. Never add OS-specific assumptions to `client/` or `server/` code outside of those services.
+**Platform note:** The frontend, backend, and database are platform-agnostic (Windows and macOS) — SQLite is a single local file (`DATABASE_URL=file:./data/tcf_prep.db`), so there is no Docker/Postgres setup on any OS. The OCR and audio transcription pipelines (`scripts/`, `server/services/`) require Apple Silicon and must only be invoked on macOS. Never add OS-specific assumptions to `client/` or `server/` code outside of those services.
 
 ---
 
@@ -156,7 +156,7 @@ Every non-trivial function or component must include a one-line comment referenc
 ### Drizzle
 - Schema changes require a migration. Never mutate the DB directly during development.
 - Run `drizzle-kit generate` after every schema change. Commit both the schema and the migration together.
-- The database connection string is read from `DATABASE_URL` in `.env`. Never hardcode connection details.
+- The database connection string is read from `DATABASE_URL` in `.env` (a libSQL `file:` URL; relative paths resolve against the repo root). Never hardcode connection details.
 
 ### Whisper / Tesseract
 - CLI calls are wrapped in `scripts/` or `server/services/`. Never inline shell commands in route handlers.
@@ -192,15 +192,18 @@ npm install
 # Start dev servers (client + server concurrently)
 npm run dev
 
-# Start / stop local PostgreSQL (Docker)
-npm run db:up
-npm run db:down
-
-# Run DB migrations
+# Run DB migrations (creates the SQLite file at DATABASE_URL — no Docker, no database server)
 npm run db:migrate
 
 # Generate migration after schema change
 npm run db:generate
+
+# One-time PostgreSQL -> SQLite data migration (Milestone 13; preserves existing local dev data).
+# Run AFTER `npm run db:migrate` has created the SQLite schema. Reads from --from / PG_DATABASE_URL,
+# writes into DATABASE_URL, preserving primary keys + FK links. --dry-run prints per-table counts.
+# `pg` is retained only as a devDependency for this one-time script.
+npm run db:migrate-from-postgres -- --from <PG_DATABASE_URL>
+npm run db:migrate-from-postgres -- --dry-run
 
 # Seed a full 39-question reading section for local UI/dev (not part of any spec)
 npm run seed:dev

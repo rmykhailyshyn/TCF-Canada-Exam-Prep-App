@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { and, eq } from 'drizzle-orm';
-import { db, pool } from '../server/db';
+import { db, client } from '../server/db';
 import { audioFiles, options, questions, transcriptSegments } from '../server/db/schema';
 import { runPdfParser } from './lib/parse';
 import { crossCheckScore, extractSequenceFromFilename, resolveCorrectLabel } from './lib/results';
@@ -184,7 +184,7 @@ async function main(): Promise<void> {
       `Score cross-check ${check.matches ? 'matched' : 'MISMATCHED'} ` +
       `(${check.pdfCorrect} correct / ${check.pdfPoints} of ${parsed.scoreSummary.maxPoints} pts).`,
   );
-  await pool.end();
+  client.close();
 }
 
 main().catch((error: unknown) => {
