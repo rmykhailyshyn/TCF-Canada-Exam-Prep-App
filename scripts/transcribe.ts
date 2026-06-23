@@ -83,6 +83,8 @@ async function main(): Promise<void> {
   let segmentsImported = 0;
   let skipped = 0;
 
+  mkdirSync(resolve(getMediaDir(), 'listening'), { recursive: true });
+
   for (const q of parsed.questions) {
     // Answer key: exactly one green option (Behaviour.13).
     const resolved = resolveCorrectLabel(q);
@@ -141,7 +143,6 @@ async function main(): Promise<void> {
 
     // Copy the source MP3 into the media store (idempotent: skip if already there).
     const audioDest = resolve(getMediaDir(), relAudioPath);
-    mkdirSync(resolve(getMediaDir(), 'listening'), { recursive: true });
     if (!existsSync(audioDest)) copyFileSync(audioPath, audioDest);
 
     await db.transaction(async (tx) => {

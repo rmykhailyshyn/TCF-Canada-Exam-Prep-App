@@ -17,9 +17,10 @@ type Row = { id: number; path: string };
 // relative path. Already-relative paths are returned unchanged (no copy).
 function relocate(section: 'listening' | 'reading', current: string): string {
   if (!isAbsolute(current)) return current;
+  const mediaDir = getMediaDir();
   const rel = join(section, basename(current));
-  const dest = resolve(getMediaDir(), rel);
-  mkdirSync(resolve(getMediaDir(), section), { recursive: true });
+  const dest = resolve(mediaDir, rel);
+  mkdirSync(resolve(mediaDir, section), { recursive: true });
   if (existsSync(current) && !existsSync(dest)) {
     copyFileSync(current, dest);
   } else if (!existsSync(current) && !existsSync(dest)) {

@@ -98,6 +98,8 @@ async function main(): Promise<void> {
   let questionsImported = 0;
   let skipped = 0;
 
+  mkdirSync(resolve(getMediaDir(), 'reading'), { recursive: true });
+
   for (const q of parsed.questions) {
     // Answer key: exactly one green option (Behaviour.10).
     const resolved = resolveCorrectLabel(q);
@@ -174,7 +176,6 @@ async function main(): Promise<void> {
 
     // Copy the source image into the media store (idempotent: skip if already there).
     const imageDest = resolve(getMediaDir(), relImagePath);
-    mkdirSync(resolve(getMediaDir(), 'reading'), { recursive: true });
     if (!existsSync(imageDest)) copyFileSync(imagePath, imageDest);
 
     await db.transaction(async (tx) => {
