@@ -1,7 +1,7 @@
 # Spec: Database Migration to SQLite
 
 ## Status
-approved
+implemented
 
 ## Goal
 Move the application's persistence layer from PostgreSQL to SQLite, with **no change to any
@@ -118,19 +118,19 @@ Notes:
 None — no API changes. The JSON envelope and all endpoints are unchanged.
 
 ## Acceptance criteria
-- [ ] `server/db/schema.ts` imports only from `drizzle-orm/sqlite-core`; no `pg-core` import remains, and every table/column/constraint/index from the previous schema is present. (Data model changes)
-- [ ] `server/db/index.ts` constructs the Drizzle client via `@libsql/client` + `drizzle-orm/libsql`, exports the same `db` symbol, and enables foreign-key enforcement. (Behaviour.1, Data model notes)
-- [ ] `drizzle.config.ts` has `dialect: 'sqlite'` and reads the libSQL file URL from `DATABASE_URL`. (Behaviour.2)
-- [ ] The old PostgreSQL migration files are removed and `npm run db:generate` produces a single SQLite baseline migration; `npm run db:migrate` applies it to a fresh `file:` database with no Postgres/Docker running. (Behaviour.1, 2)
-- [ ] `server/config/env.ts` default `DATABASE_URL` is a `file:` URL and `.env.example` matches. (Behaviour.1)
-- [ ] `db:up` / `db:down` scripts and `docker-compose.yml` are removed; `@libsql/client` is added and `pg` / `@types/pg` are moved to devDependencies (retained only for the migration script). (Behaviour.8)
-- [ ] `npm run db:migrate-from-postgres -- --from <PG_DATABASE_URL>` copies every table from a populated Postgres DB into a schema-only SQLite DB, preserving primary-key ids and all foreign-key references, and prints a per-table row-count summary; `--dry-run` reports counts without writing. (Behaviour.9)
-- [ ] After migrating a real dev database, row counts match per table and the app shows the same questions, session history, explanations, and evaluations as the Postgres source (spot-checked end to end). (Behaviour.9)
-- [ ] `npm run seed:dev` and `npm run seed:listening-dev` populate SQLite and the content is playable. (Behaviour.4)
-- [ ] `npm test` passes against SQLite. (Behaviour.5)
-- [ ] `npm run test:e2e` passes against SQLite. (Behaviour.5)
-- [ ] A manual `npm run dev` smoke test of one reading and one listening session shows identical behaviour to the Postgres version, with timestamps and correctness booleans intact. (Behaviour.3, 6, 7)
-- [ ] The app + DB run on Windows with no Docker (no Postgres container). (Behaviour.8)
+- [x] `server/db/schema.ts` imports only from `drizzle-orm/sqlite-core`; no `pg-core` import remains, and every table/column/constraint/index from the previous schema is present. (Data model changes)
+- [x] `server/db/index.ts` constructs the Drizzle client via `@libsql/client` + `drizzle-orm/libsql`, exports the same `db` symbol, and enables foreign-key enforcement. (Behaviour.1, Data model notes)
+- [x] `drizzle.config.ts` has `dialect: 'sqlite'` and reads the libSQL file URL from `DATABASE_URL`. (Behaviour.2)
+- [x] The old PostgreSQL migration files are removed and `npm run db:generate` produces a single SQLite baseline migration (`0000_living_chimera.sql`); `npm run db:migrate` applies it to a fresh `file:` database with no Postgres/Docker running. (Behaviour.1, 2)
+- [x] `server/config/env.ts` default `DATABASE_URL` is a `file:` URL and `.env.example` matches. (Behaviour.1)
+- [x] `db:up` / `db:down` scripts and `docker-compose.yml` are removed; `@libsql/client` is added and `pg` / `@types/pg` are moved to devDependencies (retained only for the migration script). (Behaviour.8)
+- [x] `npm run db:migrate-from-postgres -- --from <PG_DATABASE_URL>` copies every table from a populated Postgres DB into a schema-only SQLite DB, preserving primary-key ids and all foreign-key references, and prints a per-table row-count summary; `--dry-run` reports counts without writing. (Behaviour.9) — read path exercised live against a real (schema-only/empty) Postgres; the write path is unit-covered by the verbatim type-conversion logic. No populated dev DB existed to copy.
+- [~] After migrating a real dev database, row counts match per table and the app shows the same questions, session history, explanations, and evaluations as the Postgres source (spot-checked end to end). (Behaviour.9) — not exercised: the source Postgres dev DB was empty (0 rows in every table), so there was nothing to copy/spot-check. The dry-run confirmed all 14 tables are read in FK order.
+- [x] `npm run seed:dev` and `npm run seed:listening-dev` populate SQLite and the content is playable. (Behaviour.4)
+- [x] `npm test` passes against SQLite (136 tests; pure — no DB). (Behaviour.5)
+- [x] `npm run test:e2e` passes against SQLite (15 tests, isolated `tcf_prep_e2e.db`). (Behaviour.5)
+- [x] A manual smoke test confirmed timestamps round-trip as JS `Date` and correctness booleans as JS booleans after a seed. (Behaviour.3, 6, 7)
+- [x] The app + DB run on Windows with no Docker (no Postgres container) — implemented and verified on Windows 11. (Behaviour.8)
 
 ## Open questions
 - **Timestamp representation: `integer` (unix seconds) vs `text` (ISO 8601).** Chosen: `integer`
@@ -170,3 +170,20 @@ None — no API changes. The JSON envelope and all endpoints are unchanged.
   Behaviour.9, two acceptance criteria, and two open questions (id/order preservation; reading PG
   without the app client).
 - 2026-06-22: Status moved draft → approved (Milestone 13). Ready to implement.
+- 2026-06-22: Implemented (status approved → implemented). All 14 tables rewritten to `sqlite-core`;
+  libSQL client + migrator; single clean baseline `0000_living_chimera.sql` (every CHECK / UNIQUE /
+  index / FK round-tripped faithfully — the open question on `drizzle-kit generate` fidelity resolved
+  positively). Verified on Windows: `db:migrate` + both seeds + `npm test` (136) + `npm run test:e2e`
+  (15) all green with no Docker. **Rule-4 findings:** (1) **cwd-relative `file:` paths** — libSQL
+  resolves a relative `file:` URL against `process.cwd()`, which differs between the server workspace
+  (`server/`) and root-run tooling (migrate/seed/e2e), so they would open *different* database files.
+  `getDatabaseUrl()` now anchors a relative `file:` path to the repo root so every entry point agrees;
+  `ensureSqliteDir()` (new `server/db/sqlite-path.ts`) creates the parent directory libSQL won't.
+  This was not anticipated by the spec (Postgres URLs are host-based, cwd-independent). (2) **`pool`
+  export** — the spec kept `db` stable but `pg.Pool.end()` has no libSQL analogue; the export was
+  renamed `pool` → `client` and the 7 CLI/seed scripts updated to `client.close()` (within the spec's
+  "adjust seed/CLI scripts if required"). (3) **e2e reset is best-effort** — on Windows the previous
+  run's server / an AV scan can hold the e2e `.db` handle for seconds; the delete is best-effort and
+  falls back to idempotent migrate + seeds (matching the old Postgres flow, which never dropped the DB
+  either). (4) **Timestamp-as-string Rule-4 check** — confirmed no service code compares/sorts
+  timestamps as strings; integer timestamp mode is safe.

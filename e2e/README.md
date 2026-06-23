@@ -23,7 +23,7 @@ e2e/
 │   ├── test.ts          # extends base test with page-object + api fixtures (import from here)
 │   ├── api-client.ts    # ApiClient — session lifecycle + envelope unwrapping
 │   └── listening-data.ts# seeded listening question data
-├── global-setup.ts      # creates/migrates/seeds the dedicated tcf_prep_e2e DB (referenced by config)
+├── global-setup.ts      # resets/migrates/seeds the dedicated tcf_prep_e2e.db SQLite file (referenced by config)
 └── README.md
 ```
 
@@ -66,10 +66,10 @@ e2e/
 ## Determinism & isolation
 
 The suite runs serially (`workers: 1`, `fullyParallel: false`) because flows mutate shared session
-state through one set of dev servers. `global-setup.ts` provisions a dedicated `tcf_prep_e2e`
-database (migrate + reading/listening seeds, generating listening MP3s via ffmpeg) and the webServer
-runs the app against that same DB, so runs never touch the dev DB. Stop any local `npm run dev`
-before invoking the suite (the config never reuses an existing server).
+state through one set of dev servers. `global-setup.ts` provisions a dedicated `tcf_prep_e2e.db`
+SQLite file (reset + migrate + reading/listening seeds, generating listening MP3s via ffmpeg) and the
+webServer runs the app against that same DB, so runs never touch the dev DB. Stop any local
+`npm run dev` before invoking the suite (the config never reuses an existing server).
 
 Tests stay tolerant of dev-DB question counts where totals aren't seed-guaranteed (assert behaviour,
 not exact numbers) — except real-mode reading, where the seed fills all 39 positions.

@@ -291,3 +291,7 @@ _None._
   no behaviour change is expected; the existing end-to-end verification (real-mode all-correct 699/699,
   all-wrong 0/699) is to be re-confirmed against SQLite. The "Verified end-to-end against PostgreSQL"
   note above is retained as the historical record of the Milestone 2 verification.
+- 2026-06-22: **Milestone 13 complete (SQLite).** Re-confirmed on SQLite: the e2e suite (15 tests)
+  exercises reading + listening session flows, scoring, and history against the libSQL database, and
+  the unit scoring tests (`server/lib/scoring`) are dialect-agnostic and pass unchanged. No behaviour
+  change. Timestamps round-trip as JS `Date`, correctness as JS booleans (verified post-seed).

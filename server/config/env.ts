@@ -1,17 +1,26 @@
 import { config as loadDotenv } from 'dotenv';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { dirname, isAbsolute, resolve } from 'node:path';
 
 // Load environment variables from the repo-root .env before anything reads them.
 const here = dirname(fileURLToPath(import.meta.url));
-loadDotenv({ path: resolve(here, '../../.env') });
+const repoRoot = resolve(here, '../..');
+loadDotenv({ path: resolve(repoRoot, '.env') });
 
+// libSQL/SQLite connection URL (a `file:` path locally). Defaults to a repo-local SQLite file so a
+// fresh checkout works with no setup — no Docker, no Postgres. spec: docs/specs/database-sqlite.md
+const DEFAULT_DATABASE_URL = 'file:./data/tcf_prep.db';
+
+// libSQL resolves a relative `file:` path against process.cwd(), which differs between the server
+// workspace (server/) and the root-run tooling (migrate/seed/e2e) — they would otherwise open
+// different database files. Anchor any relative `file:` path to the repo root so every entry point
+// agrees on one database regardless of cwd. Non-file URLs (and :memory:) are returned untouched.
 export function getDatabaseUrl(): string {
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error('DATABASE_URL is not set. Copy .env.example to .env and configure it.');
-  }
-  return url;
+  const url = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
+  if (!url.startsWith('file:')) return url;
+  const path = url.slice('file:'.length);
+  if (!path || path === ':memory:' || isAbsolute(path)) return url;
+  return `file:${resolve(repoRoot, path)}`;
 }
 
 export function getPort(): number {
