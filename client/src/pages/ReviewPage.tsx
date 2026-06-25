@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { type SessionDetail, type Section, fetchSession } from '../lib/api';
-import { DIFFICULTY_BANDS } from '../lib/bands';
-import { type RetryBand, groupIncorrectByBand } from '../features/review/groupByBand';
-import { ReviewQuestionCard } from '../features/review/ReviewQuestionCard';
-import type { SessionConfig } from '../features/quiz/types';
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { type SessionDetail, type Section, fetchSession } from "../lib/api";
+import { DIFFICULTY_BANDS } from "../lib/bands";
+import {
+  type RetryBand,
+  groupIncorrectByBand,
+} from "../features/review/groupByBand";
+import { ReviewQuestionCard } from "../features/review/ReviewQuestionCard";
+import type { SessionConfig } from "../features/quiz/types";
 
 // spec: docs/specs/review-mode.md §Behaviour
 // Read-only review of a completed session: every question in order with the user's answer vs. the
@@ -21,7 +24,9 @@ export function ReviewPage(): JSX.Element {
     if (!id) return;
     fetchSession(Number(id))
       .then(setDetail)
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed to load session'))
+      .catch((e: unknown) =>
+        setError(e instanceof Error ? e.message : "Failed to load session"),
+      )
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -29,7 +34,11 @@ export function ReviewPage(): JSX.Element {
     return <Centered>Loading…</Centered>;
   }
   if (error || !detail) {
-    return <Centered className="text-red-600">{error ?? 'Session not found'}</Centered>;
+    return (
+      <Centered className="text-red-600">
+        {error ?? "Session not found"}
+      </Centered>
+    );
   }
 
   const { session, results } = detail;
@@ -41,11 +50,11 @@ export function ReviewPage(): JSX.Element {
   function startRetry(band: RetryBand): void {
     const retryConfig: SessionConfig = {
       section,
-      mode: 'learning',
+      mode: "learning",
       difficulty: band.difficulty,
       questionIds: band.questionIds,
     };
-    navigate('/', { state: { retryConfig } });
+    navigate("/", { state: { retryConfig } });
   }
 
   return (
@@ -60,9 +69,9 @@ export function ReviewPage(): JSX.Element {
         </button>
         <span className="font-semibold text-slate-900">Review answers</span>
         <span className="ml-auto text-sm text-slate-500">
-          <span className="capitalize">{session.section}</span> ·{' '}
-          <span className="capitalize">{session.mode}</span> · {session.correct} / {session.total}{' '}
-          correct
+          <span className="capitalize">{session.section}</span> ·{" "}
+          <span className="capitalize">{session.mode}</span> · {session.correct}{" "}
+          / {session.total} correct
         </span>
       </header>
 
@@ -78,7 +87,7 @@ export function ReviewPage(): JSX.Element {
   );
 }
 
-function shortBandName(slug: RetryBand['difficulty']): string {
+function shortBandName(slug: RetryBand["difficulty"]): string {
   return DIFFICULTY_BANDS.find((b) => b.slug === slug)?.name ?? slug;
 }
 
@@ -97,7 +106,8 @@ function RetryPanel({
     return (
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <p className="text-sm text-slate-600">
-          {totalWrong} incorrect {totalWrong === 1 ? 'answer' : 'answers'} in this session.
+          {totalWrong} incorrect {totalWrong === 1 ? "answer" : "answers"} in
+          this session.
         </p>
         <button
           type="button"
@@ -112,10 +122,12 @@ function RetryPanel({
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="font-semibold text-slate-900">Retry incorrect questions</h2>
+      <h2 className="font-semibold text-slate-900">
+        Retry incorrect questions
+      </h2>
       <p className="mt-1 text-sm text-slate-500">
-        Your {totalWrong} wrong answers span {bands.length} difficulty bands. Each starts its own
-        learning session — retry them one at a time.
+        Your {totalWrong} wrong answers span {bands.length} difficulty bands.
+        Each starts its own learning session — retry them one at a time.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         {bands.map((band) => (
@@ -142,7 +154,7 @@ function Centered({
 }): JSX.Element {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50">
-      <p className={className ?? 'text-slate-500'}>{children}</p>
+      <p className={className ?? "text-slate-500"}>{children}</p>
     </main>
   );
 }

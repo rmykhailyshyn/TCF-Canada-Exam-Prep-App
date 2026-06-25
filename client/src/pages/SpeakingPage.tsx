@@ -1,13 +1,13 @@
-import { useState } from 'react';
-import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Spinner } from '../components/Spinner';
-import { TopNav } from '../components/TopNav';
-import { SpeakingResults } from '../features/speaking/SpeakingResults';
-import { SpeakingSession } from '../features/speaking/SpeakingSession';
-import { SpeakingSetup } from '../features/speaking/SpeakingSetup';
-import type { SpeakingConfig } from '../features/speaking/types';
-import { useSpeakingSession } from '../features/speaking/useSpeakingSession';
+import { useState } from "react";
+import type { ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
+import { Spinner } from "../components/Spinner";
+import { TopNav } from "../components/TopNav";
+import { SpeakingResults } from "../features/speaking/SpeakingResults";
+import { SpeakingSession } from "../features/speaking/SpeakingSession";
+import { SpeakingSetup } from "../features/speaking/SpeakingSetup";
+import type { SpeakingConfig } from "../features/speaking/types";
+import { useSpeakingSession } from "../features/speaking/useSpeakingSession";
 
 // spec: docs/specs/speaking-ui.md — setup → recorder → results, mirroring the writing page.
 
@@ -28,13 +28,19 @@ export function SpeakingPage(): JSX.Element {
     );
   }
 
-  return <SpeakingRunner config={config} onHome={() => navigate('/')} />;
+  return <SpeakingRunner config={config} onHome={() => navigate("/")} />;
 }
 
-function SpeakingRunner({ config, onHome }: { config: SpeakingConfig; onHome: () => void }): JSX.Element {
+function SpeakingRunner({
+  config,
+  onHome,
+}: {
+  config: SpeakingConfig;
+  onHome: () => void;
+}): JSX.Element {
   const session = useSpeakingSession(config);
 
-  if (session.status === 'loading') {
+  if (session.status === "loading") {
     return (
       <Centered>
         <Spinner label="Starting speaking session…" />
@@ -42,10 +48,12 @@ function SpeakingRunner({ config, onHome }: { config: SpeakingConfig; onHome: ()
     );
   }
 
-  if (session.status === 'error') {
+  if (session.status === "error") {
     return (
       <Centered>
-        <p className="text-red-700">{session.error ?? 'Something went wrong.'}</p>
+        <p className="text-red-700">
+          {session.error ?? "Something went wrong."}
+        </p>
         <button
           type="button"
           onClick={onHome}
@@ -57,8 +65,14 @@ function SpeakingRunner({ config, onHome }: { config: SpeakingConfig; onHome: ()
     );
   }
 
-  if (session.status === 'finished' && session.results) {
-    return <SpeakingResults results={session.results} elapsedMs={session.elapsedMs} onHome={onHome} />;
+  if (session.status === "finished" && session.results) {
+    return (
+      <SpeakingResults
+        results={session.results}
+        elapsedMs={session.elapsedMs}
+        onHome={onHome}
+      />
+    );
   }
 
   return <SpeakingSession session={session} />;

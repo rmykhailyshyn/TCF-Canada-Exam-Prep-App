@@ -1,15 +1,18 @@
 # Spec: Review Mode
 
 ## Status
+
 implemented
 
 ## Goal
+
 After completing a session, allow the user to review every question they answered,
 see whether they were right or wrong, and retry only the questions they got wrong.
 In learning mode, LLM explanations (if available) are shown. This gives the user a
 focused post-session learning loop.
 
 ## Scope
+
 - In scope:
   - Per-question review: user's answer, correct answer, correct/incorrect indicator
   - LLM explanations shown in learning mode (if generated)
@@ -23,11 +26,13 @@ focused post-session learning loop.
 ## Behaviour
 
 ### Entering review mode
+
 1. The user enters review mode from the results summary screen ("Review answers" button)
    or by clicking a session row in the history page.
 2. Review mode is read-only — no answers can be changed.
 
 ### Question review list
+
 3. All questions from the session are shown in order.
 4. Each question shows:
    - The question text (and passage excerpt for reading questions).
@@ -44,6 +49,7 @@ focused post-session learning loop.
    supersedes the original "real mode never shows explanations" rule.
 
 ### Retry
+
 7. A "Retry incorrect questions" button is shown if the session contains at least one
    incorrect answer.
 8. Incorrect questions are **grouped by difficulty band** (using each question's `sequence`,
@@ -57,12 +63,14 @@ focused post-session learning loop.
     with its band's difficulty like any other learning session.
 
 ## Data model changes
+
 None — relies on `sessions`, `question_results`, `questions`, `options`, and
 `explanations` (defined in llm-enrichment spec).
 
 ## API contract
+
 Consumes `GET /api/sessions/:id` defined in progress-tracking spec. **Implementation note
-(SDD Rule 4):** that endpoint's per-question `results` rows were *additively enriched* to carry the
+(SDD Rule 4):** that endpoint's per-question `results` rows were _additively enriched_ to carry the
 content review mode needs — `sequence`, `text`, the reading `passage` excerpt, the four `options`
 (label + text), `correctLabel`, the derived `difficulty` band (for retry grouping), and the
 learning-mode-only `explanation` — so review mode reuses the single endpoint as the spec intends
@@ -70,22 +78,26 @@ rather than adding a parallel one. The explanation is populated **only** for lea
 enforcing Behaviour.6 server-side. No fields were removed, so the progress-tracking contract holds.
 
 ### POST /api/sessions (retry)
+
 Reuses the session creation endpoint from quiz-session spec. Because retries are grouped
 per band (Behaviour.8), each retry call carries both the band's `difficulty` and the
 `questionIds` for that band's incorrect answers. Every id in `questionIds` must belong to
 the given `difficulty` band, or the endpoint returns `QUESTIONS_OUT_OF_BAND`.
+
 ```
 Request:  { "section": "reading" | "listening", "mode": "learning", "difficulty": DifficultySlug, "questionIds": number[] }
 Response: { "data": { "sessionId": number, "questions": Question[], "timeLimitMs": null }, "error": null }
 ```
+
 Retrying wrong answers from multiple bands means issuing one such call per affected band.
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [x] Review mode is reachable from the results summary "Review answers" button and from a history session row, and is read-only — no answer can be changed. (Behaviour.1, 2)
 - [x] All questions from the session are shown in order, each with its text (plus passage excerpt for reading), all four options, the user's chosen option (red if wrong, green if correct), and the correct option marked green. (Behaviour.3, 4)
-- [x] Both learning- and real-mode review show the LLM explanation below a question when one exists; explanations are never shown *during* a real exam, only afterwards in review. (Behaviour.5, 6; llm-enrichment §Behaviour.10)
+- [x] Both learning- and real-mode review show the LLM explanation below a question when one exists; explanations are never shown _during_ a real exam, only afterwards in review. (Behaviour.5, 6; llm-enrichment §Behaviour.10)
 - [x] A "Retry incorrect questions" button is shown only when the session has at least one incorrect answer. (Behaviour.7)
 - [x] Incorrect questions are grouped by difficulty band, and retry produces one learning-mode session per affected band containing only that band's incorrect questions and carrying that band's `difficulty`. (Behaviour.8)
 - [x] When wrong answers span multiple bands, the affected bands and counts are listed and started one at a time; a single affected band starts its retry directly. (Behaviour.9)
@@ -93,11 +105,13 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [x] Each retry session is recorded in history as a normal learning-mode session labelled with its band's difficulty. (Behaviour.10)
 
 ## Open questions
+
 - Should the passage image be shown in review mode for reading questions, or is the
   OCR-extracted text sufficient? Showing the image requires serving the original PNG,
   which means the import path must be stable.
 
 ## Revision history
+
 - 2026-06-04: Initial draft
 - 2026-06-07: Retry now groups incorrect questions by difficulty band — one learning-mode
   session per affected band, each carrying that band's `difficulty`; retry API gains the

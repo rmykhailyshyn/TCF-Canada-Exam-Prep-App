@@ -1,18 +1,24 @@
-import { useState } from 'react';
-import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { TopNav } from './components/TopNav';
-import { SetupScreen } from './features/quiz/SetupScreen';
-import type { SessionConfig } from './features/quiz/types';
-import { HistoryPage } from './pages/HistoryPage';
-import { ListeningQuizPage } from './pages/ListeningQuizPage';
-import { QuestionBankPage } from './pages/QuestionBankPage';
-import { ReadingQuizPage } from './pages/ReadingQuizPage';
-import { ReviewPage } from './pages/ReviewPage';
-import { SessionDetailPage } from './pages/SessionDetailPage';
-import { SpeakingPage } from './pages/SpeakingPage';
-import { SpeakingReviewPage } from './pages/SpeakingReviewPage';
-import { WritingPage } from './pages/WritingPage';
-import { WritingReviewPage } from './pages/WritingReviewPage';
+import { useState } from "react";
+import {
+  BrowserRouter,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+import { TopNav } from "./components/TopNav";
+import { SetupScreen } from "./features/quiz/SetupScreen";
+import type { SessionConfig } from "./features/quiz/types";
+import { HistoryPage } from "./pages/HistoryPage";
+import { ListeningQuizPage } from "./pages/ListeningQuizPage";
+import { QuestionBankPage } from "./pages/QuestionBankPage";
+import { ReadingQuizPage } from "./pages/ReadingQuizPage";
+import { ReviewPage } from "./pages/ReviewPage";
+import { SessionDetailPage } from "./pages/SessionDetailPage";
+import { SpeakingPage } from "./pages/SpeakingPage";
+import { SpeakingReviewPage } from "./pages/SpeakingReviewPage";
+import { WritingPage } from "./pages/WritingPage";
+import { WritingReviewPage } from "./pages/WritingReviewPage";
 
 // spec: docs/specs/reading-quiz-ui.md + docs/specs/listening-quiz-ui.md + docs/specs/progress-tracking.md §Behaviour.4
 // Home shows the setup screen until a session is configured, then the reading or listening quiz
@@ -24,15 +30,17 @@ function Home(): JSX.Element {
   const location = useLocation();
   // spec: docs/specs/review-mode.md §Behaviour.8–10 — a retry from review mode arrives as a
   // SessionConfig (band difficulty + that band's incorrect questionIds) in the navigation state.
-  const retryConfig = (location.state as { retryConfig?: SessionConfig } | null)?.retryConfig ?? null;
+  const retryConfig =
+    (location.state as { retryConfig?: SessionConfig } | null)?.retryConfig ??
+    null;
   const [config, setConfig] = useState<SessionConfig | null>(retryConfig);
 
   if (config) {
     const onExit = () => {
       setConfig(null);
-      if (location.state) navigate('/', { replace: true, state: null });
+      if (location.state) navigate("/", { replace: true, state: null });
     };
-    return config.section === 'listening' ? (
+    return config.section === "listening" ? (
       <ListeningQuizPage config={config} onExit={onExit} />
     ) : (
       <ReadingQuizPage config={config} onExit={onExit} />

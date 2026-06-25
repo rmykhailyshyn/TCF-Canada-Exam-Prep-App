@@ -1,9 +1,14 @@
-import { extname } from 'node:path';
-import { asc, eq } from 'drizzle-orm';
-import { db } from '../db';
-import { audioFiles, passages, questions, transcriptSegments } from '../db/schema';
-import { ApiError } from '../lib/errors';
-import { resolveMediaPath } from '../config/env';
+import { extname } from "node:path";
+import { asc, eq } from "drizzle-orm";
+import { db } from "../db";
+import {
+  audioFiles,
+  passages,
+  questions,
+  transcriptSegments,
+} from "../db/schema";
+import { ApiError } from "../lib/errors";
+import { resolveMediaPath } from "../config/env";
 
 // spec: docs/specs/listening-player.md §API contract
 // Business logic for the listening player's two read endpoints. Services return plain typed values
@@ -31,7 +36,9 @@ export type PassageImageInfo = {
 // PASSAGE_IMAGE_NOT_FOUND when the question has no passage (a listening question, or an unknown
 // id). The stored `passages.source_file` is normally a path relative to MEDIA_DIR (e.g.
 // `reading/…Q39.png`); resolveMediaPath joins it onto MEDIA_DIR (legacy absolute rows pass through).
-export async function getPassageImage(questionId: number): Promise<PassageImageInfo> {
+export async function getPassageImage(
+  questionId: number,
+): Promise<PassageImageInfo> {
   const [row] = await db
     .select({ sourceFile: passages.sourceFile })
     .from(questions)
@@ -39,13 +46,15 @@ export async function getPassageImage(questionId: number): Promise<PassageImageI
     .where(eq(questions.id, questionId));
   if (!row) {
     throw new ApiError(
-      'PASSAGE_IMAGE_NOT_FOUND',
+      "PASSAGE_IMAGE_NOT_FOUND",
       `No passage image for question ${questionId}.`,
       404,
     );
   }
   const filePath = resolveMediaPath(row.sourceFile);
-  const contentType = /\.jpe?g$/i.test(extname(filePath)) ? 'image/jpeg' : 'image/png';
+  const contentType = /\.jpe?g$/i.test(extname(filePath))
+    ? "image/jpeg"
+    : "image/png";
   return { filePath, contentType };
 }
 
@@ -56,25 +65,37 @@ export async function getPassageImage(questionId: number): Promise<PassageImageI
 // rows pass through). The route streams the file with range support.
 export async function getAudioFile(questionId: number): Promise<AudioFileInfo> {
   const [row] = await db
-    .select({ filePath: audioFiles.filePath, durationMs: audioFiles.durationMs })
+    .select({
+      filePath: audioFiles.filePath,
+      durationMs: audioFiles.durationMs,
+    })
     .from(audioFiles)
     .where(eq(audioFiles.questionId, questionId));
   if (!row) {
-    throw new ApiError('NOT_FOUND', `No audio found for question ${questionId}.`, 404);
+    throw new ApiError(
+      "NOT_FOUND",
+      `No audio found for question ${questionId}.`,
+      404,
+    );
   }
-  return { filePath: resolveMediaPath(row.filePath), durationMs: row.durationMs };
+  return {
+    filePath: resolveMediaPath(row.filePath),
+    durationMs: row.durationMs,
+  };
 }
 
 // spec: docs/specs/listening-player.md §API contract GET /api/questions/:id/transcript
 // Returns the question's phrase-level segments ordered by sequence. An unknown question id is a
 // NOT_FOUND; a known question with no segments returns an empty list.
-export async function getTranscript(questionId: number): Promise<TranscriptSegmentDto[]> {
+export async function getTranscript(
+  questionId: number,
+): Promise<TranscriptSegmentDto[]> {
   const [question] = await db
     .select({ id: questions.id })
     .from(questions)
     .where(eq(questions.id, questionId));
   if (!question) {
-    throw new ApiError('NOT_FOUND', `Question ${questionId} not found.`, 404);
+    throw new ApiError("NOT_FOUND", `Question ${questionId} not found.`, 404);
   }
 
   return db

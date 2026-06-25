@@ -61,7 +61,7 @@ e2e/
 
 7. **API setup via `ApiClient`.** Use the `api` fixture for session creation / answers / completion
    and envelope unwrapping. Keep raw status/header/byte assertions inline in the spec that targets
-   that endpoint (that *is* the thing under test).
+   that endpoint (that _is_ the thing under test).
 
 ## Determinism & isolation
 

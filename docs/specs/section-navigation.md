@@ -1,6 +1,7 @@
 # Spec: Unified Section Navigation
 
 ## Status
+
 implemented
 
 > Milestone 12. A navigation/landing-UX change so all four exam sections (Reading, Listening, Writing,
@@ -9,6 +10,7 @@ implemented
 > sections exist (Reading/Listening — M2/M3; Writing — M10; Speaking — M11).
 
 ## Goal
+
 Today the landing screen's section picker only offers Reading and Listening; Writing (M10) and Speaking
 (M11) were each wired in ad hoc as a single top-nav link. This unifies entry: **all four sections are
 selectable from the landing (home) screen**, and **a persistent top menu offers quick navigation to
@@ -16,6 +18,7 @@ every section** (plus the existing History and Question Bank) from anywhere in t
 start any section in one click, and switch sections quickly without returning home first.
 
 ## Scope
+
 - In scope:
   - Landing screen: a single section picker presenting all four sections (Reading, Listening, Writing,
     Speaking), each launching that section's setup/start.
@@ -32,6 +35,7 @@ start any section in one click, and switch sections quickly without returning ho
   - Auth, role-based menus, or persisting a "last used section".
 
 ## Behaviour
+
 1. The landing (home) screen presents **all four sections** — Reading, Listening, Writing, Speaking —
    as selectable entries (cards), each with a short label/description. Selecting one starts that
    section's setup/start flow.
@@ -48,12 +52,15 @@ start any section in one click, and switch sections quickly without returning ho
    Speaking) and with consistent labels/icons, in both the landing picker and the top menu.
 
 ## Data model changes
+
 None. Presentation/routing only.
 
 ## API contract
+
 None. Consumes the existing per-section entry routes and the existing History / Question Bank routes.
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [x] The landing screen offers all four sections (Reading, Listening, Writing, Speaking) as selectable entries, each launching that section's setup/start. (Behaviour.1)
@@ -64,6 +71,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [x] Sections appear in a consistent order with consistent labels/icons in both the landing picker and the top menu. (Behaviour.6)
 
 ## Open questions
+
 - ~~**Header on session screens.**~~ **Resolved 2026-06-18:** the in-session header (timer/progress)
   stays; the persistent top menu is landing/setup chrome only and is **not** shown mid-session (no
   quick section-switching during an active quiz/editor/recorder), to avoid abandoning a timed session.
@@ -73,6 +81,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   pre-selects Reading/Listening via router state.
 
 ## Revision history
+
 - 2026-06-18: Initial draft (Milestone 12).
 - 2026-06-18: Status moved draft → approved (Milestone 12), alongside virtual-keyboard. Wireframe
   added at docs/mockups.md §20.

@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react';
-import { BrandMark } from '../../components/BrandMark';
-import { CountdownTimer } from '../quiz/CountdownTimer';
-import { ConfirmDialog } from '../quiz/ConfirmDialog';
-import { VirtualKeyboard } from './VirtualKeyboard';
-import { WordCounter } from './WordCounter';
-import type { WritingSession } from './useWritingSession';
+import { useRef, useState } from "react";
+import { BrandMark } from "../../components/BrandMark";
+import { CountdownTimer } from "../quiz/CountdownTimer";
+import { ConfirmDialog } from "../quiz/ConfirmDialog";
+import { VirtualKeyboard } from "./VirtualKeyboard";
+import { WordCounter } from "./WordCounter";
+import type { WritingSession } from "./useWritingSession";
 
 // spec: docs/specs/writing-ui.md §Editor / Training mode / Real mode
 // One textarea per task with a live word counter; training shows the sample answer + template and a
@@ -19,9 +19,12 @@ export function WritingEditor({ session }: Props): JSX.Element {
   // spec: docs/specs/virtual-keyboard.md §Behaviour.2 — the accent keyboard inserts into the active
   // task's textarea via this ref (the element is reused across task tabs, so the ref stays valid).
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const isReal = session.mode === 'real';
+  const isReal = session.mode === "real";
   const task = session.tasks[active];
-  if (!task) return <div className="p-6 text-slate-500">No writing tasks available.</div>;
+  if (!task)
+    return (
+      <div className="p-6 text-slate-500">No writing tasks available.</div>
+    );
 
   const n = task.taskNumber;
   const evaluation = session.evaluations[n];
@@ -32,7 +35,7 @@ export function WritingEditor({ session }: Props): JSX.Element {
   return (
     <div className="flex h-screen flex-col">
       <header className="flex items-center gap-4 border-b border-slate-200/70 bg-white/80 px-6 py-3 backdrop-blur-md">
-        <BrandMark context={`Writing · ${isReal ? 'Real' : 'Training'}`} />
+        <BrandMark context={`Writing · ${isReal ? "Real" : "Training"}`} />
         <div className="ml-auto flex items-center gap-4">
           {isReal && session.remainingMs !== null && (
             <CountdownTimer remainingMs={session.remainingMs} />
@@ -42,7 +45,7 @@ export function WritingEditor({ session }: Props): JSX.Element {
             onClick={() => setConfirmOpen(true)}
             className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 active:scale-[0.98]"
           >
-            {isReal ? 'Submit exam' : 'Finish'}
+            {isReal ? "Submit exam" : "Finish"}
           </button>
         </div>
       </header>
@@ -58,8 +61,8 @@ export function WritingEditor({ session }: Props): JSX.Element {
                 onClick={() => setActive(i)}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                   i === active
-                    ? 'bg-brand-600 text-white'
-                    : 'text-slate-600 hover:bg-slate-100'
+                    ? "bg-brand-600 text-white"
+                    : "text-slate-600 hover:bg-slate-100"
                 }`}
               >
                 Task {t.taskNumber}
@@ -75,7 +78,7 @@ export function WritingEditor({ session }: Props): JSX.Element {
           <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card">
             <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
               Task {n}
-              {task.title ? ` · ${task.title}` : ''}
+              {task.title ? ` · ${task.title}` : ""}
             </h2>
             <p className="mt-3 whitespace-pre-wrap text-slate-800" lang="fr">
               {task.prompt}
@@ -89,14 +92,20 @@ export function WritingEditor({ session }: Props): JSX.Element {
 
           {!isReal && task.sampleAnswer && (
             <Collapsible title="Sample answer">
-              <p className="whitespace-pre-wrap text-sm text-slate-700" lang="fr">
+              <p
+                className="whitespace-pre-wrap text-sm text-slate-700"
+                lang="fr"
+              >
                 {task.sampleAnswer}
               </p>
             </Collapsible>
           )}
           {!isReal && task.template && (
             <Collapsible title="Answer template">
-              <p className="whitespace-pre-wrap text-sm text-slate-700" lang="fr">
+              <p
+                className="whitespace-pre-wrap text-sm text-slate-700"
+                lang="fr"
+              >
                 {task.template}
               </p>
             </Collapsible>
@@ -105,7 +114,11 @@ export function WritingEditor({ session }: Props): JSX.Element {
 
         <section className="flex min-h-0 flex-col gap-3">
           <div className="flex items-center justify-between">
-            <WordCounter count={session.counts[n] ?? 0} minWords={task.minWords} maxWords={task.maxWords} />
+            <WordCounter
+              count={session.counts[n] ?? 0}
+              minWords={task.minWords}
+              maxWords={task.maxWords}
+            />
             {!isReal && (
               <div className="flex gap-2">
                 <button
@@ -122,7 +135,7 @@ export function WritingEditor({ session }: Props): JSX.Element {
                   onClick={() => session.submit(n)}
                   className="rounded-xl bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white shadow-brand-glow transition hover:bg-brand-700 disabled:opacity-50"
                 >
-                  {busy ? 'Working…' : 'Submit for score'}
+                  {busy ? "Working…" : "Submit for score"}
                 </button>
               </div>
             )}
@@ -134,7 +147,7 @@ export function WritingEditor({ session }: Props): JSX.Element {
 
           <textarea
             ref={textareaRef}
-            value={session.drafts[n] ?? ''}
+            value={session.drafts[n] ?? ""}
             onChange={(e) => session.setDraft(n, e.target.value)}
             onBlur={() => session.saveNow(n)}
             lang="fr"
@@ -151,8 +164,13 @@ export function WritingEditor({ session }: Props): JSX.Element {
 
           {!isReal && correction && (
             <div className="rounded-2xl border border-sky-200 bg-sky-50/60 p-4">
-              <h3 className="text-sm font-semibold text-sky-900">Suggested correction</h3>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700" lang="fr">
+              <h3 className="text-sm font-semibold text-sky-900">
+                Suggested correction
+              </h3>
+              <p
+                className="mt-2 whitespace-pre-wrap text-sm text-slate-700"
+                lang="fr"
+              >
                 {correction.correctedText}
               </p>
               {correction.suggestions.length > 0 && (
@@ -171,11 +189,19 @@ export function WritingEditor({ session }: Props): JSX.Element {
                 <span className="text-2xl font-extrabold text-emerald-800 tabular-nums">
                   {evaluation.score} / 20
                 </span>
-                <span className="text-sm font-semibold text-emerald-700">{evaluation.level}</span>
+                <span className="text-sm font-semibold text-emerald-700">
+                  {evaluation.level}
+                </span>
               </div>
-              <Feedback label="Strengths" text={evaluation.feedback.strengths} />
+              <Feedback
+                label="Strengths"
+                text={evaluation.feedback.strengths}
+              />
               <Feedback label="Errors" text={evaluation.feedback.errors} />
-              <Feedback label="Improvements" text={evaluation.feedback.improvements} />
+              <Feedback
+                label="Improvements"
+                text={evaluation.feedback.improvements}
+              />
             </div>
           )}
         </section>
@@ -183,9 +209,9 @@ export function WritingEditor({ session }: Props): JSX.Element {
 
       {confirmOpen && (
         <ConfirmDialog
-          title={isReal ? 'Submit exam?' : 'Finish session?'}
+          title={isReal ? "Submit exam?" : "Finish session?"}
           message="This ends the session and shows your results. You can't go back."
-          confirmLabel={isReal ? 'Submit exam' : 'Finish'}
+          confirmLabel={isReal ? "Submit exam" : "Finish"}
           onCancel={() => setConfirmOpen(false)}
           onConfirm={() => {
             setConfirmOpen(false);
@@ -198,7 +224,13 @@ export function WritingEditor({ session }: Props): JSX.Element {
   );
 }
 
-function Feedback({ label, text }: { label: string; text: string }): JSX.Element {
+function Feedback({
+  label,
+  text,
+}: {
+  label: string;
+  text: string;
+}): JSX.Element {
   return (
     <p className="mt-2 text-sm text-slate-700">
       <span className="font-semibold text-slate-900">{label}: </span>
@@ -223,9 +255,11 @@ function Collapsible({
         className="flex w-full items-center justify-between px-5 py-3 text-left text-sm font-semibold text-slate-700"
       >
         {title}
-        <span aria-hidden>{open ? '▴' : '▾'}</span>
+        <span aria-hidden>{open ? "▴" : "▾"}</span>
       </button>
-      {open && <div className="border-t border-slate-100 px-5 py-3">{children}</div>}
+      {open && (
+        <div className="border-t border-slate-100 px-5 py-3">{children}</div>
+      )}
     </div>
   );
 }

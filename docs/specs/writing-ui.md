@@ -1,6 +1,7 @@
 # Spec: Writing Quiz UI
 
 ## Status
+
 implemented
 
 > Milestone 10. The React UI for the Writing section. Consumes the writing-session endpoints; the
@@ -8,12 +9,14 @@ implemented
 > reading-quiz-ui / listening-quiz-ui patterns and reuses the shared real-mode timer.
 
 ## Goal
+
 Provide the front-end for the Writing section: entry from the section picker, a Training/Real mode
 selector, a free-text editor for the three TCF writing tasks with live word counts, a single
 60-minute countdown in real mode, training-mode guidance (sample answer + answer template) and an
 on-request correction, and a results view showing each task's score (/20), NCLC level, and feedback.
 
 ## Scope
+
 - In scope:
   - A Writing entry on the home/section-select screen and a Writing route.
   - Mode selection (Training / Real) and, in training mode, a task selector (single task vs. all
@@ -39,6 +42,7 @@ on-request correction, and a results view showing each task's score (/20), NCLC 
 ## Behaviour
 
 ### Entry & mode selection
+
 1. The section picker shows a **Writing** option alongside Reading and Listening; selecting it routes
    to the Writing start screen.
 2. The start screen lets the user choose **Training** or **Real** and shows each mode's rules
@@ -50,6 +54,7 @@ on-request correction, and a results view showing each task's score (/20), NCLC 
    `NO_TASKS` error shows a clear "no writing tasks imported" message.
 
 ### Editor
+
 5. Each presented task shows its `title`/`prompt`/`instructions` (French content `lang="fr"`) and a
    `<textarea>` for the response.
 6. A live **word counter** is shown on screen with each task and updates **dynamically as the user
@@ -59,15 +64,16 @@ on-request correction, and a results view showing each task's score (/20), NCLC 
    (the minimum the response should reach). It visually indicates when the count is **below target**
    and, when `maxWords` is set, when it **exceeds the maximum**. The counter is informational — it does
    not block submission. (If a task has no `minWords`, the counter shows the current count alone.)
-6b. The Writing editor includes the **on-screen virtual keyboard** for French accents next to each
-    task's textarea (see virtual-keyboard spec, Milestone 12); inserted characters update this word
-    counter exactly like typed input.
+   6b. The Writing editor includes the **on-screen virtual keyboard** for French accents next to each
+   task's textarea (see virtual-keyboard spec, Milestone 12); inserted characters update this word
+   counter exactly like typed input.
 7. When more than one task is presented, the UI provides navigation between tasks (the user can move
    freely between them and back).
 8. The editor autosaves the current draft via `PUT …/responses/:taskNumber` (e.g. on pause/blur/task
    switch); save state is indicated unobtrusively.
 
 ### Training mode
+
 9. Each task shows collapsible **Sample answer** and **Template** panels populated from the task
    payload (French content `lang="fr"`); they are hidden when not authored.
 10. A **Get correction** action calls `POST …/correct/:taskNumber` with the current draft and renders
@@ -79,6 +85,7 @@ on-request correction, and a results view showing each task's score (/20), NCLC 
 12. The user finishes the session explicitly ("Finish"), calling `POST …/complete`.
 
 ### Real mode
+
 13. A single **60-minute countdown** is shown for the whole session, initialised from the session's
     `timeLimitMs`. Sample-answer/template panels and the correction action are **not** shown.
 14. The user writes across all three tasks within the one budget. Submitting is a single
@@ -87,6 +94,7 @@ on-request correction, and a results view showing each task's score (/20), NCLC 
     The user may also submit manually before expiry. `elapsedMs` is sent to `POST …/complete`.
 
 ### Results / review
+
 16. After completion the results view shows, per task: the response, its **score (/20)**, **NCLC
     level** (derived from the score), and the structured feedback (strengths / errors /
     improvements), plus an **overall summary** (mean score, tasks submitted). A task left unanswered
@@ -96,16 +104,19 @@ on-request correction, and a results view showing each task's score (/20), NCLC 
     part of the payload.
 
 ## Data model changes
+
 None. This spec is presentation only; all persistence is defined in writing-session and
 writing-evaluation.
 
 ## API contract
+
 Consumes the writing-session endpoints (`POST /api/writing/sessions`, `PUT …/responses/:taskNumber`,
 `POST …/responses/:taskNumber/submit`, `POST …/correct/:taskNumber`, `POST …/complete`,
 `GET /api/writing/sessions/:id`) and renders the `WritingTask`, `WritingEvaluation`/`WritingFeedback`,
 and `WritingCorrection` shapes defined in those specs. No new endpoints.
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [ ] The section picker offers Writing and routes to a start screen with Training/Real selection and (training) a single-vs-all-three task choice. (Behaviour.1, 2, 3)
@@ -118,6 +129,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] Evaluation/correction failures (`EVALUATION_FAILED` / `CORRECTION_FAILED`) show a retry affordance without losing the draft. (Behaviour.10, 11)
 
 ## Open questions
+
 - **Autosave trigger.** On blur / task switch / debounced interval — pick one (debounced interval +
   on task switch recommended) so frequent small `PUT`s stay cheap.
 - **Real-mode per-task scores during the exam.** Hidden until the end (recommended, exam-authentic).
@@ -127,6 +139,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   per-question) budget.
 
 ## Revision history
+
 - 2026-06-17: Initial draft (Milestone 10).
 - 2026-06-17: Status moved draft → approved.
 - 2026-06-17: Refined the word counter (Behaviour.6) to a dynamic on-screen `current / target` display

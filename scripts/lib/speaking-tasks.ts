@@ -9,7 +9,7 @@
 export class SpeakingTaskParseError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'SpeakingTaskParseError';
+    this.name = "SpeakingTaskParseError";
   }
 }
 
@@ -28,7 +28,9 @@ export type SpeakingTaskParseResult =
 // Parse the whole file's JSON text into per-element results. Throws SpeakingTaskParseError only when
 // the document itself is unusable (not valid JSON, or not an array) — individual bad elements are
 // returned as `{ ok: false }` so the caller can skip-and-continue (Behaviour.4).
-export function parseSpeakingTasks(jsonText: string): SpeakingTaskParseResult[] {
+export function parseSpeakingTasks(
+  jsonText: string,
+): SpeakingTaskParseResult[] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(jsonText);
@@ -38,37 +40,71 @@ export function parseSpeakingTasks(jsonText: string): SpeakingTaskParseResult[] 
     );
   }
   if (!Array.isArray(parsed)) {
-    throw new SpeakingTaskParseError('file must contain a JSON array of task objects');
+    throw new SpeakingTaskParseError(
+      "file must contain a JSON array of task objects",
+    );
   }
 
   return parsed.map((element, sequence) => parseElement(element, sequence));
 }
 
 // spec: docs/specs/speaking-import.md §Behaviour.3–4 — validate a single array element.
-function parseElement(element: unknown, sequence: number): SpeakingTaskParseResult {
-  if (typeof element !== 'object' || element === null || Array.isArray(element)) {
-    return { ok: false, sequence, reason: 'element is not a JSON object' };
+function parseElement(
+  element: unknown,
+  sequence: number,
+): SpeakingTaskParseResult {
+  if (
+    typeof element !== "object" ||
+    element === null ||
+    Array.isArray(element)
+  ) {
+    return { ok: false, sequence, reason: "element is not a JSON object" };
   }
   const obj = element as Record<string, unknown>;
 
   const task = obj.task;
-  if (typeof task !== 'number' || !Number.isInteger(task) || task < 1 || task > 3) {
-    return { ok: false, sequence, reason: `task must be an integer 1–3 (got ${JSON.stringify(task)})` };
+  if (
+    typeof task !== "number" ||
+    !Number.isInteger(task) ||
+    task < 1 ||
+    task > 3
+  ) {
+    return {
+      ok: false,
+      sequence,
+      reason: `task must be an integer 1–3 (got ${JSON.stringify(task)})`,
+    };
   }
 
   const question = obj.question;
-  if (typeof question !== 'string' || question.trim().length === 0) {
-    return { ok: false, sequence, reason: 'question must be a non-empty string' };
+  if (typeof question !== "string" || question.trim().length === 0) {
+    return {
+      ok: false,
+      sequence,
+      reason: "question must be a non-empty string",
+    };
   }
 
   const answer = obj.answer;
-  if (answer != null && typeof answer !== 'string') {
-    return { ok: false, sequence, reason: 'answer, when present, must be a string' };
+  if (answer != null && typeof answer !== "string") {
+    return {
+      ok: false,
+      sequence,
+      reason: "answer, when present, must be a string",
+    };
   }
-  const sampleAnswer = typeof answer === 'string' && answer.trim().length > 0 ? answer.trim() : null;
+  const sampleAnswer =
+    typeof answer === "string" && answer.trim().length > 0
+      ? answer.trim()
+      : null;
 
   return {
     ok: true,
-    task: { sequence, taskNumber: task, question: question.trim(), sampleAnswer },
+    task: {
+      sequence,
+      taskNumber: task,
+      question: question.trim(),
+      sampleAnswer,
+    },
   };
 }

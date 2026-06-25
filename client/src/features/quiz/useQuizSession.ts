@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ApiError,
   type CompleteResult,
@@ -8,21 +8,21 @@ import {
   completeSession,
   createSession,
   submitAnswer,
-} from '../../lib/api';
-import type { SessionConfig } from './types';
+} from "../../lib/api";
+import type { SessionConfig } from "./types";
 
 // spec: docs/specs/quiz-session.md §Learning mode + §Real mode; docs/specs/reading-quiz-ui.md
 // Drives one quiz session: creates it, tracks the current question, records answers, runs the
 // real-mode countdown, and completes the session. Learning mode reveals feedback per answer;
 // real mode auto-advances with no feedback.
 
-export type QuizStatus = 'loading' | 'error' | 'active' | 'finished';
+export type QuizStatus = "loading" | "error" | "active" | "finished";
 
 export type QuizSession = {
   status: QuizStatus;
   error: string | null;
   sessionId: number | null;
-  mode: SessionConfig['mode'];
+  mode: SessionConfig["mode"];
   question: SessionQuestion | undefined;
   index: number;
   total: number;
@@ -39,7 +39,7 @@ export type QuizSession = {
 };
 
 export function useQuizSession(config: SessionConfig): QuizSession {
-  const [status, setStatus] = useState<QuizStatus>('loading');
+  const [status, setStatus] = useState<QuizStatus>("loading");
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [questions, setQuestions] = useState<SessionQuestion[]>([]);
@@ -67,11 +67,15 @@ export function useQuizSession(config: SessionConfig): QuizSession {
         timeLimitRef.current = res.timeLimitMs;
         setRemainingMs(res.timeLimitMs);
         startTsRef.current = Date.now();
-        setStatus('active');
+        setStatus("active");
       })
       .catch((err: unknown) => {
-        setError(err instanceof ApiError ? err.message : 'Failed to start the session.');
-        setStatus('error');
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "Failed to start the session.",
+        );
+        setStatus("error");
       });
   }, [config]);
 
@@ -84,10 +88,14 @@ export function useQuizSession(config: SessionConfig): QuizSession {
       try {
         const res = await completeSession(sessionId, elapsedMs);
         setResults(res);
-        setStatus('finished');
+        setStatus("finished");
       } catch (err: unknown) {
-        setError(err instanceof ApiError ? err.message : 'Failed to complete the session.');
-        setStatus('error');
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "Failed to complete the session.",
+        );
+        setStatus("error");
       }
     },
     [sessionId],
@@ -101,7 +109,7 @@ export function useQuizSession(config: SessionConfig): QuizSession {
   // spec: docs/specs/reading-quiz-ui.md §Learning mode feedback.13 / §Real mode.15
   const goNext = useCallback(() => {
     if (index + 1 >= questions.length) {
-      void finish(config.mode === 'real' ? elapsedForReal() : null);
+      void finish(config.mode === "real" ? elapsedForReal() : null);
       return;
     }
     setFeedback(null);
@@ -121,22 +129,42 @@ export function useQuizSession(config: SessionConfig): QuizSession {
   // spec: docs/specs/reading-quiz-ui.md §Answering.10 — confirm finalises the choice.
   const confirm = useCallback(() => {
     const question = questions[index];
-    if (selectedLabel == null || sessionId == null || submitting || feedback || !question) return;
+    if (
+      selectedLabel == null ||
+      sessionId == null ||
+      submitting ||
+      feedback ||
+      !question
+    )
+      return;
     setSubmitting(true);
     submitAnswer(sessionId, question.id, selectedLabel)
       .then((res) => {
-        if (config.mode === 'learning') {
+        if (config.mode === "learning") {
           setFeedback(res as LearningAnswerResult);
         } else {
           goNext(); // real mode: no feedback, auto-advance (Behaviour.15)
         }
       })
       .catch((err: unknown) => {
-        setError(err instanceof ApiError ? err.message : 'Failed to record the answer.');
-        setStatus('error');
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "Failed to record the answer.",
+        );
+        setStatus("error");
       })
       .finally(() => setSubmitting(false));
-  }, [questions, index, selectedLabel, sessionId, submitting, feedback, config.mode, goNext]);
+  }, [
+    questions,
+    index,
+    selectedLabel,
+    sessionId,
+    submitting,
+    feedback,
+    config.mode,
+    goNext,
+  ]);
 
   // spec: docs/specs/reading-quiz-ui.md §Real mode.17 — manual early submit.
   const submitExam = useCallback(() => {
@@ -145,9 +173,15 @@ export function useQuizSession(config: SessionConfig): QuizSession {
 
   // spec: docs/specs/quiz-session.md §Real mode.8,10 — countdown; auto-submit at zero.
   useEffect(() => {
-    if (status !== 'active' || config.mode !== 'real' || timeLimitRef.current == null) return;
+    if (
+      status !== "active" ||
+      config.mode !== "real" ||
+      timeLimitRef.current == null
+    )
+      return;
     const tick = () => {
-      const remaining = (timeLimitRef.current ?? 0) - (Date.now() - startTsRef.current);
+      const remaining =
+        (timeLimitRef.current ?? 0) - (Date.now() - startTsRef.current);
       if (remaining <= 0) {
         setRemainingMs(0);
         void finish(timeLimitRef.current);

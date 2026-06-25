@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import type { RefObject } from 'react';
-import { VK_KEYS, computeInsertion, glyphFor } from './vkKeys';
-import type { VirtualKey } from './vkKeys';
+import { useState } from "react";
+import type { RefObject } from "react";
+import { VK_KEYS, computeInsertion, glyphFor } from "./vkKeys";
+import type { VirtualKey } from "./vkKeys";
 
 // spec: docs/specs/virtual-keyboard.md §Behaviour.2,4,5 — on-screen accent toolbar mirroring the real
 // TCF Canada exam software: a 4×4 grid of 16 keys + a `⇧ abc` shift toggle. Clicking a key inserts the
@@ -13,14 +13,17 @@ import type { VirtualKey } from './vkKeys';
 // fires the native `input` event — which means the editor's existing onChange (word count + debounced
 // autosave) runs unchanged. Falls back to a native value-setter + dispatched `input` event for
 // environments where execCommand is unavailable.
-function insertIntoTextarea(textarea: HTMLTextAreaElement, glyph: string): void {
+function insertIntoTextarea(
+  textarea: HTMLTextAreaElement,
+  glyph: string,
+): void {
   textarea.focus();
   let inserted = false;
   try {
     inserted =
-      typeof document !== 'undefined' &&
-      typeof document.execCommand === 'function' &&
-      document.execCommand('insertText', false, glyph);
+      typeof document !== "undefined" &&
+      typeof document.execCommand === "function" &&
+      document.execCommand("insertText", false, glyph);
   } catch {
     inserted = false;
   }
@@ -32,10 +35,10 @@ function insertIntoTextarea(textarea: HTMLTextAreaElement, glyph: string): void 
   // Use the native setter so React's value tracker sees the change and onChange fires.
   const setter = Object.getOwnPropertyDescriptor(
     window.HTMLTextAreaElement.prototype,
-    'value',
+    "value",
   )?.set;
   setter?.call(textarea, value);
-  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
   textarea.focus();
   textarea.setSelectionRange(caret, caret);
 }
@@ -79,8 +82,8 @@ export function VirtualKeyboard({ textareaRef }: Props): JSX.Element {
         onClick={() => setShift((s) => !s)}
         className={`mt-1.5 w-full rounded-xl border px-3 py-1.5 text-sm font-medium transition ${
           shift
-            ? 'border-brand-500 bg-brand-600 text-white shadow-brand-glow'
-            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+            ? "border-brand-500 bg-brand-600 text-white shadow-brand-glow"
+            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
         }`}
       >
         ⇧ abc

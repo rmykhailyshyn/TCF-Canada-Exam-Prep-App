@@ -1,17 +1,20 @@
 # Spec: Quiz Session
 
 ## Status
+
 implemented
 
 > Base session model: Milestone 2. **§Question selection and ordering** (items 19–22): Milestone 8.
 
 ## Goal
+
 Define the shared session model that underpins both reading and listening quiz modes.
 A session represents one attempt at a section (reading or listening) in either learning
 mode or real mode. This spec covers session lifecycle, mode behaviour, and result
 persistence. UI specifics for each section are covered in their own specs.
 
 ## Scope
+
 - In scope:
   - Session creation: section type, mode selection, question set
   - Learning mode behaviour (immediate per-answer feedback, no time limit)
@@ -29,6 +32,7 @@ persistence. UI specifics for each section are covered in their own specs.
 ## Behaviour
 
 ### Mode selection
+
 1. Before starting a session the user selects a section (Reading or Listening) and a mode
    (Learning or Real).
 2. The app displays the mode rules before the session begins:
@@ -37,18 +41,19 @@ persistence. UI specifics for each section are covered in their own specs.
 3. In learning mode, the user additionally selects a difficulty level to practice. The six
    levels map directly to the scoring bands and are labelled as follows:
 
-   | Label | Questions | Points per correct answer |
-   |---|---|---|
-   | Beginner (Q1–4, 3 pts)            | 1 – 4   | 3  |
-   | Elementary (Q5–10, 9 pts)         | 5 – 10  | 9  |
-   | Intermediate (Q11–19, 15 pts)     | 11 – 19 | 15 |
-   | Upper-Intermediate (Q20–29, 21 pts) | 20 – 29 | 21 |
-   | Advanced (Q30–35, 26 pts)         | 30 – 35 | 26 |
-   | Expert (Q36–39, 33 pts)           | 36 – 39 | 33 |
+   | Label                               | Questions | Points per correct answer |
+   | ----------------------------------- | --------- | ------------------------- |
+   | Beginner (Q1–4, 3 pts)              | 1 – 4     | 3                         |
+   | Elementary (Q5–10, 9 pts)           | 5 – 10    | 9                         |
+   | Intermediate (Q11–19, 15 pts)       | 11 – 19   | 15                        |
+   | Upper-Intermediate (Q20–29, 21 pts) | 20 – 29   | 21                        |
+   | Advanced (Q30–35, 26 pts)           | 30 – 35   | 26                        |
+   | Expert (Q36–39, 33 pts)             | 36 – 39   | 33                        |
 
    The session will only include questions whose `sequence` falls within the selected band.
 
 ### Learning mode
+
 4. The session presents one question at a time with no time constraint.
 5. After the user selects an option and confirms their answer as final, the app immediately
    highlights the correct option and marks the user's choice as correct or incorrect.
@@ -57,6 +62,7 @@ persistence. UI specifics for each section are covered in their own specs.
 8. The session ends when all questions have been answered or the user explicitly quits.
 
 ### Real mode
+
 8. A countdown timer is displayed throughout the session, initialised from the configured
    time limit for the section.
 9. The user answers questions without receiving any feedback on correctness.
@@ -66,6 +72,7 @@ persistence. UI specifics for each section are covered in their own specs.
 12. Elapsed time is recorded in the session record.
 
 ### Question selection and ordering
+
 A section may contain **more than one question at the same `sequence` position** — multiple
 imports can share a sequence, because the question bank's natural key is `(source_file,
 sequence)`, not `sequence` alone (see question-export-import spec). The following items define
@@ -87,6 +94,7 @@ how a session resolves these per-position candidate pools into the set it presen
     fixed for that session's lifetime (the same questions/order are used by review mode).
 
 ### Results
+
 13. At session end:
     - **Learning mode:** shows correct answers and total questions in the selected difficulty
       band (e.g. "7 / 12 correct"). No point score is shown.
@@ -95,24 +103,27 @@ how a session resolves these per-position candidate pools into the set it presen
 14. The user is offered the option to enter Review mode.
 
 ### Scoring
+
 15. Each question is worth a number of points determined by its `sequence` position within
     the exam (1-indexed, same map for both reading and listening sections):
 
     | Sequence range | Points per correct answer |
-    |---|---|
-    | 1 – 4   | 3  |
-    | 5 – 10  | 9  |
-    | 11 – 19 | 15 |
-    | 20 – 29 | 21 |
-    | 30 – 35 | 26 |
-    | 36 – 39 | 33 |
+    | -------------- | ------------------------- |
+    | 1 – 4          | 3                         |
+    | 5 – 10         | 9                         |
+    | 11 – 19        | 15                        |
+    | 20 – 29        | 21                        |
+    | 30 – 35        | 26                        |
+    | 36 – 39        | 33                        |
 
     Maximum possible score per section: **699 points** (sum of all 39 questions at full value).
+
 16. An incorrect or unanswered question contributes 0 points.
 17. The backend computes `pointsScored` and `pointsPossible` at session completion by
     joining `question_results` with the question `sequence` values.
 
 ### Configuration
+
 18. Exam time limits are read from a configuration file (`exam.config.json` at the repo
     root) and never hardcoded. Default values:
     - Reading: 60 minutes, 39 questions
@@ -154,7 +165,9 @@ question_results
 ## API contract
 
 ### POST /api/sessions
+
 Start a new session.
+
 ```
 Request:  { "section": "reading" | "listening", "mode": "learning" | "real", "difficulty"?: DifficultySlug, "questionIds"?: number[] }
 Response: { "data": { "sessionId": number, "questions": Question[], "timeLimitMs": number | null }, "error": null }
@@ -162,11 +175,13 @@ Error (no answer key):    { "data": null, "error": { "code": "ANSWER_KEY_MISSING
 Error (bad difficulty):   { "data": null, "error": { "code": "INVALID_DIFFICULTY", "message": "..." } }
 Error (band mismatch):    { "data": null, "error": { "code": "QUESTIONS_OUT_OF_BAND", "message": "..." } }
 ```
+
 `difficulty` is required when `mode` is `"learning"` and must be one of: `"beginner"`,
 `"elementary"`, `"intermediate"`, `"upper-intermediate"`, `"advanced"`, `"expert"`.
 It is ignored (and may be omitted) when `mode` is `"real"`.
 
 The returned `questions` array is resolved per §Question selection and ordering (Behaviour.19–22):
+
 - **Learning mode:** the selected difficulty band's questions, in **randomized order**.
 - **Real mode:** **one randomly chosen question per occupied sequence position 1–39**, ordered
   ascending by `sequence`. The per-position draw is taken only from candidates that satisfy the
@@ -182,6 +197,7 @@ per band, each carrying that band's `difficulty`.)
 The endpoint returns `ANSWER_KEY_MISSING` when the resolved question set cannot be formed
 because of a missing answer key (a question with `is_correct = false` for all of its options,
 i.e. no answer key imported yet):
+
 - **Learning mode:** any question in the selected difficulty band lacks a key.
 - **Real mode:** an occupied sequence position has **no** keyed candidate (a position still
   starts normally as long as at least one of its candidates is keyed — that keyed candidate is
@@ -191,7 +207,9 @@ This prevents sessions from starting in an indeterminate state, while still allo
 to practise a band whose answer key is ready even if other bands have not been imported.
 
 ### POST /api/sessions/:id/answers
+
 Submit an answer for a question within a session.
+
 ```
 Request:  { "questionId": number, "chosenLabel": "A" | "B" | "C" | "D" }
 Response (learning): {
@@ -210,22 +228,27 @@ Response (learning): {
 }
 Response (real): { "data": { "recorded": true }, "error": null }
 ```
+
 The `explanation` shape mirrors the `explanations` table defined in the llm-enrichment spec.
 The backend fetches it in a single JOIN rather than requiring a separate client request.
 
 ### POST /api/sessions/:id/complete
+
 Mark a session as completed (real mode manual submit or timer expiry signal, or learning
 mode when the last question is answered / the user quits).
+
 ```
 Request:  { "elapsedMs": number | null }
 Response: { "data": { "correct": number, "total": number, "pointsScored": number | null, "pointsPossible": number | null }, "error": null }
 ```
+
 `elapsedMs` is `null` in learning mode (no timer). In **real mode**, `pointsPossible` is
 always 699 for a full 39-question section and `pointsScored` is the sum of point values for
 correctly answered questions, looked up by question `sequence`. In **learning mode**,
 `pointsScored` and `pointsPossible` are both `null` (learning mode tracks correct/total only).
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [ ] Starting a session requires a section and mode; in learning mode a valid difficulty slug is also required. (Behaviour.1, 3)
@@ -246,9 +269,11 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] Real mode: a position with one keyed and one unkeyed candidate still starts (drawing the keyed one); `ANSWER_KEY_MISSING` is returned only when an occupied position has no keyed candidate. (API contract)
 
 ## Open questions
+
 _None._
 
 ## Revision history
+
 - 2026-06-04: Initial draft
 - 2026-06-05: POST /api/sessions now returns ANSWER_KEY_MISSING if section has no answer key
 - 2026-06-05: POST /api/sessions/:id/answers explanation field changed from `string | null`

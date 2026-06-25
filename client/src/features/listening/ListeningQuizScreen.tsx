@@ -1,12 +1,12 @@
-import { useCallback, useState } from 'react';
-import { BrandMark } from '../../components/BrandMark';
-import { ProgressCounter } from '../../components/ProgressCounter';
-import { CountdownTimer } from '../quiz/CountdownTimer';
-import { ConfirmDialog } from '../quiz/ConfirmDialog';
-import { QuestionPanel } from '../quiz/QuestionPanel';
-import type { QuizSession } from '../quiz/useQuizSession';
-import type { SessionConfig } from '../quiz/types';
-import { ListeningPlayer } from './ListeningPlayer';
+import { useCallback, useState } from "react";
+import { BrandMark } from "../../components/BrandMark";
+import { ProgressCounter } from "../../components/ProgressCounter";
+import { CountdownTimer } from "../quiz/CountdownTimer";
+import { ConfirmDialog } from "../quiz/ConfirmDialog";
+import { QuestionPanel } from "../quiz/QuestionPanel";
+import type { QuizSession } from "../quiz/useQuizSession";
+import type { SessionConfig } from "../quiz/types";
+import { ListeningPlayer } from "./ListeningPlayer";
 
 // spec: docs/specs/listening-quiz-ui.md §Layout (Behaviour.3–6) + §Real mode.16–17
 // The active listening-session screen: header (mode, counter, real-mode timer), the player above
@@ -26,18 +26,22 @@ export function ListeningQuizScreen({ session, config }: Props): JSX.Element {
   const { question } = session;
 
   // Reset readiness whenever the question changes (a fresh clip must finish loading again).
-  const onReadyChange = useCallback((ready: boolean) => setAudioReady(ready), []);
+  const onReadyChange = useCallback(
+    (ready: boolean) => setAudioReady(ready),
+    [],
+  );
 
-  if (!question) return <div className="p-6 text-slate-500">No questions in this band.</div>;
+  if (!question)
+    return <div className="p-6 text-slate-500">No questions in this band.</div>;
 
-  const modeLabel = config.mode === 'real' ? 'Real' : 'Learning';
+  const modeLabel = config.mode === "real" ? "Real" : "Learning";
 
   return (
     <div className="flex h-screen flex-col">
       <header className="flex items-center gap-4 border-b border-slate-200/70 bg-white/80 px-6 py-3 backdrop-blur-md">
         <BrandMark context={`Listening · ${modeLabel}`} />
         <div className="ml-auto flex items-center gap-5">
-          {config.mode === 'real' && session.remainingMs !== null && (
+          {config.mode === "real" && session.remainingMs !== null && (
             <CountdownTimer remainingMs={session.remainingMs} />
           )}
           <ProgressCounter index={session.index} total={session.total} />
@@ -67,7 +71,7 @@ export function ListeningQuizScreen({ session, config }: Props): JSX.Element {
         </div>
       </main>
 
-      {config.mode === 'real' && (
+      {config.mode === "real" && (
         <footer className="flex justify-end border-t border-slate-200/70 bg-white/80 px-6 py-3 backdrop-blur-md">
           <button
             type="button"

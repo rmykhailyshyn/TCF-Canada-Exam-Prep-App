@@ -1,6 +1,7 @@
 # Spec: Progress Tracking + Session History
 
 ## Status
+
 revised
 
 > Base history model: Milestone 4 (reading/listening). **§Writing & speaking sessions** (Behaviour.9–12):
@@ -9,6 +10,7 @@ revised
 > in the same unified history.
 
 ## Goal
+
 Give the user visibility into their past quiz sessions and overall progress. After
 completing a session they see a results summary. A history page lists all past sessions
 with key stats so the user can track improvement over time. Writing and speaking attempts are
@@ -16,6 +18,7 @@ recorded in the same history as reading/listening — with their scores and feed
 user can review and analyse every attempt across all four sections over time.
 
 ## Scope
+
 - In scope:
   - Session results summary screen (shown immediately after a session ends)
   - Session history list: all past sessions across **all four sections** (reading, listening, writing,
@@ -35,6 +38,7 @@ user can review and analyse every attempt across all four sections over time.
 ## Behaviour
 
 ### Results summary screen
+
 1. Shown immediately after a session completes (timer expires, manual submit, or last
    question answered in learning mode).
 2. Displays: section name, mode, and results that depend on mode:
@@ -45,6 +49,7 @@ user can review and analyse every attempt across all four sections over time.
 3. Two action buttons: "Review answers" (enters review mode) and "Back to home".
 
 ### Session history page
+
 4. Accessible from the home / navigation menu.
 5. Lists all completed sessions, most recent first.
 6. Each row shows: date, section (Reading / Listening), mode (Learning / Real), and
@@ -57,6 +62,7 @@ user can review and analyse every attempt across all four sections over time.
 8. Abandoned sessions (completed_at is null) are not shown in the history list.
 
 ### Writing & speaking sessions
+
 Writing (Milestone 10) and speaking (Milestone 11) sessions are stored in the same `sessions` table as
 reading/listening, so they appear in the **same unified history list**, intermixed and newest-first.
 Their result shape differs (free-text / spoken responses scored per task /20 + NCLC, not MCQ
@@ -78,6 +84,7 @@ correct/total or the 699-point map), so the history surfaces them as follows:
     reading/listening (Behaviour.8).
 
 ## Data model changes
+
 No new tables in this spec. The unified history reads `sessions` (now also `section in
 ('writing','speaking')`), plus the writing/speaking response + evaluation tables defined in the
 writing-session / writing-evaluation / speaking-session / speaking-evaluation specs. The reading/
@@ -86,10 +93,13 @@ listening history continues to rely on `sessions` + `question_results` (quiz-ses
 ## API contract
 
 ### GET /api/sessions
+
 Return all completed sessions across **all four sections**, newest first.
+
 ```
 Response: { "data": { "sessions": [{ "id": number, "section": string, "mode": string, "difficulty": string | null, "completedAt": string, "correct": number | null, "total": number | null, "pointsScored": number | null, "pointsPossible": number | null, "overallScore": number | null, "tasksSubmitted": number | null, "elapsedMs": number | null }] }, "error": null }
 ```
+
 - `section` is one of `"reading" | "listening" | "writing" | "speaking"`.
 - **Reading/listening rows:** `correct`/`total` set; `pointsScored`/`pointsPossible` set in real mode
   (null in learning); `overallScore`/`tasksSubmitted` null. `difficulty` is the slug for learning,
@@ -101,16 +111,20 @@ Response: { "data": { "sessions": [{ "id": number, "section": string, "mode": st
   responses use ISO 8601 strings, not unix integers.
 
 ### GET /api/sessions/:id
+
 Return a single reading/listening session with per-question results.
+
 ```
 Response: { "data": { "session": Session, "results": QuestionResult[] }, "error": null }
 ```
+
 Writing and speaking session detail is read through their own section endpoints
 (`GET /api/writing/sessions/:id`, `GET /api/speaking/sessions/:id`), which carry the per-task
 responses, scores, levels, and feedback (see writing-session / speaking-session). The history row's
 click target routes to the appropriate detail view by `section` (Behaviour.10).
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [ ] The results summary appears immediately when a session ends — timer expiry, manual submit, or the last learning-mode question answered. (Behaviour.1)
@@ -129,6 +143,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] Abandoned writing/speaking sessions (`completed_at` null) do not appear in the history list. (Behaviour.12)
 
 ## Open questions
+
 - ~~**Overall NCLC in the history row.**~~ **Resolved 2026-06-17:** the overall NCLC is **derived
   deterministically** from the overall /20 average using the shared score→NCLC map (writing-evaluation
   §Score → NCLC), so the history row can show both the average and its NCLC band without storing
@@ -137,6 +152,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   progress over time is out of scope here (see Scope).
 
 ## Revision history
+
 - 2026-06-04: Initial draft
 - 2026-06-05: Changed `completedAt` from `number` to ISO 8601 `string`; added timestamp
   serialisation rule for all API responses

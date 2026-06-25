@@ -1,9 +1,11 @@
 # Spec: Portable Server Runtime (Express → Hono)
 
 ## Status
+
 approved
 
 ## Goal
+
 Make the backend run unchanged on two runtimes — **Node.js locally** (full feature set) and a
 **Cloudflare Worker** in the cloud (Milestone 15) — from a single codebase, with no change to any API
 contract or observable behaviour locally. The current server is Express on Node, which cannot run on
@@ -16,6 +18,7 @@ that cannot run on Workers (imports, enrichment, AI scoring, transcription, corr
 they live only in the Node entry and never enter the Worker bundle.
 
 ## Scope
+
 - In scope:
   - Replace Express with Hono across `server/index.ts` and the five route modules in `server/routes/`,
     translating `express.Router()` handlers to Hono routers. Services in `server/services/` are
@@ -48,10 +51,11 @@ they live only in the Node entry and never enter the Worker bundle.
 - Out of scope:
   - Cloudflare Worker entry, `wrangler.toml`, D1, R2, and Cloudflare Access (Milestone 15).
   - The online practice-mode behaviour and client capability-gating (Milestone 16). This milestone only
-    *adds* the capabilities endpoint and reports all-true on Node; no client behaviour changes yet.
+    _adds_ the capabilities endpoint and reports all-true on Node; no client behaviour changes yet.
   - Any change to the data model or to scoring/transcription logic.
 
 ## Behaviour
+
 From a developer's perspective; no end-user behaviour changes on the local app:
 
 1. `npm run dev` starts the Hono server on Node (via `@hono/node-server`) on the same `PORT`; the Vite
@@ -62,7 +66,7 @@ From a developer's perspective; no end-user behaviour changes on the local app:
 3. The 1 MB JSON body limit (writing essays) and the multipart speaking upload (≤ ~50 MB) continue to
    work; the unknown-`/api`-route fallback still returns the `NOT_FOUND` envelope.
 4. `GET /api/health` returns `{ data: { status: 'ok', capabilities: { aiScoring: true,
-   transcription: true, imports: true } }, error: null }` on the Node runtime.
+transcription: true, imports: true } }, error: null }` on the Node runtime.
 5. The DB instance used by services is produced by the DB factory; on Node it is the libSQL client from
    `DATABASE_URL` (Milestone 13), constructed once.
 6. Audio, passage-image, and speaking-recording bytes are served through the `MediaStore` interface;
@@ -77,20 +81,23 @@ From a developer's perspective; no end-user behaviour changes on the local app:
    in the repo are historical notes in `docs/` revision histories.
 
 ## Data model changes
+
 None.
 
 ## API contract
+
 No new resource endpoints; one **additive** change to an existing one:
 
 - `GET /api/health`
   - Response (success): `{ data: { status: 'ok', capabilities: { aiScoring: boolean, transcription:
-    boolean, imports: boolean } }, error: null }`
+boolean, imports: boolean } }, error: null }`
   - The previous shape (`{ data: { status: 'ok' } }`) is extended, not broken: `status` is retained and
     `capabilities` is added. On Node all capability flags are `true`.
 
 All other endpoints retain their exact paths, methods, request shapes, response shapes, and error codes.
 
 ### Runtime abstractions (implementation contract, not HTTP)
+
 - **DB factory** — `createDb(env)` returns the Drizzle DB. Node: libSQL client from `DATABASE_URL`
   (constructed once and reused). Worker (M15): `drizzle(env.DB)` from the D1 binding, per request.
   Services receive the DB rather than importing a singleton, so the same service runs on both runtimes.
@@ -105,6 +112,7 @@ All other endpoints retain their exact paths, methods, request shapes, response 
   Worker (M15): all `false`. Surfaced via `/api/health` and used to decide which routes are mounted.
 
 ## Acceptance criteria
+
 - [ ] Express and `multer` are removed from `server/`; Hono (+ `@hono/node-server`) is the only web framework; `server/index.ts` is the Node entry that mounts the portable core + the Node-only CLI routes and listens on `PORT`. (Behaviour.1, 8)
 - [ ] Every endpoint returns byte-identical envelope shapes and error codes to the Express version, verified by the existing unit + e2e suites passing unchanged. (Behaviour.2, 7)
 - [ ] Range-aware streaming (HTTP 206, `Content-Range`, partial body) works for audio, passage images, and speaking recordings through the `MediaStore` filesystem implementation. (Behaviour.2, 6)
@@ -117,6 +125,7 @@ All other endpoints retain their exact paths, methods, request shapes, response 
 - [ ] A repo-wide grep for `pg`/`postgres`/`postgresql`/`timestamptz` (excluding `docs/`) returns no matches in code, config, or `.env.example`. (Behaviour.9)
 
 ## Open questions
+
 - **Hono body-size limits & multipart parity with multer.** Hono's `parseBody`/`formData` must accept
   the browser's `webm/opus` recording up to the existing ~50 MB cap and the 1 MB JSON essay limit. To
   confirm the limit configuration during implementation; if Hono needs different middleware, the spec is
@@ -132,6 +141,7 @@ All other endpoints retain their exact paths, methods, request shapes, response 
   saved file and metadata, not on multer specifically; to be confirmed they pass unchanged.
 
 ## Revision history
+
 - 2026-06-20: Initial draft (Milestone 14). Part of the Cloudflare-hosting initiative; depends on
   `database-sqlite.md` (M13, libSQL DB factory) and is the prerequisite for `cloud-deployment.md` (M15,
   Worker entry + D1/R2 implementations of these abstractions) and `content-deploy.md` (M16, client

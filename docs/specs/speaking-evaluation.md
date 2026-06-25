@@ -1,6 +1,7 @@
 # Spec: Speaking Transcription & Evaluation
 
 ## Status
+
 implemented
 
 > Milestone 11. The request-time CLI layer for the Speaking section: **Whisper transcription** of a
@@ -9,7 +10,8 @@ implemented
 > `…/correct`, `…/complete`) and surfaced by the speaking-ui spec.
 
 ## Goal
-Turn a user's voice recording into a TCF *Expression orale* evaluation. On upload, the audio is
+
+Turn a user's voice recording into a TCF _Expression orale_ evaluation. On upload, the audio is
 **transcribed by the local Whisper CLI** (French). On submit, the transcript is sent to the **local
 Claude CLI**, which acts as a TCF speaking examiner and returns a **score (/20)** and **structured
 feedback** (strengths, errors, improvements) — persisted. The **NCLC level is derived
@@ -24,6 +26,7 @@ platform-agnostic. Configuration follows the existing conventions (`.env`: `CLAU
 `CLAUDE_CLI_MODEL`, `WHISPER_CMD`, `WHISPER_MODEL`; no API key).
 
 ## Scope
+
 - In scope:
   - A `server/services/` wrapper that, at request time: (a) saves an uploaded recording under
     `MEDIA_DIR` and **transcribes** it via the **same Whisper CLI wrapper the listening import uses** —
@@ -54,16 +57,18 @@ platform-agnostic. Configuration follows the existing conventions (`.env`: `CLAU
 ## Behaviour
 
 ### Configuration & invocation
+
 1. The service reads configuration from `.env`:
    - `CLAUDE_CLI_BIN` (default `claude`), `CLAUDE_CLI_MODEL` (optional `--model`).
    - `WHISPER_CMD` (default `mlx_whisper`), `WHISPER_MODEL` (default `mlx-community/whisper-large-v3-turbo`).
-   No API key is read.
+     No API key is read.
 2. Claude is invoked non-interactively (`claude -p <prompt>`, plus `--model` when set), capturing
    stdout and parsing the **first JSON object** (tolerating prose/code-fence wrapping), reusing the
    `scripts/lib/claude.ts` helpers (`runClaude`, `extractJsonObject`, `parseCliEnvelope`). Whisper is
    invoked via `scripts/lib/whisper.ts` (`runWhisper`) on the saved file path.
 
 ### Transcription (on recording upload)
+
 3. When a recording is uploaded (`POST …/responses/:taskNumber`, see speaking-session), the service
    saves the audio under `MEDIA_DIR` (a path derived from session + task, so re-uploads overwrite),
    runs Whisper on it, and concatenates the returned segments (in order) into one transcript string.
@@ -75,29 +80,31 @@ platform-agnostic. Configuration follows the existing conventions (`.env`: `CLAU
    logged; the saved audio is retained so the user can retry (re-upload).
 
 ### Scoring (on submit, both modes)
+
 6. When a task is submitted (`POST …/responses/:taskNumber/submit`), the service builds an English
    prompt containing the task `question` and the stored transcript, instructing the model to act as a
-   **TCF Canada *Expression orale* examiner** and apply the official assessment criteria (task
+   **TCF Canada _Expression orale_ examiner** and apply the official assessment criteria (task
    achievement / fluency & coherence / lexical range / grammatical range & accuracy), returning a JSON
    object with:
    - `score`: integer 0–20 for this task.
    - `strengths`: what the response does well.
    - `errors`: notable language errors (grammar, vocabulary, register, coherence) evident in the transcript.
    - `improvements`: concrete suggestions to raise the score.
-   The model is **not** asked for the NCLC level.
+     The model is **not** asked for the NCLC level.
 7. The parsed result (score + feedback) is persisted in `speaking_evaluations`, linked to the response
    (one row per response; resubmitting **replaces** the prior row), with `generated_by` recording
    `claude-cli` (plus `/model` when pinned) and `generated_at` set. The NCLC level is not stored. The
    endpoint returns `score`, the **derived** `level`, and `feedback`.
-7a. **Score → NCLC (deterministic):** the `level` is computed from `score` by the same shared pure
-    helper and map defined in writing-evaluation §Score → NCLC (e.g. `server/lib/nclc.ts`) — identical
-    for writing and speaking, never produced by the model, never persisted. An **overall** NCLC for the
-    results/history summary is derived the same way from the rounded mean of the per-task scores.
+   7a. **Score → NCLC (deterministic):** the `level` is computed from `score` by the same shared pure
+   helper and map defined in writing-evaluation §Score → NCLC (e.g. `server/lib/nclc.ts`) — identical
+   for writing and speaking, never produced by the model, never persisted. An **overall** NCLC for the
+   results/history summary is derived the same way from the rounded mean of the per-task scores.
 8. On a Claude failure (non-zero exit) or output with no parseable JSON object, the service logs the
    error (incl. stderr), writes **no** evaluation row, and the endpoint returns `EVALUATION_FAILED`.
    The user can retry by resubmitting.
 
 ### Correction (on request, training only)
+
 9. When the user requests a correction (`POST …/correct/:taskNumber`, training only), the service
    builds a prompt with the task `question` and the transcript, instructing the model to return a JSON
    object with:
@@ -109,6 +116,7 @@ platform-agnostic. Configuration follows the existing conventions (`.env`: `CLAU
     change, endpoint returns `CORRECTION_FAILED`.
 
 ## Data model changes
+
 ```
 -- spec: docs/specs/speaking-evaluation.md §Data model changes
 speaking_evaluations
@@ -124,39 +132,43 @@ speaking_evaluations
   check (score between 0 and 20)
   -- NCLC `level` is NOT stored: it is derived deterministically from `score` on read (writing-evaluation §Score → NCLC).
 ```
+
 The transcript and `audio_path` live on `speaking_responses` (speaking-session spec). On-request
 corrections are **not** stored. Resubmitting replaces the response's `speaking_evaluations` row
 (upsert on the unique `response_id`).
 
 ## API contract
+
 This service has no routes of its own; it is invoked by the speaking-session endpoints. The shapes it
 produces:
 
 ```typescript
 type SpeakingFeedback = {
-  strengths: string      // what the response does well
-  errors: string         // notable grammar / vocabulary / register / coherence errors
-  improvements: string   // concrete suggestions to raise the score
-}
+  strengths: string; // what the response does well
+  errors: string; // notable grammar / vocabulary / register / coherence errors
+  improvements: string; // concrete suggestions to raise the score
+};
 
 // Returned by POST /api/speaking/sessions/:id/responses/:taskNumber/submit
 type SpeakingEvaluation = {
-  score: number          // 0–20 (model-produced, persisted)
-  level: string          // NCLC, DERIVED from score via the shared map (not stored, not model-produced)
-  feedback: SpeakingFeedback
-}
+  score: number; // 0–20 (model-produced, persisted)
+  level: string; // NCLC, DERIVED from score via the shared map (not stored, not model-produced)
+  feedback: SpeakingFeedback;
+};
 
 // Returned by POST /api/speaking/sessions/:id/correct/:taskNumber (training only; not persisted)
 type SpeakingCorrection = {
-  correctedText: string  // the transcript rewritten with errors fixed
-  suggestions: string[]  // specific improvement notes
-}
+  correctedText: string; // the transcript rewritten with errors fixed
+  suggestions: string[]; // specific improvement notes
+};
 ```
+
 Error codes surfaced by the consuming endpoints: `TRANSCRIPTION_FAILED` (upload), `EVALUATION_FAILED`
 (submit), `CORRECTION_FAILED` (correct), `MODE_NOT_ALLOWED` (correct on a real-mode session),
 `NO_RECORDING` (submit/correct before a transcript exists).
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [ ] The service reads `CLAUDE_CLI_*` and `WHISPER_*` from `.env`, requires no API key, and a missing binary produces a descriptive error. (Behaviour.1)
@@ -170,6 +182,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] The Claude and Whisper invocations reuse the existing `scripts/lib/claude.ts` and `scripts/lib/whisper.ts` helpers (no duplicated parser); the pure parse/prompt helpers are unit-tested. (Scope)
 
 ## Open questions
+
 - **Recording format / transcode.** Browser MediaRecorder typically emits `webm/opus`; confirm
   `mlx_whisper` ingests it directly or whether a small `ffmpeg` transcode (ffmpeg is already a project
   dependency, used by the listening seed) to wav/mp3 is needed before `runWhisper`.
@@ -186,6 +199,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   should replay corrections, add a table later.
 
 ## Revision history
+
 - 2026-06-17: Initial draft (Milestone 11).
 - 2026-06-17: Made explicit that transcription reuses the **same** Whisper CLI wrapper as the listening
   import (`scripts/lib/whisper.ts` / `npm run transcribe`), with no alternate path (per user request).

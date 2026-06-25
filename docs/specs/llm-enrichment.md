@@ -1,9 +1,11 @@
 # Spec: LLM Enrichment
 
 ## Status
+
 implemented
 
 ## Goal
+
 Generate per-question explanations that tell the user, in **English**, why the correct answer is
 right and why each of the three incorrect options is wrong — each reason **pointing to the specific
 clue** in the source material (the **passage** for reading questions, the **transcript** for
@@ -13,6 +15,7 @@ They surface in learning mode immediately after the user confirms an answer (bef
 question), and — for both learning and real sessions — in review mode after the session ends.
 
 ## Scope
+
 - In scope:
   - CLI command `npm run enrich` that iterates over questions without an explanation and generates
     one via the **local `claude` CLI** invoked in non-interactive print mode.
@@ -36,21 +39,22 @@ question), and — for both learning and real sessions — in review mode after 
   - Any schema change — reuses the existing `explanations` table.
 
 ## Behaviour
+
 1. The user runs `npm run enrich` (optionally with `--question-id` or `--section` filters).
 2. The command reads its configuration from `.env`:
    - `CLAUDE_CLI_BIN`: the Claude CLI binary name/path (default `claude`).
    - `CLAUDE_CLI_MODEL` (optional): passed to the CLI as `--model` (e.g. `claude-opus-4-8`); when
      unset the CLI's own default model is used.
-   No API key is read — the local CLI manages its own authentication.
+     No API key is read — the local CLI manages its own authentication.
 3. For each qualifying question (no existing explanation), the command:
    a. Loads the question text, its four options, and the correct answer label.
    b. **Reading:** loads the linked passage text. **Listening:** loads the transcript segments and
-      concatenates them in `sequence` order into a single transcript string.
+   concatenates them in `sequence` order into a single transcript string.
    c. Builds an English prompt instructing the model to return a **JSON object only** with a
-      `correctReason` and a reason for each of `A`–`D`, where every reason quotes or paraphrases the
-      relevant clue from the supplied passage/transcript.
+   `correctReason` and a reason for each of `A`–`D`, where every reason quotes or paraphrases the
+   relevant clue from the supplied passage/transcript.
    d. Invokes the local CLI non-interactively (`claude -p <prompt>`, plus `--model` when configured),
-      captures stdout, and parses the JSON object out of the response.
+   captures stdout, and parses the JSON object out of the response.
 4. The parsed response yields: one explanation of why the correct answer is right (citing its clue),
    and one explanation per option of why it is wrong (or, for the correct option, what confirms it).
 5. The explanation is persisted to the DB linked to the question, with `generated_by` recording the
@@ -62,6 +66,7 @@ question), and — for both learning and real sessions — in review mode after 
 8. With `--dry-run`, the prompt and the raw model output are printed to stdout and no DB writes occur.
 
 ### Surfacing (consumption)
+
 9. **Learning mode** — `POST /api/sessions/:id/answers` returns the full explanation object alongside
    `isCorrect` and `correctLabel`, so it renders immediately after the user confirms, before the
    next question. (Unchanged from the current implementation.)
@@ -69,14 +74,16 @@ question), and — for both learning and real sessions — in review mode after 
     payload for **both** learning and real sessions, so a finished **real** exam shows every
     question's explanation in review (reached from the results screen). This **supersedes**
     review-mode spec §Behaviour.6 ("real mode never shows explanations"): explanations are still
-    never shown *during* a real exam, only afterwards in review.
+    never shown _during_ a real exam, only afterwards in review.
 
 ## Data model changes
+
 None. Reuses the existing `explanations` table (question_id unique; `correct_reason` +
 `option_a_reason`..`option_d_reason`; `generated_by`; `generated_at`). Clue citations live inline in
 the reason prose, so no new column is needed.
 
 ## API contract
+
 The CLI command has no HTTP surface. Stored explanations are surfaced through the two existing
 consumption paths:
 
@@ -88,17 +95,19 @@ consumption paths:
 
 ```typescript
 type Explanation = {
-  correctReason: string   // why the correct answer is right, citing the passage/transcript clue
-  optionAReason: string   // why A is wrong (or, for the correct option, what confirms it)
-  optionBReason: string
-  optionCReason: string
-  optionDReason: string
-}
+  correctReason: string; // why the correct answer is right, citing the passage/transcript clue
+  optionAReason: string; // why A is wrong (or, for the correct option, what confirms it)
+  optionBReason: string;
+  optionCReason: string;
+  optionDReason: string;
+};
 ```
+
 (There is no standalone `GET /api/questions/:id/explanation` endpoint — review mode reads
 explanations through `GET /api/sessions/:id`, so a separate route is unnecessary.)
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [x] `npm run enrich` iterates over questions without an explanation and generates one record per question by invoking the local `claude` CLI. (Behaviour.1, 3, 5)
@@ -113,6 +122,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [x] The JSON-parse step tolerates the model wrapping its object in prose or a code fence (extracts the first JSON object); a response with no JSON object is treated as a CLI failure. (Behaviour.3d, 7)
 
 ## Open questions
+
 - ~~Explanation language (English / French / both).~~ **Resolved:** English only.
 - ~~Structured vs. free-form model output.~~ **Resolved:** the model is asked for a JSON object and
   the command parses it (extracting the first `{…}` to tolerate fences/prose); unparseable output is
@@ -125,6 +135,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   at current clip lengths.
 
 ## Revision history
+
 - 2026-06-04: Initial draft
 - 2026-06-05: Clarified two consumption patterns and added the explicit `Explanation` TS shape
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).

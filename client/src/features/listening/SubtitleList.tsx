@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import type { TranscriptSegment } from '../../lib/api';
+import { useEffect, useRef } from "react";
+import type { TranscriptSegment } from "../../lib/api";
 
 // spec: docs/specs/listening-player.md §Subtitle overlay (Behaviour.5–10)
 // Renders all transcript phrases, highlights the active one, auto-scrolls it into view, and seeks
@@ -11,16 +11,24 @@ type Props = {
   onSeek: (index: number) => void;
 };
 
-export function SubtitleList({ segments, activeIndex, onSeek }: Props): JSX.Element {
+export function SubtitleList({
+  segments,
+  activeIndex,
+  onSeek,
+}: Props): JSX.Element {
   const activeRef = useRef<HTMLButtonElement>(null);
 
   // spec: docs/specs/listening-player.md §Behaviour.8 — keep the active segment in view.
   useEffect(() => {
-    activeRef.current?.scrollIntoView({ block: 'nearest' });
+    activeRef.current?.scrollIntoView({ block: "nearest" });
   }, [activeIndex]);
 
   if (segments.length === 0) {
-    return <p className="p-4 text-sm italic text-slate-400">No subtitles for this clip.</p>;
+    return (
+      <p className="p-4 text-sm italic text-slate-400">
+        No subtitles for this clip.
+      </p>
+    );
   }
 
   return (
@@ -34,11 +42,11 @@ export function SubtitleList({ segments, activeIndex, onSeek }: Props): JSX.Elem
               type="button"
               lang="fr"
               onClick={() => onSeek(index)}
-              aria-current={active ? 'true' : undefined}
+              aria-current={active ? "true" : undefined}
               className={`w-full rounded-lg px-3 py-1.5 text-left text-sm leading-relaxed transition ${
                 active
-                  ? 'bg-brand-100 font-semibold text-brand-900 ring-1 ring-brand-200'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                  ? "bg-brand-100 font-semibold text-brand-900 ring-1 ring-brand-200"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
               }`}
             >
               {seg.text}

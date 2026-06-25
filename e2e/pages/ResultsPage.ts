@@ -1,4 +1,4 @@
-import { type Locator, type Page } from '@playwright/test';
+import { type Locator, type Page } from "@playwright/test";
 
 // spec: docs/specs/quiz-session.md §Results
 // Page Object for the end-of-session results screen.
@@ -9,8 +9,8 @@ export class ResultsPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByText('Session complete');
-    this.correctAnswersLabel = page.getByText('correct answers');
+    this.heading = page.getByText("Session complete");
+    this.correctAnswersLabel = page.getByText("correct answers");
   }
 
   // A free-text result figure, e.g. the score "4 / 4" or a band label. The figure and its label

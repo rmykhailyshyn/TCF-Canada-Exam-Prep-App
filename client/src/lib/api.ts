@@ -2,16 +2,16 @@
 // Typed client for the session endpoints. Unwraps the standard { data, error } envelope and
 // throws ApiError on a failure envelope so callers can branch on error.code.
 
-export type OptionLabel = 'A' | 'B' | 'C' | 'D';
-export type Section = 'reading' | 'listening';
-export type Mode = 'learning' | 'real';
+export type OptionLabel = "A" | "B" | "C" | "D";
+export type Section = "reading" | "listening";
+export type Mode = "learning" | "real";
 export type DifficultySlug =
-  | 'beginner'
-  | 'elementary'
-  | 'intermediate'
-  | 'upper-intermediate'
-  | 'advanced'
-  | 'expert';
+  | "beginner"
+  | "elementary"
+  | "intermediate"
+  | "upper-intermediate"
+  | "advanced"
+  | "expert";
 
 export type SessionQuestion = {
   id: number;
@@ -50,7 +50,9 @@ export type CompleteResult = {
   pointsPossible: number | null;
 };
 
-type Envelope<T> = { data: T; error: null } | { data: null; error: { code: string; message: string } };
+type Envelope<T> =
+  | { data: T; error: null }
+  | { data: null; error: { code: string; message: string } };
 
 export class ApiError extends Error {
   constructor(
@@ -58,14 +60,14 @@ export class ApiError extends Error {
     message: string,
   ) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
   }
 }
 
 async function request<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   const envelope = (await res.json()) as Envelope<T>;
@@ -132,7 +134,7 @@ export type SessionDetail = {
 };
 
 export function fetchSessions(): Promise<{ sessions: SessionSummary[] }> {
-  return get<{ sessions: SessionSummary[] }>('/api/sessions');
+  return get<{ sessions: SessionSummary[] }>("/api/sessions");
 }
 
 export function fetchSession(id: number): Promise<SessionDetail> {
@@ -140,8 +142,10 @@ export function fetchSession(id: number): Promise<SessionDetail> {
 }
 
 // spec: docs/specs/quiz-session.md §API contract POST /api/sessions
-export function createSession(input: CreateSessionInput): Promise<CreateSessionResult> {
-  return request<CreateSessionResult>('/api/sessions', input);
+export function createSession(
+  input: CreateSessionInput,
+): Promise<CreateSessionResult> {
+  return request<CreateSessionResult>("/api/sessions", input);
 }
 
 // spec: docs/specs/quiz-session.md §API contract POST /api/sessions/:id/answers
@@ -150,15 +154,23 @@ export function submitAnswer(
   questionId: number,
   chosenLabel: OptionLabel,
 ): Promise<LearningAnswerResult | RealAnswerResult> {
-  return request<LearningAnswerResult | RealAnswerResult>(`/api/sessions/${sessionId}/answers`, {
-    questionId,
-    chosenLabel,
-  });
+  return request<LearningAnswerResult | RealAnswerResult>(
+    `/api/sessions/${sessionId}/answers`,
+    {
+      questionId,
+      chosenLabel,
+    },
+  );
 }
 
 // spec: docs/specs/quiz-session.md §API contract POST /api/sessions/:id/complete
-export function completeSession(sessionId: number, elapsedMs: number | null): Promise<CompleteResult> {
-  return request<CompleteResult>(`/api/sessions/${sessionId}/complete`, { elapsedMs });
+export function completeSession(
+  sessionId: number,
+  elapsedMs: number | null,
+): Promise<CompleteResult> {
+  return request<CompleteResult>(`/api/sessions/${sessionId}/complete`, {
+    elapsedMs,
+  });
 }
 
 // spec: docs/specs/listening-player.md §API contract
@@ -183,13 +195,17 @@ export function passageImageUrl(questionId: number): string {
 }
 
 // spec: docs/specs/listening-player.md §API contract GET /api/questions/:id/transcript
-export function fetchTranscript(questionId: number): Promise<{ segments: TranscriptSegment[] }> {
-  return get<{ segments: TranscriptSegment[] }>(`/api/questions/${questionId}/transcript`);
+export function fetchTranscript(
+  questionId: number,
+): Promise<{ segments: TranscriptSegment[] }> {
+  return get<{ segments: TranscriptSegment[] }>(
+    `/api/questions/${questionId}/transcript`,
+  );
 }
 
 // spec: docs/specs/question-export-import.md §Export document format + API contract
-export type SectionFilter = 'reading' | 'listening' | 'all';
-export type DifficultyFilter = DifficultySlug[] | 'all';
+export type SectionFilter = "reading" | "listening" | "all";
+export type DifficultyFilter = DifficultySlug[] | "all";
 
 export type ExportQuestion = {
   section: Section;
@@ -200,7 +216,12 @@ export type ExportQuestion = {
   options: { label: OptionLabel; text: string; isCorrect: boolean }[];
   passage: { sourceFile: string; text: string } | null;
   audio: { fileName: string; durationMs: number | null } | null;
-  transcript: { sequence: number; text: string; startMs: number; endMs: number }[];
+  transcript: {
+    sequence: number;
+    text: string;
+    startMs: number;
+    endMs: number;
+  }[];
 };
 
 export type ExportDocument = {
@@ -224,7 +245,10 @@ export function fetchExport(
   difficulties: DifficultyFilter,
 ): Promise<ExportDocument> {
   const params = new URLSearchParams({ section });
-  params.set('difficulty', difficulties === 'all' ? 'all' : difficulties.join(','));
+  params.set(
+    "difficulty",
+    difficulties === "all" ? "all" : difficulties.join(","),
+  );
   return get<ExportDocument>(`/api/questions/export?${params.toString()}`);
 }
 
@@ -233,7 +257,10 @@ export function importQuestions(
   document: ExportDocument,
   override: boolean,
 ): Promise<ImportSummary> {
-  return request<ImportSummary>('/api/questions/import', { document, override });
+  return request<ImportSummary>("/api/questions/import", {
+    document,
+    override,
+  });
 }
 
 // ============================================================================
@@ -241,18 +268,23 @@ export function importQuestions(
 // spec: docs/specs/writing-session.md §API contract + docs/specs/writing-evaluation.md
 // ============================================================================
 
-async function send<T>(method: 'PUT' | 'POST', path: string, body: unknown): Promise<T> {
+async function send<T>(
+  method: "PUT" | "POST",
+  path: string,
+  body: unknown,
+): Promise<T> {
   const res = await fetch(path, {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   const envelope = (await res.json()) as Envelope<T>;
-  if (envelope.error) throw new ApiError(envelope.error.code, envelope.error.message);
+  if (envelope.error)
+    throw new ApiError(envelope.error.code, envelope.error.message);
   return envelope.data;
 }
 
-export type WritingMode = 'learning' | 'real';
+export type WritingMode = "learning" | "real";
 
 export type WritingTask = {
   taskId: number;
@@ -273,9 +305,20 @@ export type CreateWritingSessionResult = {
   timeLimitMs: number | null;
 };
 
-export type WritingFeedback = { strengths: string; errors: string; improvements: string };
-export type WritingEvaluation = { score: number; level: string; feedback: WritingFeedback };
-export type WritingCorrection = { correctedText: string; suggestions: string[] };
+export type WritingFeedback = {
+  strengths: string;
+  errors: string;
+  improvements: string;
+};
+export type WritingEvaluation = {
+  score: number;
+  level: string;
+  feedback: WritingFeedback;
+};
+export type WritingCorrection = {
+  correctedText: string;
+  suggestions: string[];
+};
 
 export type WritingCompleteResult = {
   tasks: { taskNumber: number; score: number | null; level: string | null }[];
@@ -316,7 +359,10 @@ export function createWritingSession(
   mode: WritingMode,
   taskNumbers?: number[],
 ): Promise<CreateWritingSessionResult> {
-  return request<CreateWritingSessionResult>('/api/writing/sessions', { mode, taskNumbers });
+  return request<CreateWritingSessionResult>("/api/writing/sessions", {
+    mode,
+    taskNumbers,
+  });
 }
 
 export function saveWritingDraft(
@@ -325,7 +371,7 @@ export function saveWritingDraft(
   text: string,
 ): Promise<{ wordCount: number }> {
   return send<{ wordCount: number }>(
-    'PUT',
+    "PUT",
     `/api/writing/sessions/${sessionId}/responses/${taskNumber}`,
     { text },
   );
@@ -347,19 +393,27 @@ export function requestWritingCorrection(
   taskNumber: number,
   text: string,
 ): Promise<WritingCorrection> {
-  return request<WritingCorrection>(`/api/writing/sessions/${sessionId}/correct/${taskNumber}`, {
-    text,
-  });
+  return request<WritingCorrection>(
+    `/api/writing/sessions/${sessionId}/correct/${taskNumber}`,
+    {
+      text,
+    },
+  );
 }
 
 export function completeWritingSession(
   sessionId: number,
   elapsedMs: number | null,
 ): Promise<WritingCompleteResult> {
-  return request<WritingCompleteResult>(`/api/writing/sessions/${sessionId}/complete`, { elapsedMs });
+  return request<WritingCompleteResult>(
+    `/api/writing/sessions/${sessionId}/complete`,
+    { elapsedMs },
+  );
 }
 
-export function fetchWritingSession(sessionId: number): Promise<WritingSessionDetail> {
+export function fetchWritingSession(
+  sessionId: number,
+): Promise<WritingSessionDetail> {
   return get<WritingSessionDetail>(`/api/writing/sessions/${sessionId}`);
 }
 
@@ -368,10 +422,14 @@ export function fetchWritingSession(sessionId: number): Promise<WritingSessionDe
 // spec: docs/specs/speaking-session.md §API contract + docs/specs/speaking-evaluation.md
 // ============================================================================
 
-export type SpeakingMode = 'learning' | 'real';
+export type SpeakingMode = "learning" | "real";
 
 // spec: docs/specs/speaking-session.md §API contract — per-task prep + recording limits (real mode).
-export type TaskTiming = { taskNumber: number; prepSeconds: number; recordSeconds: number };
+export type TaskTiming = {
+  taskNumber: number;
+  prepSeconds: number;
+  recordSeconds: number;
+};
 
 export type SpeakingTask = {
   taskId: number;
@@ -387,9 +445,20 @@ export type CreateSpeakingSessionResult = {
   timing: TaskTiming[] | null;
 };
 
-export type SpeakingFeedback = { strengths: string; errors: string; improvements: string };
-export type SpeakingEvaluation = { score: number; level: string; feedback: SpeakingFeedback };
-export type SpeakingCorrection = { correctedText: string; suggestions: string[] };
+export type SpeakingFeedback = {
+  strengths: string;
+  errors: string;
+  improvements: string;
+};
+export type SpeakingEvaluation = {
+  score: number;
+  level: string;
+  feedback: SpeakingFeedback;
+};
+export type SpeakingCorrection = {
+  correctedText: string;
+  suggestions: string[];
+};
 export type SpeakingUploadResult = {
   transcript: string;
   audioUrl: string;
@@ -433,7 +502,10 @@ export function createSpeakingSession(
   mode: SpeakingMode,
   taskNumbers?: number[],
 ): Promise<CreateSpeakingSessionResult> {
-  return request<CreateSpeakingSessionResult>('/api/speaking/sessions', { mode, taskNumbers });
+  return request<CreateSpeakingSessionResult>("/api/speaking/sessions", {
+    mode,
+    taskNumbers,
+  });
 }
 
 // spec: docs/specs/speaking-session.md §API contract POST …/responses/:taskNumber — upload + transcribe.
@@ -444,14 +516,22 @@ export async function uploadSpeakingRecording(
 ): Promise<SpeakingUploadResult> {
   const form = new FormData();
   // The filename hints the server at the container; MIME comes from the Blob's type.
-  const ext = audio.type.includes('ogg') ? 'ogg' : audio.type.includes('mp4') ? 'm4a' : 'webm';
-  form.append('audio', audio, `recording.${ext}`);
-  const res = await fetch(`/api/speaking/sessions/${sessionId}/responses/${taskNumber}`, {
-    method: 'POST',
-    body: form,
-  });
+  const ext = audio.type.includes("ogg")
+    ? "ogg"
+    : audio.type.includes("mp4")
+      ? "m4a"
+      : "webm";
+  form.append("audio", audio, `recording.${ext}`);
+  const res = await fetch(
+    `/api/speaking/sessions/${sessionId}/responses/${taskNumber}`,
+    {
+      method: "POST",
+      body: form,
+    },
+  );
   const envelope = (await res.json()) as Envelope<SpeakingUploadResult>;
-  if (envelope.error) throw new ApiError(envelope.error.code, envelope.error.message);
+  if (envelope.error)
+    throw new ApiError(envelope.error.code, envelope.error.message);
   return envelope.data;
 }
 
@@ -482,18 +562,26 @@ export function completeSpeakingSession(
   sessionId: number,
   elapsedMs: number | null,
 ): Promise<SpeakingCompleteResult> {
-  return request<SpeakingCompleteResult>(`/api/speaking/sessions/${sessionId}/complete`, {
-    elapsedMs,
-  });
+  return request<SpeakingCompleteResult>(
+    `/api/speaking/sessions/${sessionId}/complete`,
+    {
+      elapsedMs,
+    },
+  );
 }
 
 // spec: docs/specs/speaking-session.md §API contract GET /api/speaking/sessions/:id
-export function fetchSpeakingSession(sessionId: number): Promise<SpeakingSessionDetail> {
+export function fetchSpeakingSession(
+  sessionId: number,
+): Promise<SpeakingSessionDetail> {
   return get<SpeakingSessionDetail>(`/api/speaking/sessions/${sessionId}`);
 }
 
 // spec: docs/specs/speaking-session.md §API contract GET …/responses/:taskNumber/audio
 // The <audio> element's src; the server streams the recording with range support for seeking.
-export function speakingAudioUrl(sessionId: number, taskNumber: number): string {
+export function speakingAudioUrl(
+  sessionId: number,
+  taskNumber: number,
+): string {
   return `/api/speaking/sessions/${sessionId}/responses/${taskNumber}/audio`;
 }

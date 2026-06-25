@@ -1,4 +1,4 @@
-import type { WritingMode } from '../../lib/api';
+import type { WritingMode } from "../../lib/api";
 
 // spec: docs/specs/writing-ui.md §Entry & mode selection
 export type WritingConfig = {

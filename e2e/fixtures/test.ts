@@ -1,9 +1,9 @@
-import { test as base } from '@playwright/test';
-import { ApiClient } from './api-client';
-import { SetupPage } from '../pages/SetupPage';
-import { ReadingQuizPage } from '../pages/ReadingQuizPage';
-import { ListeningQuizPage } from '../pages/ListeningQuizPage';
-import { ResultsPage } from '../pages/ResultsPage';
+import { test as base } from "@playwright/test";
+import { ApiClient } from "./api-client";
+import { SetupPage } from "../pages/SetupPage";
+import { ReadingQuizPage } from "../pages/ReadingQuizPage";
+import { ListeningQuizPage } from "../pages/ListeningQuizPage";
+import { ResultsPage } from "../pages/ResultsPage";
 
 // Central test fixture. All e2e specs import { test, expect } from here (not '@playwright/test'),
 // so every test receives the Page Objects and the API client pre-wired to the current page/request.
@@ -34,4 +34,4 @@ export const test = base.extend<Fixtures>({
   },
 });
 
-export { expect } from '@playwright/test';
+export { expect } from "@playwright/test";

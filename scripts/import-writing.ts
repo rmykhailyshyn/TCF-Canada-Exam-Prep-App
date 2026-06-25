@@ -1,9 +1,9 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { basename, resolve } from 'node:path';
-import { and, eq } from 'drizzle-orm';
-import { db, client } from '../server/db';
-import { writingTasks } from '../server/db/schema';
-import { TaskParseError, parseTaskFile } from './lib/writing-tasks';
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { basename, resolve } from "node:path";
+import { and, eq } from "drizzle-orm";
+import { db, client } from "../server/db";
+import { writingTasks } from "../server/db/schema";
+import { TaskParseError, parseTaskFile } from "./lib/writing-tasks";
 
 // spec: docs/specs/writing-import.md
 // Writing task import CLI: `npm run import:writing -- --dir <path>`. Each `*.md` file in the
@@ -20,21 +20,22 @@ function parseArgs(argv: string[]): Args {
   const args: Args = { dir: null, dryRun: false };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
-    if (a === '--dry-run') args.dryRun = true;
-    else if (a === '--dir') args.dir = argv[(i += 1)] ?? null;
-    else if (a.startsWith('--dir=')) args.dir = a.slice('--dir='.length);
+    if (a === "--dry-run") args.dryRun = true;
+    else if (a === "--dir") args.dir = argv[(i += 1)] ?? null;
+    else if (a.startsWith("--dir=")) args.dir = a.slice("--dir=".length);
   }
   return args;
 }
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  if (!args.dir) throw new Error('Usage: npm run import:writing -- --dir <path>');
+  if (!args.dir)
+    throw new Error("Usage: npm run import:writing -- --dir <path>");
 
   const dir = resolve(args.dir);
   if (!existsSync(dir)) throw new Error(`Directory not found: ${dir}`);
 
-  const files = readdirSync(dir).filter((f) => f.toLowerCase().endsWith('.md'));
+  const files = readdirSync(dir).filter((f) => f.toLowerCase().endsWith(".md"));
   if (files.length === 0) throw new Error(`No .md task files found in ${dir}`);
 
   let inserted = 0;
@@ -45,17 +46,21 @@ async function main(): Promise<void> {
     const sourceFile = basename(file);
     let parsed;
     try {
-      parsed = parseTaskFile(readFileSync(resolve(dir, file), 'utf8'));
+      parsed = parseTaskFile(readFileSync(resolve(dir, file), "utf8"));
     } catch (error) {
       // spec: docs/specs/writing-import.md §Behaviour.4 — skip a malformed file, continue.
-      const reason = error instanceof TaskParseError ? error.message : String(error);
+      const reason =
+        error instanceof TaskParseError ? error.message : String(error);
       console.warn(`• ${sourceFile}: skipped (${reason})`);
       skipped += 1;
       continue;
     }
 
     if (args.dryRun) {
-      console.log(`${sourceFile} → task ${parsed.taskNumber}: would import`, parsed);
+      console.log(
+        `${sourceFile} → task ${parsed.taskNumber}: would import`,
+        parsed,
+      );
       continue;
     }
 
@@ -77,11 +82,17 @@ async function main(): Promise<void> {
       .select({ id: writingTasks.id })
       .from(writingTasks)
       .where(
-        and(eq(writingTasks.sourceFile, sourceFile), eq(writingTasks.taskNumber, parsed.taskNumber)),
+        and(
+          eq(writingTasks.sourceFile, sourceFile),
+          eq(writingTasks.taskNumber, parsed.taskNumber),
+        ),
       );
 
     if (existing) {
-      await db.update(writingTasks).set(values).where(eq(writingTasks.id, existing.id));
+      await db
+        .update(writingTasks)
+        .set(values)
+        .where(eq(writingTasks.id, existing.id));
       console.log(`${sourceFile} → task ${parsed.taskNumber}: overwritten`);
       overwritten += 1;
     } else {
@@ -98,13 +109,16 @@ async function main(): Promise<void> {
 
   // spec: docs/specs/writing-import.md §Behaviour.8 — non-zero exit if every file was skipped.
   if (!args.dryRun && inserted + overwritten === 0) {
-    throw new Error('No tasks were imported (every file was skipped).');
+    throw new Error("No tasks were imported (every file was skipped).");
   }
 }
 
 main()
   .catch((error: unknown) => {
-    console.error('Import failed:', error instanceof Error ? error.message : error);
+    console.error(
+      "Import failed:",
+      error instanceof Error ? error.message : error,
+    );
     process.exitCode = 1;
   })
   .finally(() => client.close());

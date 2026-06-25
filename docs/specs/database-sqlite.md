@@ -1,9 +1,11 @@
 # Spec: Database Migration to SQLite
 
 ## Status
+
 implemented
 
 ## Goal
+
 Move the application's persistence layer from PostgreSQL to SQLite, with **no change to any
 observable application behaviour**. This is the foundation for hosting the app on Cloudflare's free
 tier (where the database will be Cloudflare D1 — itself SQLite — sharing this same schema), while
@@ -21,6 +23,7 @@ local-only — there is no production database — and once a developer has migr
 script (and the `pg` dependency it needs) can be retired.
 
 ## Scope
+
 - In scope:
   - Rewrite `server/db/schema.ts` from `drizzle-orm/pg-core` to `drizzle-orm/sqlite-core`, preserving
     every table, column, constraint, index, and natural key.
@@ -63,10 +66,11 @@ script (and the `pg` dependency it needs) can be retired.
     are converted).
 
 ## Behaviour
+
 Observable from a developer's perspective (there is no end-user-facing change):
 
 1. With a fresh checkout and `DATABASE_URL=file:./data/tcf_prep.db` (the new default), `npm run
-   db:migrate` creates the SQLite database file and all tables, with **no PostgreSQL server or Docker
+db:migrate` creates the SQLite database file and all tables, with **no PostgreSQL server or Docker
    container running**.
 2. `npm run db:generate` produces SQLite-dialect migration SQL under `server/db/migrations/`.
 3. `npm run dev` starts the server against the SQLite file; all four sections (reading, listening,
@@ -90,23 +94,25 @@ Observable from a developer's perspective (there is no end-user-facing change):
    required, and `--dry-run` reports the row counts it would copy without writing.
 
 ## Data model changes
+
 No semantic change. The same 14 tables, columns, natural keys, CHECK constraints, and indexes are
 preserved; only their Drizzle/SQLite representation changes. The type mapping applied uniformly:
 
-| PostgreSQL (current) | SQLite (`sqlite-core`) |
-|---|---|
-| `serial('id').primaryKey()` | `integer('id').primaryKey({ autoIncrement: true })` |
-| `integer(...)` | `integer(...)` (unchanged) |
-| `text(...)` | `text(...)` (unchanged) |
-| `boolean(...)` | `integer(..., { mode: 'boolean' })` |
+| PostgreSQL (current)                                            | SQLite (`sqlite-core`)                                                        |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `serial('id').primaryKey()`                                     | `integer('id').primaryKey({ autoIncrement: true })`                           |
+| `integer(...)`                                                  | `integer(...)` (unchanged)                                                    |
+| `text(...)`                                                     | `text(...)` (unchanged)                                                       |
+| `boolean(...)`                                                  | `integer(..., { mode: 'boolean' })`                                           |
 | `timestamp(..., { withTimezone: true }).notNull().defaultNow()` | `integer(..., { mode: 'timestamp' }).notNull().default(sql\`(unixepoch())\`)` |
-| `timestamp(..., { withTimezone: true })` (nullable) | `integer(..., { mode: 'timestamp' })` |
-| `check(name, sql\`...\`)` | `check(name, sql\`...\`)` (unchanged — sqlite-core supports it) |
-| `unique(name).on(...)` | `unique(name).on(...)` (unchanged) |
-| `index(name).on(...)` | `index(name).on(...)` (unchanged) |
-| `.references(() => t.id)` | `.references(() => t.id)` (unchanged) |
+| `timestamp(..., { withTimezone: true })` (nullable)             | `integer(..., { mode: 'timestamp' })`                                         |
+| `check(name, sql\`...\`)`                                       | `check(name, sql\`...\`)` (unchanged — sqlite-core supports it)               |
+| `unique(name).on(...)`                                          | `unique(name).on(...)` (unchanged)                                            |
+| `index(name).on(...)`                                           | `index(name).on(...)` (unchanged)                                             |
+| `.references(() => t.id)`                                       | `.references(() => t.id)` (unchanged)                                         |
 
 Notes:
+
 - The `between 1 and 3` and `in ('A','B',...)` CHECK expressions are standard SQL and valid in SQLite.
 - SQLite enforces foreign keys only when `PRAGMA foreign_keys = ON`. The libSQL client is configured
   to enable it so the existing `references(...)` constraints remain enforced (matching Postgres).
@@ -115,9 +121,11 @@ Notes:
   for "now".)
 
 ## API contract
+
 None — no API changes. The JSON envelope and all endpoints are unchanged.
 
 ## Acceptance criteria
+
 - [x] `server/db/schema.ts` imports only from `drizzle-orm/sqlite-core`; no `pg-core` import remains, and every table/column/constraint/index from the previous schema is present. (Data model changes)
 - [x] `server/db/index.ts` constructs the Drizzle client via `@libsql/client` + `drizzle-orm/libsql`, exports the same `db` symbol, and enables foreign-key enforcement. (Behaviour.1, Data model notes)
 - [x] `drizzle.config.ts` has `dialect: 'sqlite'` and reads the libSQL file URL from `DATABASE_URL`. (Behaviour.2)
@@ -133,6 +141,7 @@ None — no API changes. The JSON envelope and all endpoints are unchanged.
 - [x] The app + DB run on Windows with no Docker (no Postgres container) — implemented and verified on Windows 11. (Behaviour.8)
 
 ## Open questions
+
 - **Timestamp representation: `integer` (unix seconds) vs `text` (ISO 8601).** Chosen: `integer`
   timestamp mode, because it maps to/from JS `Date` in Drizzle with no service-code change and is the
   most portable to D1. Risk: any code that compared/sorted timestamps as strings would break — to be
@@ -149,7 +158,7 @@ None — no API changes. The JSON envelope and all endpoints are unchanged.
   `INTEGER PRIMARY KEY AUTOINCREMENT` column, so the script inserts rows with their original ids and
   copies tables in foreign-key dependency order (passages → questions → options/audio_files/
   transcript_segments/explanations; writing_tasks/speaking_tasks → sessions → question_results/
-  writing_responses/speaking_responses → *_evaluations). Open: whether to disable FK enforcement during
+  writing_responses/speaking_responses → \*\_evaluations). Open: whether to disable FK enforcement during
   the copy and re-verify at the end (simpler) or strictly order every insert; and whether to reset the
   SQLite autoincrement high-water mark after a preserved-id copy so new inserts don't collide. To be
   settled during implementation; both are local-only correctness details with no behavioural impact.
@@ -159,6 +168,7 @@ None — no API changes. The JSON envelope and all endpoints are unchanged.
   hence its demotion to a devDependency.
 
 ## Revision history
+
 - 2026-06-20: Initial draft (Milestone 13). Part of the Cloudflare-hosting initiative (PostgreSQL →
   SQLite → D1). Pairs with the forthcoming `server-runtime.md` (M14), `cloud-deployment.md` (M15), and
   `content-deploy.md` (M16) specs.
@@ -176,7 +186,7 @@ None — no API changes. The JSON envelope and all endpoints are unchanged.
   positively). Verified on Windows: `db:migrate` + both seeds + `npm test` (136) + `npm run test:e2e`
   (15) all green with no Docker. **Rule-4 findings:** (1) **cwd-relative `file:` paths** — libSQL
   resolves a relative `file:` URL against `process.cwd()`, which differs between the server workspace
-  (`server/`) and root-run tooling (migrate/seed/e2e), so they would open *different* database files.
+  (`server/`) and root-run tooling (migrate/seed/e2e), so they would open _different_ database files.
   `getDatabaseUrl()` now anchors a relative `file:` path to the repo root so every entry point agrees;
   `ensureSqliteDir()` (new `server/db/sqlite-path.ts`) creates the parent directory libSQL won't.
   This was not anticipated by the spec (Postgres URLs are host-based, cwd-independent). (2) **`pool`

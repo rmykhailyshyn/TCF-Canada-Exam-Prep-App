@@ -1,9 +1,11 @@
 # Spec: Question Bank Export / Import
 
 ## Status
+
 implemented
 
 ## Goal
+
 Let the user back up and share imported questions through the web app. From a dedicated
 "Question Bank" page the user can **export** questions — filtered by section (reading or
 listening) and by complexity (one or more of the six difficulty bands) — as a single JSON
@@ -14,6 +16,7 @@ the locally-imported question bank portable and re-seedable without re-running t
 pipelines.
 
 ## Scope
+
 - In scope:
   - A web UI ("Question Bank" page) with an **Export** panel and an **Import** panel.
   - Export filtering by **section** (reading, listening, or both) and by **complexity**
@@ -33,17 +36,18 @@ pipelines.
     standard JSON envelope.
 - Out of scope:
   - **Bundling the audio binary.** The listening export carries the transcript and the audio
-    *filename* + duration only — never the MP3 bytes. Playback after import requires the MP3 to
+    _filename_ + duration only — never the MP3 bytes. Playback after import requires the MP3 to
     be present in the configured media directory (see Open questions).
   - Exporting LLM explanations (`explanations` table), sessions, or `question_results`.
   - Editing or deleting questions through this UI (export/import only).
   - CLI export/import (this feature is web-UI driven; the OCR/Whisper importers remain the CLI
-    entry points for *first* import).
+    entry points for _first_ import).
   - Any schema change — this feature reuses the existing tables and natural key.
 
 ## Behaviour
 
 ### Export
+
 1. The user opens the **Question Bank** page and the **Export** panel.
 2. The user selects a **section** filter: Reading, Listening, or Both (default Both).
 3. The user selects a **complexity** filter: any subset of the six difficulty bands
@@ -60,6 +64,7 @@ pipelines.
    a file.
 
 ### Import
+
 7. In the **Import** panel the user selects a previously exported JSON file from disk.
 8. The user chooses whether to **override existing questions** (a checkbox, default off).
 9. On submit, the app parses the file and posts it to the import endpoint with the override
@@ -68,17 +73,18 @@ pipelines.
 10. The server resolves each incoming question against the database by the natural key
     `(source_file, sequence)`:
     - **Absent** → insert the question (and its passage / options / transcript / audio
-      reference). Counted as *inserted*.
-    - **Present, override OFF** → leave it untouched. Counted as *skipped*.
+      reference). Counted as _inserted_.
+    - **Present, override OFF** → leave it untouched. Counted as _skipped_.
     - **Present, override ON** → overwrite the existing row's prompt text, options (full
       replace of the four), passage text, transcript segments, and audio reference, **keeping
-      the same `questions.id`**. Counted as *overridden*.
+      the same `questions.id`**. Counted as _overridden_.
 11. The whole import runs in a single transaction: if any question fails to apply, the import
     rolls back and the database is left unchanged.
 12. After a successful import the app shows a summary: number inserted, overridden, skipped,
     and the total processed, plus any non-fatal warnings (e.g. audio file not found on disk).
 
 ### Validation
+
 13. The document is rejected (`INVALID_FORMAT`) if `formatVersion` is missing or unsupported,
     or if `questions` is not an array.
 14. Each question is rejected (`VALIDATION_FAILED`, naming the offending key) unless it has:
@@ -89,10 +95,12 @@ pipelines.
     recomputed from `sequence` on both export and import.
 
 ## Data model changes
+
 None. This feature reuses `questions`, `options`, `passages`, `audio_files`, and
 `transcript_segments` as defined by the reading-import and listening-import specs.
 
 Key points that make override safe without a schema change:
+
 - The override identity is the existing `UNIQUE(source_file, sequence)` on `questions`.
 - `question_results` references `question_id` and stores `chosen_label` (`A`–`D`) — not option
   ids — so replacing a question's option rows on override does not break historical results.
@@ -101,6 +109,7 @@ Key points that make override safe without a schema change:
   `file_path` / `duration_ms` are updated.
 
 ## Export document format
+
 ```jsonc
 {
   "formatVersion": 1,
@@ -129,6 +138,7 @@ Key points that make override safe without a schema change:
   ]
 }
 ```
+
 The natural key is `(section, sourceFile, sequence)`; `section` is carried for clarity but the
 DB-level match is on `(source_file, sequence)`. The `audio.fileName` is the **basename** only;
 import records it as `listening/<fileName>` (relative to `MEDIA_DIR`) and resolves it against the
@@ -137,7 +147,9 @@ configured media directory under the `listening/` subfolder.
 ## API contract
 
 ### GET /api/questions/export
+
 Return the filtered export document.
+
 ```
 Query:    section?    = "reading" | "listening" | "all"  (default "all")
           difficulty? = comma-separated band slugs, or "all" (default "all")
@@ -146,12 +158,15 @@ Response: { "data": <ExportDocument>, "error": null }
 Error (bad section):    { "data": null, "error": { "code": "INVALID_SECTION",    "message": "…" } }
 Error (bad band slug):  { "data": null, "error": { "code": "INVALID_DIFFICULTY", "message": "…" } }
 ```
+
 The response carries the document as `data` (envelope rule); the client serializes `data` to a
 file to trigger the download. `questions` is `[]` when nothing matches (the client then shows
 the empty-result notice rather than downloading).
 
 ### POST /api/questions/import
+
 Apply an export document to the database.
+
 ```
 Request:  { "document": <ExportDocument>, "override": boolean }
 Response: { "data": { "inserted": number, "overridden": number, "skipped": number,
@@ -159,10 +174,12 @@ Response: { "data": { "inserted": number, "overridden": number, "skipped": numbe
 Error (bad envelope):   { "data": null, "error": { "code": "INVALID_FORMAT",     "message": "…" } }
 Error (bad question):   { "data": null, "error": { "code": "VALIDATION_FAILED",  "message": "… (question <section>/<sequence>)" } }
 ```
+
 `override` defaults to `false` when omitted. On `VALIDATION_FAILED` or `INVALID_FORMAT` the
 transaction is rolled back and the database is unchanged.
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [x] The Question Bank page exposes an Export panel with section (Reading/Listening/Both) and complexity (band subset / All) filters. (Behaviour.1, 2, 3)
@@ -177,9 +194,10 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [x] A round trip (export a band → import into an empty DB → the questions, options, answer key, and passages/transcripts match the originals) reproduces the source data. (Behaviour.4, 10)
 
 ## Open questions
+
 - **Cross-machine portability of the natural key.** `(source_file, sequence)` embeds a local
   absolute path. Exporting on machine A and importing on machine B — where the same questions
-  were first imported under a *different* `source_file` path — will not match, so override falls
+  were first imported under a _different_ `source_file` path — will not match, so override falls
   back to insert (duplicates). A portable per-question UUID column would solve this but needs a
   migration + backfill; deferred for now. Acceptable while the app is single-machine.
 - **Audio binaries.** The export references `audio.fileName` only. After importing a listening
@@ -192,6 +210,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   revision can add an `explanation` object per question.
 
 ## Revision history
+
 - 2026-06-09: Initial draft. Web-UI + API surface; transcript + audio-path reference (no binary);
   override keyed on the existing `(source_file, sequence)` natural key (no schema change).
 - 2026-06-09: Implemented (Milestone 5). Pure validation/filter core in

@@ -1,5 +1,5 @@
-import { asc, desc, eq, inArray, isNotNull } from 'drizzle-orm';
-import { db } from '../db';
+import { asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { db } from "../db";
 import {
   explanations,
   options,
@@ -11,8 +11,8 @@ import {
   speakingResponses,
   writingEvaluations,
   writingResponses,
-} from '../db/schema';
-import { ApiError } from '../lib/errors';
+} from "../db/schema";
+import { ApiError } from "../lib/errors";
 import {
   type DifficultySlug,
   bandForSequence,
@@ -20,15 +20,15 @@ import {
   isDifficultySlug,
   pointsForSequence,
   sequenceInBand,
-} from '../lib/bands';
-import { type Section, getTimeLimitMs } from '../config/exam';
-import { pickOne, shuffle } from '../lib/random';
+} from "../lib/bands";
+import { type Section, getTimeLimitMs } from "../config/exam";
+import { pickOne, shuffle } from "../lib/random";
 
 // spec: docs/specs/quiz-session.md §API contract
 // Business logic for session lifecycle. Services return plain typed values or throw ApiError;
 // the route layer owns the envelope.
 
-export type OptionLabel = 'A' | 'B' | 'C' | 'D';
+export type OptionLabel = "A" | "B" | "C" | "D";
 
 // UI-facing question shape: deliberately omits `is_correct` so the answer key never leaks to
 // the client before the answer is confirmed (the correct label comes from recordAnswer).
@@ -42,7 +42,7 @@ export type SessionQuestion = {
 
 export type CreateSessionInput = {
   section: Section;
-  mode: 'learning' | 'real';
+  mode: "learning" | "real";
   difficulty?: DifficultySlug;
   questionIds?: number[];
 };
@@ -62,8 +62,13 @@ export type Explanation = {
 };
 
 export type RecordAnswerResult =
-  | { mode: 'learning'; isCorrect: boolean; correctLabel: OptionLabel; explanation: Explanation | null }
-  | { mode: 'real' };
+  | {
+      mode: "learning";
+      isCorrect: boolean;
+      correctLabel: OptionLabel;
+      explanation: Explanation | null;
+    }
+  | { mode: "real" };
 
 export type CompleteSessionResult = {
   correct: number;
@@ -73,14 +78,19 @@ export type CompleteSessionResult = {
 };
 
 // spec: docs/specs/quiz-session.md §API contract POST /api/sessions
-export async function createSession(input: CreateSessionInput): Promise<CreateSessionResult> {
+export async function createSession(
+  input: CreateSessionInput,
+): Promise<CreateSessionResult> {
   const { section, mode } = input;
 
   // In learning mode a valid difficulty band is required (Behaviour.3).
   let band = null;
-  if (mode === 'learning') {
+  if (mode === "learning") {
     if (!input.difficulty || !isDifficultySlug(input.difficulty)) {
-      throw new ApiError('INVALID_DIFFICULTY', 'A valid difficulty is required in learning mode.');
+      throw new ApiError(
+        "INVALID_DIFFICULTY",
+        "A valid difficulty is required in learning mode.",
+      );
     }
     band = bandForSlug(input.difficulty)!;
   }
@@ -96,7 +106,10 @@ export async function createSession(input: CreateSessionInput): Promise<CreateSe
 
   const sectionIds = sectionQuestions.map((q) => q.id);
   const allOptions = sectionIds.length
-    ? await db.select().from(options).where(inArray(options.questionId, sectionIds))
+    ? await db
+        .select()
+        .from(options)
+        .where(inArray(options.questionId, sectionIds))
     : [];
   const optionsByQuestion = new Map<number, typeof allOptions>();
   for (const opt of allOptions) {
@@ -113,7 +126,9 @@ export async function createSession(input: CreateSessionInput): Promise<CreateSe
     // Learning mode: the band's questions in RANDOM order (Behaviour.21). All band questions are
     // kept (including multiple candidates that share a sequence position) — only the presentation
     // order is shuffled, no per-position pruning.
-    let bandQuestions = sectionQuestions.filter((q) => sequenceInBand(q.sequence, band!));
+    let bandQuestions = sectionQuestions.filter((q) =>
+      sequenceInBand(q.sequence, band!),
+    );
 
     // Optional retry filter (review-mode). Every supplied id must fall within the band.
     if (input.questionIds && input.questionIds.length > 0) {
@@ -121,8 +136,8 @@ export async function createSession(input: CreateSessionInput): Promise<CreateSe
       const outOfBand = input.questionIds.filter((id) => !inBandIds.has(id));
       if (outOfBand.length > 0) {
         throw new ApiError(
-          'QUESTIONS_OUT_OF_BAND',
-          `Question(s) ${outOfBand.join(', ')} are not in the ${band.slug} band.`,
+          "QUESTIONS_OUT_OF_BAND",
+          `Question(s) ${outOfBand.join(", ")} are not in the ${band.slug} band.`,
         );
       }
       const wanted = new Set(input.questionIds);
@@ -132,7 +147,10 @@ export async function createSession(input: CreateSessionInput): Promise<CreateSe
     // Every band question must have an imported answer key (API contract — learning mode).
     for (const q of bandQuestions) {
       if (!isKeyed(q.id)) {
-        throw new ApiError('ANSWER_KEY_MISSING', `Question ${q.sequence} has no imported answer key.`);
+        throw new ApiError(
+          "ANSWER_KEY_MISSING",
+          `Question ${q.sequence} has no imported answer key.`,
+        );
       }
     }
 
@@ -150,25 +168,35 @@ export async function createSession(input: CreateSessionInput): Promise<CreateSe
 
     // Every occupied position (one holding any question) must have at least one keyed candidate,
     // otherwise the exam can't be formed for that position (API contract — real mode).
-    const occupiedPositions = [...new Set(sectionQuestions.map((q) => q.sequence))].sort(
-      (a, b) => a - b,
-    );
+    const occupiedPositions = [
+      ...new Set(sectionQuestions.map((q) => q.sequence)),
+    ].sort((a, b) => a - b);
     for (const pos of occupiedPositions) {
       if (!keyedByPosition.has(pos)) {
-        throw new ApiError('ANSWER_KEY_MISSING', `Question ${pos} has no imported answer key.`);
+        throw new ApiError(
+          "ANSWER_KEY_MISSING",
+          `Question ${pos} has no imported answer key.`,
+        );
       }
     }
 
-    resolved = occupiedPositions.map((pos) => pickOne(keyedByPosition.get(pos)!));
+    resolved = occupiedPositions.map((pos) =>
+      pickOne(keyedByPosition.get(pos)!),
+    );
   }
 
   if (resolved.length === 0) {
-    throw new ApiError('ANSWER_KEY_MISSING', 'No questions are available for this selection.');
+    throw new ApiError(
+      "ANSWER_KEY_MISSING",
+      "No questions are available for this selection.",
+    );
   }
 
   // Load passages for the resolved questions (reading section).
   const passageIds = [
-    ...new Set(resolved.map((q) => q.passageId).filter((id): id is number => id != null)),
+    ...new Set(
+      resolved.map((q) => q.passageId).filter((id): id is number => id != null),
+    ),
   ];
   const passageRows = passageIds.length
     ? await db.select().from(passages).where(inArray(passages.id, passageIds))
@@ -176,7 +204,8 @@ export async function createSession(input: CreateSessionInput): Promise<CreateSe
   const passageById = new Map(passageRows.map((p) => [p.id, p]));
 
   const uiQuestions: SessionQuestion[] = resolved.map((q) => {
-    const passage = q.passageId != null ? passageById.get(q.passageId) : undefined;
+    const passage =
+      q.passageId != null ? passageById.get(q.passageId) : undefined;
     const opts = (optionsByQuestion.get(q.id) ?? [])
       .map((o) => ({ label: o.label as OptionLabel, text: o.text }))
       .sort((a, b) => a.label.localeCompare(b.label));
@@ -194,14 +223,14 @@ export async function createSession(input: CreateSessionInput): Promise<CreateSe
     .values({
       section,
       mode,
-      difficulty: mode === 'learning' ? input.difficulty! : null,
+      difficulty: mode === "learning" ? input.difficulty! : null,
     })
     .returning({ id: sessions.id });
 
   return {
     sessionId: created.id,
     questions: uiQuestions,
-    timeLimitMs: mode === 'real' ? getTimeLimitMs(section) : null,
+    timeLimitMs: mode === "real" ? getTimeLimitMs(section) : null,
   };
 }
 
@@ -211,23 +240,38 @@ export async function recordAnswer(
   questionId: number,
   chosenLabel: OptionLabel,
 ): Promise<RecordAnswerResult> {
-  const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.id, sessionId));
   if (!session) {
-    throw new ApiError('SESSION_NOT_FOUND', `Session ${sessionId} not found.`, 404);
+    throw new ApiError(
+      "SESSION_NOT_FOUND",
+      `Session ${sessionId} not found.`,
+      404,
+    );
   }
 
-  const qOptions = await db.select().from(options).where(eq(options.questionId, questionId));
+  const qOptions = await db
+    .select()
+    .from(options)
+    .where(eq(options.questionId, questionId));
   const correct = qOptions.find((o) => o.isCorrect);
   if (!correct) {
-    throw new ApiError('ANSWER_KEY_MISSING', `Question ${questionId} has no answer key.`);
+    throw new ApiError(
+      "ANSWER_KEY_MISSING",
+      `Question ${questionId} has no answer key.`,
+    );
   }
 
   const isCorrect = chosenLabel === correct.label;
-  await db.insert(questionResults).values({ sessionId, questionId, chosenLabel, isCorrect });
+  await db
+    .insert(questionResults)
+    .values({ sessionId, questionId, chosenLabel, isCorrect });
 
   // Real mode returns no correctness feedback (Behaviour.9).
-  if (session.mode === 'real') {
-    return { mode: 'real' };
+  if (session.mode === "real") {
+    return { mode: "real" };
   }
 
   // Learning mode reveals the correct option and bundles the explanation in one JOIN.
@@ -237,7 +281,7 @@ export async function recordAnswer(
     .where(eq(explanations.questionId, questionId));
 
   return {
-    mode: 'learning',
+    mode: "learning",
     isCorrect,
     correctLabel: correct.label as OptionLabel,
     explanation: exp
@@ -257,19 +301,32 @@ export async function completeSession(
   sessionId: number,
   elapsedMs: number | null,
 ): Promise<CompleteSessionResult> {
-  const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.id, sessionId));
   if (!session) {
-    throw new ApiError('SESSION_NOT_FOUND', `Session ${sessionId} not found.`, 404);
+    throw new ApiError(
+      "SESSION_NOT_FOUND",
+      `Session ${sessionId} not found.`,
+      404,
+    );
   }
 
   await db
     .update(sessions)
-    .set({ completedAt: new Date(), elapsedMs: session.mode === 'real' ? elapsedMs : null })
+    .set({
+      completedAt: new Date(),
+      elapsedMs: session.mode === "real" ? elapsedMs : null,
+    })
     .where(eq(sessions.id, sessionId));
 
   // Correctness comes from the recorded answers joined to question sequences.
   const results = await db
-    .select({ isCorrect: questionResults.isCorrect, sequence: questions.sequence })
+    .select({
+      isCorrect: questionResults.isCorrect,
+      sequence: questions.sequence,
+    })
     .from(questionResults)
     .innerJoin(questions, eq(questionResults.questionId, questions.id))
     .where(eq(questionResults.sessionId, sessionId));
@@ -288,13 +345,16 @@ export async function completeSession(
   let total: number;
   let pointsScored: number | null = null;
   let pointsPossible: number | null = null;
-  if (session.mode === 'real') {
+  if (session.mode === "real") {
     const positions = [...new Set(sectionRows.map((q) => q.sequence))];
     total = positions.length;
     pointsScored = results
       .filter((r) => r.isCorrect)
       .reduce((sum, r) => sum + pointsForSequence(r.sequence), 0);
-    pointsPossible = positions.reduce((sum, pos) => sum + pointsForSequence(pos), 0);
+    pointsPossible = positions.reduce(
+      (sum, pos) => sum + pointsForSequence(pos),
+      0,
+    );
   } else {
     let bandRows = sectionRows;
     if (session.difficulty) {
@@ -362,21 +422,23 @@ export async function listSessions(): Promise<SessionSummary[]> {
   // spec: docs/specs/progress-tracking.md §Writing & speaking sessions (Behaviour.9) — writing rows
   // carry an overall /20 average + tasks-submitted instead of correct/total/points.
   const writingBySession = await loadWritingAggregates(
-    completed.filter((s) => s.section === 'writing').map((s) => s.id),
+    completed.filter((s) => s.section === "writing").map((s) => s.id),
   );
   // spec: docs/specs/speaking-session.md §Behaviour.17 — speaking rows carry the same overall /20
   // average + tasks-submitted shape as writing (no correct/total/points).
   const speakingBySession = await loadSpeakingAggregates(
-    completed.filter((s) => s.section === 'speaking').map((s) => s.id),
+    completed.filter((s) => s.section === "speaking").map((s) => s.id),
   );
 
   return completed.map((s) => {
-    if (s.section === 'writing' || s.section === 'speaking') {
-      const agg =
-        (s.section === 'writing' ? writingBySession : speakingBySession).get(s.id) ?? {
-          overallScore: 0,
-          tasksSubmitted: 0,
-        };
+    if (s.section === "writing" || s.section === "speaking") {
+      const agg = (s.section === "writing"
+        ? writingBySession
+        : speakingBySession
+      ).get(s.id) ?? {
+        overallScore: 0,
+        tasksSubmitted: 0,
+      };
       return {
         id: s.id,
         section: s.section,
@@ -397,7 +459,7 @@ export async function listSessions(): Promise<SessionSummary[]> {
     const total = sessionResults.length;
     let pointsScored: number | null = null;
     let pointsPossible: number | null = null;
-    if (s.mode === 'real') {
+    if (s.mode === "real") {
       pointsScored = sessionResults
         .filter((r) => r.isCorrect)
         .reduce((sum, r) => sum + pointsForSequence(r.sequence), 0);
@@ -428,7 +490,10 @@ export async function listSessions(): Promise<SessionSummary[]> {
 async function loadWritingAggregates(
   sessionIds: number[],
 ): Promise<Map<number, { overallScore: number; tasksSubmitted: number }>> {
-  const out = new Map<number, { overallScore: number; tasksSubmitted: number }>();
+  const out = new Map<
+    number,
+    { overallScore: number; tasksSubmitted: number }
+  >();
   if (sessionIds.length === 0) return out;
 
   const rows = await db
@@ -437,7 +502,10 @@ async function loadWritingAggregates(
       score: writingEvaluations.score,
     })
     .from(writingResponses)
-    .leftJoin(writingEvaluations, eq(writingEvaluations.responseId, writingResponses.id))
+    .leftJoin(
+      writingEvaluations,
+      eq(writingEvaluations.responseId, writingResponses.id),
+    )
     .where(inArray(writingResponses.sessionId, sessionIds));
 
   const bySession = new Map<number, (number | null)[]>();
@@ -461,7 +529,10 @@ async function loadWritingAggregates(
 async function loadSpeakingAggregates(
   sessionIds: number[],
 ): Promise<Map<number, { overallScore: number; tasksSubmitted: number }>> {
-  const out = new Map<number, { overallScore: number; tasksSubmitted: number }>();
+  const out = new Map<
+    number,
+    { overallScore: number; tasksSubmitted: number }
+  >();
   if (sessionIds.length === 0) return out;
 
   const rows = await db
@@ -470,7 +541,10 @@ async function loadSpeakingAggregates(
       score: speakingEvaluations.score,
     })
     .from(speakingResponses)
-    .leftJoin(speakingEvaluations, eq(speakingEvaluations.responseId, speakingResponses.id))
+    .leftJoin(
+      speakingEvaluations,
+      eq(speakingEvaluations.responseId, speakingResponses.id),
+    )
     .where(inArray(speakingResponses.sessionId, sessionIds));
 
   const bySession = new Map<number, (number | null)[]>();
@@ -517,9 +591,16 @@ export type SessionDetail = {
 };
 
 export async function getSession(sessionId: number): Promise<SessionDetail> {
-  const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.id, sessionId));
   if (!session || session.completedAt == null) {
-    throw new ApiError('SESSION_NOT_FOUND', `Session ${sessionId} not found.`, 404);
+    throw new ApiError(
+      "SESSION_NOT_FOUND",
+      `Session ${sessionId} not found.`,
+      404,
+    );
   }
 
   const rows = await db
@@ -537,11 +618,14 @@ export async function getSession(sessionId: number): Promise<SessionDetail> {
 
   let pointsScored: number | null = null;
   let pointsPossible: number | null = null;
-  if (session.mode === 'real') {
+  if (session.mode === "real") {
     pointsScored = rows
       .filter((r) => r.isCorrect)
       .reduce((sum, r) => sum + pointsForSequence(r.sequence), 0);
-    pointsPossible = rows.reduce((sum, r) => sum + pointsForSequence(r.sequence), 0);
+    pointsPossible = rows.reduce(
+      (sum, r) => sum + pointsForSequence(r.sequence),
+      0,
+    );
   }
 
   const resultRows = await db
@@ -552,13 +636,23 @@ export async function getSession(sessionId: number): Promise<SessionDetail> {
   // Enrich each recorded answer with its question content for review mode (review-mode §Behaviour.4).
   const reviewedQuestionIds = resultRows.map((r) => r.questionId);
   const questionRows = reviewedQuestionIds.length
-    ? await db.select().from(questions).where(inArray(questions.id, reviewedQuestionIds))
+    ? await db
+        .select()
+        .from(questions)
+        .where(inArray(questions.id, reviewedQuestionIds))
     : [];
   const optionRows = reviewedQuestionIds.length
-    ? await db.select().from(options).where(inArray(options.questionId, reviewedQuestionIds))
+    ? await db
+        .select()
+        .from(options)
+        .where(inArray(options.questionId, reviewedQuestionIds))
     : [];
   const passageIds = [
-    ...new Set(questionRows.map((q) => q.passageId).filter((id): id is number => id != null)),
+    ...new Set(
+      questionRows
+        .map((q) => q.passageId)
+        .filter((id): id is number => id != null),
+    ),
   ];
   const passageRows = passageIds.length
     ? await db.select().from(passages).where(inArray(passages.id, passageIds))
@@ -566,12 +660,17 @@ export async function getSession(sessionId: number): Promise<SessionDetail> {
   // Explanations surface in review for BOTH learning and real sessions (llm-enrichment §Behaviour.10
   // supersedes review-mode §Behaviour.6): they're shown after a real exam, never during it.
   const explanationRows = reviewedQuestionIds.length
-    ? await db.select().from(explanations).where(inArray(explanations.questionId, reviewedQuestionIds))
+    ? await db
+        .select()
+        .from(explanations)
+        .where(inArray(explanations.questionId, reviewedQuestionIds))
     : [];
 
   const questionById = new Map(questionRows.map((q) => [q.id, q]));
   const passageById = new Map(passageRows.map((p) => [p.id, p]));
-  const explanationByQuestion = new Map(explanationRows.map((e) => [e.questionId, e]));
+  const explanationByQuestion = new Map(
+    explanationRows.map((e) => [e.questionId, e]),
+  );
   const optionsByQuestion = new Map<number, typeof optionRows>();
   for (const o of optionRows) {
     const list = optionsByQuestion.get(o.questionId) ?? [];
@@ -584,17 +683,23 @@ export async function getSession(sessionId: number): Promise<SessionDetail> {
     const opts = (optionsByQuestion.get(r.questionId) ?? [])
       .slice()
       .sort((a, b) => a.label.localeCompare(b.label));
-    const passage = q?.passageId != null ? passageById.get(q.passageId) : undefined;
+    const passage =
+      q?.passageId != null ? passageById.get(q.passageId) : undefined;
     const exp = explanationByQuestion.get(r.questionId);
     return {
       id: r.id,
       questionId: r.questionId,
       sequence: q?.sequence ?? 0,
-      text: q?.text ?? '',
+      text: q?.text ?? "",
       passage: passage ? { text: passage.text } : null,
-      options: opts.map((o) => ({ label: o.label as OptionLabel, text: o.text })),
+      options: opts.map((o) => ({
+        label: o.label as OptionLabel,
+        text: o.text,
+      })),
       chosenLabel: r.chosenLabel,
-      correctLabel: (opts.find((o) => o.isCorrect)?.label as OptionLabel | undefined) ?? null,
+      correctLabel:
+        (opts.find((o) => o.isCorrect)?.label as OptionLabel | undefined) ??
+        null,
       isCorrect: r.isCorrect,
       difficulty: q ? (bandForSequence(q.sequence)?.slug ?? null) : null,
       explanation: exp

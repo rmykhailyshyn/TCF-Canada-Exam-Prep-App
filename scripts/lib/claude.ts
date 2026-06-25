@@ -9,16 +9,16 @@ import {
   extractJsonObject,
   parseCliEnvelope,
   runClaude,
-} from '../../server/lib/claude-cli';
+} from "../../server/lib/claude-cli";
 
 export { ClaudeError, extractJsonObject, parseCliEnvelope, runClaude };
 export type { RunClaudeOptions };
 
-export type OptionLabel = 'A' | 'B' | 'C' | 'D';
+export type OptionLabel = "A" | "B" | "C" | "D";
 
 export type EnrichInput = {
   sequence: number;
-  section: 'reading' | 'listening';
+  section: "reading" | "listening";
   questionText: string;
   options: { label: OptionLabel; text: string }[];
   correctLabel: OptionLabel;
@@ -35,53 +35,53 @@ export type Explanation = {
 };
 
 const REASON_FIELDS = [
-  'correctReason',
-  'optionAReason',
-  'optionBReason',
-  'optionCReason',
-  'optionDReason',
+  "correctReason",
+  "optionAReason",
+  "optionBReason",
+  "optionCReason",
+  "optionDReason",
 ] as const;
 
 // spec: docs/specs/llm-enrichment.md §Behaviour.3c — English, clue-citing, JSON-only prompt. The
 // source is the passage (reading) or the transcript (listening); the model must quote the clue.
 export function buildEnrichPrompt(input: EnrichInput): string {
-  const sourceLabel = input.section === 'reading' ? 'PASSAGE' : 'TRANSCRIPT';
-  const sourceWord = input.section === 'reading' ? 'passage' : 'transcript';
+  const sourceLabel = input.section === "reading" ? "PASSAGE" : "TRANSCRIPT";
+  const sourceWord = input.section === "reading" ? "passage" : "transcript";
   const optionsBlock = input.options
     .slice()
     .sort((a, b) => a.label.localeCompare(b.label))
     .map((o) => `${o.label}. ${o.text}`)
-    .join('\n');
+    .join("\n");
 
   return [
-    'You are a tutor for the TCF Canada French exam, explaining a multiple-choice question to a learner.',
-    '',
+    "You are a tutor for the TCF Canada French exam, explaining a multiple-choice question to a learner.",
+    "",
     `Here is the ${sourceLabel} the question is based on:`,
     '"""',
-    input.sourceText.trim() || '(no source text available)',
+    input.sourceText.trim() || "(no source text available)",
     '"""',
-    '',
+    "",
     `QUESTION ${input.sequence}: ${input.questionText}`,
-    '',
-    'OPTIONS:',
+    "",
+    "OPTIONS:",
     optionsBlock,
-    '',
+    "",
     `The correct answer is ${input.correctLabel}.`,
-    '',
-    'Write every explanation IN ENGLISH (the question and source are in French; explain in English).',
+    "",
+    "Write every explanation IN ENGLISH (the question and source are in French; explain in English).",
     `For the correct option, explain why it is right and quote the specific clue from the ${sourceWord}`,
     `that proves it. For each incorrect option, explain why it is wrong, pointing to the ${sourceWord}`,
-    'where helpful. Keep each reason to one or two sentences.',
-    '',
-    'Respond with ONLY a JSON object (no surrounding prose, no markdown code fence) of exactly this shape:',
-    '{',
+    "where helpful. Keep each reason to one or two sentences.",
+    "",
+    "Respond with ONLY a JSON object (no surrounding prose, no markdown code fence) of exactly this shape:",
+    "{",
     '  "correctReason": "why the correct answer is right, citing the clue",',
     '  "optionAReason": "why A is wrong, or what confirms A if A is the answer",',
     '  "optionBReason": "...",',
     '  "optionCReason": "...",',
     '  "optionDReason": "..."',
-    '}',
-  ].join('\n');
+    "}",
+  ].join("\n");
 }
 
 // spec: docs/specs/llm-enrichment.md §Behaviour.4, 7 — parse the model's reply into a validated
@@ -98,7 +98,7 @@ export function parseExplanationResponse(raw: string): Explanation {
   }
   for (const field of REASON_FIELDS) {
     const value = obj[field];
-    if (typeof value !== 'string' || value.trim().length === 0) {
+    if (typeof value !== "string" || value.trim().length === 0) {
       throw new ClaudeError(`Model output is missing a non-empty "${field}".`);
     }
   }

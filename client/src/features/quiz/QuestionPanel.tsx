@@ -1,5 +1,10 @@
-import type { LearningAnswerResult, Mode, OptionLabel, SessionQuestion } from '../../lib/api';
-import { OptionRow, type OptionState } from './OptionRow';
+import type {
+  LearningAnswerResult,
+  Mode,
+  OptionLabel,
+  SessionQuestion,
+} from "../../lib/api";
+import { OptionRow, type OptionState } from "./OptionRow";
 
 // spec: docs/specs/reading-quiz-ui.md §Answering + §Learning mode feedback
 // Renders the question, its four options (with the correct/incorrect highlight after a learning
@@ -24,11 +29,11 @@ function optionState(
   feedback: LearningAnswerResult | null,
 ): OptionState {
   if (feedback) {
-    if (label === feedback.correctLabel) return 'correct';
-    if (label === selectedLabel) return 'wrong';
-    return 'dimmed';
+    if (label === feedback.correctLabel) return "correct";
+    if (label === selectedLabel) return "wrong";
+    return "dimmed";
   }
-  return label === selectedLabel ? 'selected' : 'idle';
+  return label === selectedLabel ? "selected" : "idle";
 }
 
 export function QuestionPanel({
@@ -49,7 +54,10 @@ export function QuestionPanel({
       <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
         Question {question.sequence}
       </h2>
-      <p lang="fr" className="mt-1.5 text-lg font-medium leading-snug text-slate-900">
+      <p
+        lang="fr"
+        className="mt-1.5 text-lg font-medium leading-snug text-slate-900"
+      >
         {question.text}
       </p>
 
@@ -70,23 +78,27 @@ export function QuestionPanel({
         <div
           className={`mt-5 flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-medium animate-scale-in ${
             feedback.isCorrect
-              ? 'border-green-200 bg-green-50 text-green-800'
-              : 'border-red-200 bg-red-50 text-red-800'
+              ? "border-green-200 bg-green-50 text-green-800"
+              : "border-red-200 bg-red-50 text-red-800"
           }`}
         >
           <span
             className={`flex h-6 w-6 flex-none items-center justify-center rounded-full text-sm font-bold text-white ${
-              feedback.isCorrect ? 'bg-green-600' : 'bg-red-600'
+              feedback.isCorrect ? "bg-green-600" : "bg-red-600"
             }`}
             aria-hidden
           >
-            {feedback.isCorrect ? '✓' : '✗'}
+            {feedback.isCorrect ? "✓" : "✗"}
           </span>
-          {feedback.isCorrect ? 'Correct!' : `Incorrect — the answer is ${feedback.correctLabel}.`}
+          {feedback.isCorrect
+            ? "Correct!"
+            : `Incorrect — the answer is ${feedback.correctLabel}.`}
         </div>
       )}
 
-      {feedback?.explanation && <Explanation explanation={feedback.explanation} />}
+      {feedback?.explanation && (
+        <Explanation explanation={feedback.explanation} />
+      )}
 
       <div className="mt-6 flex justify-end">
         {answered ? (
@@ -104,7 +116,7 @@ export function QuestionPanel({
             onClick={onConfirm}
             className="rounded-xl bg-brand-600 px-6 py-2.5 font-semibold text-white shadow-brand-glow transition enabled:hover:bg-brand-700 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
           >
-            {mode === 'real' ? 'Confirm & next' : 'Confirm answer'}
+            {mode === "real" ? "Confirm & next" : "Confirm answer"}
           </button>
         )}
       </div>
@@ -116,18 +128,22 @@ export function QuestionPanel({
 function Explanation({
   explanation,
 }: {
-  explanation: NonNullable<LearningAnswerResult['explanation']>;
+  explanation: NonNullable<LearningAnswerResult["explanation"]>;
 }): JSX.Element {
   const reasons: { label: OptionLabel; text: string }[] = [
-    { label: 'A', text: explanation.optionAReason },
-    { label: 'B', text: explanation.optionBReason },
-    { label: 'C', text: explanation.optionCReason },
-    { label: 'D', text: explanation.optionDReason },
+    { label: "A", text: explanation.optionAReason },
+    { label: "B", text: explanation.optionBReason },
+    { label: "C", text: explanation.optionCReason },
+    { label: "D", text: explanation.optionDReason },
   ];
   return (
     <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm animate-fade-in">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-600">Explanation</p>
-      <p className="mt-2 font-medium text-slate-900">{explanation.correctReason}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-600">
+        Explanation
+      </p>
+      <p className="mt-2 font-medium text-slate-900">
+        {explanation.correctReason}
+      </p>
       <ul className="mt-3 space-y-1.5 text-slate-600">
         {reasons.map((r) => (
           <li key={r.label} className="flex gap-2">

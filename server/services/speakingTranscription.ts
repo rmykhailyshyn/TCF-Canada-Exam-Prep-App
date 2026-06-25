@@ -1,4 +1,4 @@
-import { WhisperError, runWhisper } from '../../scripts/lib/whisper';
+import { WhisperError, runWhisper } from "../../scripts/lib/whisper";
 
 // spec: docs/specs/speaking-evaluation.md §Behaviour.2–5
 // Request-time transcription for the Speaking section. Reuses the shared Whisper wrapper
@@ -18,7 +18,7 @@ export function transcribeFile(audioPath: string): TranscriptionResult {
   const transcript = segments
     .map((s) => s.text.trim())
     .filter((t) => t.length > 0)
-    .join(' ')
+    .join(" ")
     .trim();
   return { transcript, durationMs };
 }

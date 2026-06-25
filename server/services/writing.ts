@@ -1,17 +1,22 @@
-import { and, asc, eq, inArray } from 'drizzle-orm';
-import { db } from '../db';
-import { sessions, writingEvaluations, writingResponses, writingTasks } from '../db/schema';
-import { ApiError } from '../lib/errors';
-import { ClaudeError } from '../lib/claude-cli';
-import { type Rng, pickOne } from '../lib/random';
-import { scoreToNclc } from '../lib/nclc';
-import { getWritingTaskCount, getWritingTimeLimitMs } from '../config/exam';
+import { and, asc, eq, inArray } from "drizzle-orm";
+import { db } from "../db";
+import {
+  sessions,
+  writingEvaluations,
+  writingResponses,
+  writingTasks,
+} from "../db/schema";
+import { ApiError } from "../lib/errors";
+import { ClaudeError } from "../lib/claude-cli";
+import { type Rng, pickOne } from "../lib/random";
+import { scoreToNclc } from "../lib/nclc";
+import { getWritingTaskCount, getWritingTimeLimitMs } from "../config/exam";
 import {
   type WritingCorrection,
   type WritingFeedback,
   correctWithClaude,
   scoreWithClaude,
-} from './writingEvaluation';
+} from "./writingEvaluation";
 
 // spec: docs/specs/writing-session.md
 // Writing session lifecycle: create (resolve the per-task draw), autosave drafts, submit (score via
@@ -20,7 +25,7 @@ import {
 // UI). The resolved task per task_number is persisted as an (empty) writing_responses row at
 // creation, so review/scoring always reference the task that was actually drawn.
 
-export type WritingMode = 'learning' | 'real';
+export type WritingMode = "learning" | "real";
 
 export type WritingTaskDto = {
   taskId: number;
@@ -47,7 +52,11 @@ export type CreateWritingSessionResult = {
   timeLimitMs: number | null;
 };
 
-export type SubmitResult = { score: number; level: string; feedback: WritingFeedback };
+export type SubmitResult = {
+  score: number;
+  level: string;
+  feedback: WritingFeedback;
+};
 export type CompleteResult = {
   tasks: { taskNumber: number; score: number | null; level: string | null }[];
   overallScore: number;
@@ -64,12 +73,15 @@ export function countWords(text: string): number {
 // spec: docs/specs/writing-session.md §Task selection — resolve the requested task numbers.
 function resolveTaskNumbers(input: CreateWritingSessionInput): number[] {
   const all = Array.from({ length: getWritingTaskCount() }, (_, i) => i + 1);
-  if (input.mode === 'real') return all;
+  if (input.mode === "real") return all;
   if (!input.taskNumbers || input.taskNumbers.length === 0) return all;
   const wanted = [...new Set(input.taskNumbers)];
   for (const n of wanted) {
     if (!all.includes(n)) {
-      throw new ApiError('BAD_REQUEST', `taskNumbers must be within 1–${all.length}.`);
+      throw new ApiError(
+        "BAD_REQUEST",
+        `taskNumbers must be within 1–${all.length}.`,
+      );
     }
   }
   return wanted.sort((a, b) => a - b);
@@ -98,14 +110,14 @@ export async function createWritingSession(
   for (const n of taskNumbers) {
     const candidates = byNumber.get(n);
     if (!candidates || candidates.length === 0) {
-      throw new ApiError('NO_TASKS', `No writing task imported for task ${n}.`);
+      throw new ApiError("NO_TASKS", `No writing task imported for task ${n}.`);
     }
     resolved.push(pickOne(candidates, rng));
   }
 
   const [created] = await db
     .insert(sessions)
-    .values({ section: 'writing', mode: input.mode, difficulty: null })
+    .values({ section: "writing", mode: input.mode, difficulty: null })
     .returning({ id: sessions.id });
 
   // Persist the draw as empty response rows so review/scoring reference the drawn task.
@@ -114,7 +126,7 @@ export async function createWritingSession(
       sessionId: created.id,
       writingTaskId: t.id,
       taskNumber: t.taskNumber,
-      responseText: '',
+      responseText: "",
     })),
   );
 
@@ -128,7 +140,7 @@ export async function createWritingSession(
       minWords: t.minWords,
       maxWords: t.maxWords,
     };
-    if (input.mode === 'learning') {
+    if (input.mode === "learning") {
       dto.sampleAnswer = t.sampleAnswer;
       dto.template = t.template;
     }
@@ -139,21 +151,31 @@ export async function createWritingSession(
     sessionId: created.id,
     mode: input.mode,
     tasks,
-    timeLimitMs: input.mode === 'real' ? getWritingTimeLimitMs() : null,
+    timeLimitMs: input.mode === "real" ? getWritingTimeLimitMs() : null,
   };
 }
 
 type ResponseRow = typeof writingResponses.$inferSelect;
 
-async function loadResponse(sessionId: number, taskNumber: number): Promise<ResponseRow> {
+async function loadResponse(
+  sessionId: number,
+  taskNumber: number,
+): Promise<ResponseRow> {
   const [row] = await db
     .select()
     .from(writingResponses)
     .where(
-      and(eq(writingResponses.sessionId, sessionId), eq(writingResponses.taskNumber, taskNumber)),
+      and(
+        eq(writingResponses.sessionId, sessionId),
+        eq(writingResponses.taskNumber, taskNumber),
+      ),
     );
   if (!row) {
-    throw new ApiError('NOT_FOUND', `No task ${taskNumber} in session ${sessionId}.`, 404);
+    throw new ApiError(
+      "NOT_FOUND",
+      `No task ${taskNumber} in session ${sessionId}.`,
+      404,
+    );
   }
   return row;
 }
@@ -173,10 +195,19 @@ export async function saveDraft(
   return { wordCount };
 }
 
-async function loadTaskForResponse(row: ResponseRow): Promise<typeof writingTasks.$inferSelect> {
-  const [task] = await db.select().from(writingTasks).where(eq(writingTasks.id, row.writingTaskId));
+async function loadTaskForResponse(
+  row: ResponseRow,
+): Promise<typeof writingTasks.$inferSelect> {
+  const [task] = await db
+    .select()
+    .from(writingTasks)
+    .where(eq(writingTasks.id, row.writingTaskId));
   if (!task) {
-    throw new ApiError('NOT_FOUND', `Task for response ${row.id} not found.`, 404);
+    throw new ApiError(
+      "NOT_FOUND",
+      `Task for response ${row.id} not found.`,
+      404,
+    );
   }
   return task;
 }
@@ -188,9 +219,11 @@ async function persistEvaluation(
 ): Promise<void> {
   const generatedBy = process.env.CLAUDE_CLI_MODEL
     ? `claude-cli/${process.env.CLAUDE_CLI_MODEL}`
-    : 'claude-cli';
+    : "claude-cli";
   await db.transaction(async (tx) => {
-    await tx.delete(writingEvaluations).where(eq(writingEvaluations.responseId, responseId));
+    await tx
+      .delete(writingEvaluations)
+      .where(eq(writingEvaluations.responseId, responseId));
     await tx.insert(writingEvaluations).values({
       responseId,
       score,
@@ -213,7 +246,11 @@ export async function submitResponse(
 
   await db
     .update(writingResponses)
-    .set({ responseText: text, wordCount: countWords(text), submittedAt: new Date() })
+    .set({
+      responseText: text,
+      wordCount: countWords(text),
+      submittedAt: new Date(),
+    })
     .where(eq(writingResponses.id, row.id));
 
   let score: number;
@@ -230,7 +267,11 @@ export async function submitResponse(
     feedback = result.feedback;
   } catch (error) {
     if (error instanceof ClaudeError) {
-      throw new ApiError('EVALUATION_FAILED', `Could not score the response: ${error.message}`, 502);
+      throw new ApiError(
+        "EVALUATION_FAILED",
+        `Could not score the response: ${error.message}`,
+        502,
+      );
     }
     throw error;
   }
@@ -246,12 +287,22 @@ export async function requestCorrection(
   taskNumber: number,
   text: string,
 ): Promise<WritingCorrection> {
-  const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
-  if (!session || session.section !== 'writing') {
-    throw new ApiError('SESSION_NOT_FOUND', `Writing session ${sessionId} not found.`, 404);
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.id, sessionId));
+  if (!session || session.section !== "writing") {
+    throw new ApiError(
+      "SESSION_NOT_FOUND",
+      `Writing session ${sessionId} not found.`,
+      404,
+    );
   }
-  if (session.mode !== 'learning') {
-    throw new ApiError('MODE_NOT_ALLOWED', 'Corrections are only available in training mode.');
+  if (session.mode !== "learning") {
+    throw new ApiError(
+      "MODE_NOT_ALLOWED",
+      "Corrections are only available in training mode.",
+    );
   }
 
   const row = await loadResponse(sessionId, taskNumber);
@@ -267,7 +318,11 @@ export async function requestCorrection(
     return correctWithClaude({ prompt: task.prompt, responseText: text });
   } catch (error) {
     if (error instanceof ClaudeError) {
-      throw new ApiError('CORRECTION_FAILED', `Could not produce a correction: ${error.message}`, 502);
+      throw new ApiError(
+        "CORRECTION_FAILED",
+        `Could not produce a correction: ${error.message}`,
+        502,
+      );
     }
     throw error;
   }
@@ -278,9 +333,16 @@ export async function completeWritingSession(
   sessionId: number,
   elapsedMs: number | null,
 ): Promise<CompleteResult> {
-  const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
-  if (!session || session.section !== 'writing') {
-    throw new ApiError('SESSION_NOT_FOUND', `Writing session ${sessionId} not found.`, 404);
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.id, sessionId));
+  if (!session || session.section !== "writing") {
+    throw new ApiError(
+      "SESSION_NOT_FOUND",
+      `Writing session ${sessionId} not found.`,
+      404,
+    );
   }
 
   const responses = await db
@@ -293,7 +355,7 @@ export async function completeWritingSession(
 
   // spec: docs/specs/writing-session.md §Behaviour.14 — real mode submits/evaluates any draft still
   // unscored (best-effort: a CLI failure leaves that task unscored rather than blocking completion).
-  if (session.mode === 'real') {
+  if (session.mode === "real") {
     for (const row of responses) {
       if (evals.has(row.id)) continue;
       const task = await loadTaskForResponse(row);
@@ -320,16 +382,25 @@ export async function completeWritingSession(
 
   await db
     .update(sessions)
-    .set({ completedAt: new Date(), elapsedMs: session.mode === 'real' ? elapsedMs : null })
+    .set({
+      completedAt: new Date(),
+      elapsedMs: session.mode === "real" ? elapsedMs : null,
+    })
     .where(eq(sessions.id, sessionId));
 
   const tasks = responses.map((r) => {
     const score = evals.get(r.id)?.score ?? null;
-    return { taskNumber: r.taskNumber, score, level: score == null ? null : scoreToNclc(score) };
+    return {
+      taskNumber: r.taskNumber,
+      score,
+      level: score == null ? null : scoreToNclc(score),
+    };
   });
   const submitted = tasks.filter((t) => t.score != null).length;
   const overallScore = responses.length
-    ? Math.round(tasks.reduce((sum, t) => sum + (t.score ?? 0), 0) / responses.length)
+    ? Math.round(
+        tasks.reduce((sum, t) => sum + (t.score ?? 0), 0) / responses.length,
+      )
     : 0;
 
   return { tasks, overallScore, submitted };
@@ -376,10 +447,19 @@ export type WritingSessionDetail = {
 };
 
 // spec: docs/specs/writing-session.md §Behaviour.16; API contract — read-only results/review.
-export async function getWritingSession(sessionId: number): Promise<WritingSessionDetail> {
-  const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId));
-  if (!session || session.section !== 'writing') {
-    throw new ApiError('SESSION_NOT_FOUND', `Writing session ${sessionId} not found.`, 404);
+export async function getWritingSession(
+  sessionId: number,
+): Promise<WritingSessionDetail> {
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.id, sessionId));
+  if (!session || session.section !== "writing") {
+    throw new ApiError(
+      "SESSION_NOT_FOUND",
+      `Writing session ${sessionId} not found.`,
+      404,
+    );
   }
 
   const rows = await db
@@ -388,12 +468,15 @@ export async function getWritingSession(sessionId: number): Promise<WritingSessi
       task: writingTasks,
     })
     .from(writingResponses)
-    .innerJoin(writingTasks, eq(writingResponses.writingTaskId, writingTasks.id))
+    .innerJoin(
+      writingTasks,
+      eq(writingResponses.writingTaskId, writingTasks.id),
+    )
     .where(eq(writingResponses.sessionId, sessionId))
     .orderBy(asc(writingResponses.taskNumber));
 
   const evals = await loadEvaluations(rows.map((r) => r.response.id));
-  const isLearning = session.mode === 'learning';
+  const isLearning = session.mode === "learning";
 
   const tasks: WritingTaskReview[] = rows.map(({ response, task }) => {
     const evaluation = evals.get(response.id);
@@ -423,14 +506,18 @@ export async function getWritingSession(sessionId: number): Promise<WritingSessi
 
   const scored = tasks.filter((t) => t.score != null);
   const overallScore = tasks.length
-    ? Math.round(tasks.reduce((sum, t) => sum + (t.score ?? 0), 0) / tasks.length)
+    ? Math.round(
+        tasks.reduce((sum, t) => sum + (t.score ?? 0), 0) / tasks.length,
+      )
     : null;
 
   return {
     session: {
       id: session.id,
       mode: session.mode,
-      completedAt: session.completedAt ? session.completedAt.toISOString() : null,
+      completedAt: session.completedAt
+        ? session.completedAt.toISOString()
+        : null,
       elapsedMs: session.elapsedMs ?? null,
       overallScore: session.completedAt ? overallScore : null,
       submitted: scored.length,

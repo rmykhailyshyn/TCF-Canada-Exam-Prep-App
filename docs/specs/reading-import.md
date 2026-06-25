@@ -1,9 +1,11 @@
 # Spec: Reading Question Import
 
 ## Status
+
 implemented
 
 ## Goal
+
 Allow a developer to import reading comprehension questions from a source directory into the
 local database via a CLI script. The source directory contains exactly one **results
 PDF** (the "Afficher les questions" review page exported from the Réussir TCF Canada site) and
@@ -24,6 +26,7 @@ the passage text and the question prompt.
 > not used. See §PDF structure and Revision history.
 
 ## Scope
+
 - In scope:
   - CLI script `npm run ocr -- --dir <path>`
   - Directory discovery: locate the single PDF file and all passage image files in the directory
@@ -73,11 +76,11 @@ reading them from `page.rects` finds nothing. The parser must inspect `page.curv
 (`non_stroking_color`) for the answer-row fills. Confirmed fill colours (RGB 0–1, match within
 ±0.06 tolerance):
 
-| Meaning | RGB | approx hex |
-|---|---|---|
-| Correct answer (green) | `(0.0, 0.737, 0.271)` | `#00BC45` |
-| Test-taker's wrong pick (red, ignored) | `(0.839, 0.114, 0.114)` (also a darker `(0.886, 0.051, 0.051)`) | `#D61D1D` |
-| Default option row (grey) | `(0.941, 0.953, 0.965)` | `#F0F3F6` |
+| Meaning                                | RGB                                                             | approx hex |
+| -------------------------------------- | --------------------------------------------------------------- | ---------- |
+| Correct answer (green)                 | `(0.0, 0.737, 0.271)`                                           | `#00BC45`  |
+| Test-taker's wrong pick (red, ignored) | `(0.839, 0.114, 0.114)` (also a darker `(0.886, 0.051, 0.051)`) | `#D61D1D`  |
+| Default option row (grey)              | `(0.941, 0.953, 0.965)`                                         | `#F0F3F6`  |
 
 Each question contributes four answer-row curves. Their absolute `x0`/width **vary with the
 export's page width** (e.g. `x0 ≈ 844`, width ≈ 746 on a 2434pt-wide page; `x0 ≈ 349`, width ≈ 806
@@ -91,6 +94,7 @@ passage text starting with A–D from matching. (In listening, audio-only questi
 after `88`.)
 
 ## Behaviour
+
 1. The user runs the import script with a path to a source directory.
 2. The script scans the directory, locates the single PDF file (and any PNG files); it exits
    with an error if no PDF file is found or more than one PDF file is found.
@@ -160,9 +164,11 @@ options
 ```
 
 ## API contract
+
 None — CLI script only.
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [ ] Running `npm run ocr -- --dir <path>` on a directory holding exactly one PDF completes and prints a final summary line. (Behaviour.1, 12)
@@ -177,6 +183,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] The success summary reports passages imported, questions imported, questions skipped, and whether the score cross-check matched. (Behaviour.12)
 
 ## Open questions
+
 - ~~**Are reading passages embedded as text in the results PDF, or supplied as separate images?**~~
   Resolved 2026-06-08 against a real reading PDF + image: each question's stimulus (passage +
   prompt) is a **separate image**, OCR'd at import. The PDF text layer holds only options + answer
@@ -195,6 +202,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   every image — confirmed across the sample, but a missing footer falls back to "last line = prompt".
 
 ## Revision history
+
 - 2026-06-04: Initial draft
 - 2026-06-05: Changed CLI from per-file flags to `--dir`; one HTML + multiple PNGs per directory
 - 2026-06-05: Updated open questions based on wpProQuiz HTML sample from listening section;
@@ -230,7 +238,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   question's passage **and prompt** are in a **separate image** (filename carries the sequence,
   e.g. `comprehension-ecrite-25Q39.png`), OCR'd and split at the `reussir-tcfcanada.com` footer;
   (c) option-row curves sit at `x0 ≈ 844` (vs. 898 listening); (d) the `88` icon glyph is now a
-  *required* anchor in the option regex. Parser refactored to order-based detection (re-validated:
+  _required_ anchor in the option regex. Parser refactored to order-based detection (re-validated:
   reading 19/266, listening 27/437) and the importer rewritten to OCR per-question images. Verified
   end-to-end against the real PDF + the real Q39 image (passage + prompt + 4 options, correct = the
   green option; idempotent). Removed the embedded-text caveat; status now fully **implemented**.

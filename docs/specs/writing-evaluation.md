@@ -1,6 +1,7 @@
 # Spec: Writing Evaluation & Correction
 
 ## Status
+
 implemented
 
 > Milestone 10. The local-Claude-CLI layer for the Writing section: scoring + feedback on submit
@@ -8,6 +9,7 @@ implemented
 > (`/submit`, `/correct`, `/complete`) and surfaced by the writing-ui spec.
 
 ## Goal
+
 Evaluate a user's free-text writing response with the **local Claude CLI** and return a **score
 (/20)**, an **NCLC level derived deterministically from that score**, and **structured written
 feedback** (strengths, errors, suggested improvements). The model produces only the numeric score and
@@ -22,6 +24,7 @@ same configuration (`.env`: `CLAUDE_CLI_BIN`, `CLAUDE_CLI_MODEL`; no API key) an
 prompt-build/JSON-parse helper pattern established in `scripts/lib/claude.ts`.
 
 ## Scope
+
 - In scope:
   - A `server/services/` wrapper that invokes the local `claude` CLI non-interactively at request
     time and parses a JSON object from its output (tolerating prose/code-fence wrapping, like
@@ -46,25 +49,27 @@ prompt-build/JSON-parse helper pattern established in `scripts/lib/claude.ts`.
 ## Behaviour
 
 ### Configuration & invocation
+
 1. The service reads configuration from `.env`:
    - `CLAUDE_CLI_BIN`: the Claude CLI binary name/path (default `claude`).
    - `CLAUDE_CLI_MODEL` (optional): passed as `--model`; when unset the CLI default model is used.
-   No API key is read — the local CLI manages its own authentication.
+     No API key is read — the local CLI manages its own authentication.
 2. The service invokes the CLI non-interactively (`claude -p <prompt>`, plus `--model` when
    configured), captures stdout, and parses the **first JSON object** out of the response (tolerating
    surrounding prose or a code fence), mirroring the enrichment parser. Invocation happens
    **per request**, on the server, within the HTTP request lifecycle.
 
 ### Scoring (on submit, both modes)
+
 3. When a task is submitted (`POST …/responses/:taskNumber/submit`, see writing-session), the service
    builds an English prompt containing: the task `prompt`/instructions, the task's word-count
    guidance (`min_words`/`max_words`), and the user's response text. It instructs the model to act as
-   a TCF Canada *Expression écrite* evaluator and return a JSON object with:
+   a TCF Canada _Expression écrite_ evaluator and return a JSON object with:
    - `score`: integer 0–20 for this task.
    - `strengths`: what the response does well.
    - `errors`: notable language/structure errors (grammar, vocabulary, register, coherence).
    - `improvements`: concrete suggestions to raise the score.
-   The model is **not** asked for the NCLC level.
+     The model is **not** asked for the NCLC level.
 4. The parsed result (score + feedback) is persisted in `writing_evaluations`, linked to the response
    (one row per response; resubmitting **replaces** the prior row), with `generated_by` recording
    `claude-cli` (plus `/model` when pinned) and `generated_at` set. The NCLC level is not stored.
@@ -75,9 +80,10 @@ prompt-build/JSON-parse helper pattern established in `scripts/lib/claude.ts`.
    `EVALUATION_FAILED`. The user can retry by resubmitting.
 
 ### Score → NCLC (deterministic)
+
 6a. The NCLC level is a pure, deterministic function of the per-task `score` (0–20), computed by a
-    shared helper (e.g. `server/lib/nclc.ts`) reused by writing and speaking — never produced by the
-    model and never persisted. The default map (monotonic; tunable — see Open questions):
+shared helper (e.g. `server/lib/nclc.ts`) reused by writing and speaking — never produced by the
+model and never persisted. The default map (monotonic; tunable — see Open questions):
 
     | Score /20 | NCLC level |
     |---|---|
@@ -92,9 +98,10 @@ prompt-build/JSON-parse helper pattern established in `scripts/lib/claude.ts`.
     | 0–3   | NCLC 1–2 |
 
 6b. An **overall** NCLC (for the results/history summary) is derived the same way from the overall
-    score (the rounded mean of the per-task scores), using the identical map.
+score (the rounded mean of the per-task scores), using the identical map.
 
 ### Correction (on request, training only)
+
 7. When the user requests a correction (`POST …/correct/:taskNumber`, training mode only), the service
    builds a prompt with the task `prompt` and the user's current draft, instructing the model to
    return a JSON object with:
@@ -108,6 +115,7 @@ prompt-build/JSON-parse helper pattern established in `scripts/lib/claude.ts`.
     returns `CORRECTION_FAILED`.
 
 ## Data model changes
+
 ```
 -- spec: docs/specs/writing-evaluation.md §Data model changes
 writing_evaluations
@@ -123,37 +131,41 @@ writing_evaluations
   check (score between 0 and 20)
   -- NCLC `level` is NOT stored: it is derived deterministically from `score` on read (§Score → NCLC).
 ```
+
 On-request corrections are **not** stored — no table for them. Resubmitting a response replaces its
 `writing_evaluations` row (delete-and-insert or upsert on the unique `response_id`).
 
 ## API contract
+
 This service has no routes of its own; it is invoked by the writing-session endpoints. The shapes it
 produces:
 
 ```typescript
 type WritingFeedback = {
-  strengths: string      // what the response does well
-  errors: string         // notable grammar / vocabulary / register / coherence errors
-  improvements: string   // concrete suggestions to raise the score
-}
+  strengths: string; // what the response does well
+  errors: string; // notable grammar / vocabulary / register / coherence errors
+  improvements: string; // concrete suggestions to raise the score
+};
 
 // Returned by POST /api/writing/sessions/:id/responses/:taskNumber/submit
 type WritingEvaluation = {
-  score: number          // 0–20 (model-produced, persisted)
-  level: string          // NCLC, DERIVED from score via §Score → NCLC (not stored, not model-produced)
-  feedback: WritingFeedback
-}
+  score: number; // 0–20 (model-produced, persisted)
+  level: string; // NCLC, DERIVED from score via §Score → NCLC (not stored, not model-produced)
+  feedback: WritingFeedback;
+};
 
 // Returned by POST /api/writing/sessions/:id/correct/:taskNumber (training only; not persisted)
 type WritingCorrection = {
-  correctedText: string  // the draft rewritten with errors fixed
-  suggestions: string[]  // specific improvement notes
-}
+  correctedText: string; // the draft rewritten with errors fixed
+  suggestions: string[]; // specific improvement notes
+};
 ```
+
 Error codes surfaced by the consuming endpoints: `EVALUATION_FAILED` (submit), `CORRECTION_FAILED`
 (correct), `MODE_NOT_ALLOWED` (correct requested on a real-mode session).
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [ ] The evaluation service reads `CLAUDE_CLI_BIN` / `CLAUDE_CLI_MODEL` from `.env`, requires no API key, and a missing binary produces a descriptive error. (Behaviour.1)
@@ -167,6 +179,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] The CLI wrapper reuses the shared prompt-build/JSON-parse helpers (no duplicated parser); helper logic is pure and unit-tested. (Scope)
 
 ## Open questions
+
 - **Correction persistence.** Default: corrections are ephemeral (not stored), so review mode shows
   only the submitted response + its score/feedback, not past corrections. If review should replay
   corrections, add a `writing_corrections` table (multiple per response). Confirm.
@@ -184,6 +197,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   invocation is **not** subject to the Apple-Silicon constraint that applies to Whisper/Tesseract.
 
 ## Revision history
+
 - 2026-06-17: Initial draft (Milestone 10).
 - 2026-06-17: NCLC `level` is now **derived deterministically from `score`** (added §Score → NCLC map +
   a shared `server/lib/nclc.ts` helper) instead of being produced by the model; dropped the stored

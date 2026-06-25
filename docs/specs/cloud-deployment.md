@@ -1,9 +1,11 @@
 # Spec: Cloudflare Deployment (Worker + Static Assets + D1 + R2 + Access)
 
 ## Status
+
 draft
 
 ## Goal
+
 Host the app online on Cloudflare's **free tier** as a single Worker that serves the built React client
 (via Workers Static Assets) and the Hono `/api/*` routes (the portable core from Milestone 14), backed
 by **Cloudflare D1** (the same SQLite schema as local, Milestone 13) for data and **Cloudflare R2** for
@@ -16,6 +18,7 @@ milestone adds the cloud target alongside them. Content seeding into D1/R2 and t
 capabilities are Milestone 16 — this milestone establishes the running, access-gated cloud runtime.
 
 ## Scope
+
 - In scope:
   - `wrangler.toml` defining one Worker: `main` = a new `server/worker.ts` entry, `[assets]` serving
     `client/dist` (SPA), `[[d1_databases]]` binding `DB`, `[[r2_buckets]]` binding `MEDIA`,
@@ -44,13 +47,14 @@ capabilities are Milestone 16 — this milestone establishes the running, access
   - Any change to local runtime behaviour or the data model.
 
 ## Behaviour
+
 1. `npm run build` produces `client/dist`; `wrangler deploy` publishes one Worker that serves the SPA at
    the root URL and the API under `/api/*`.
 2. Unauthenticated requests to the deployed URL are intercepted by **Cloudflare Access** and must
    authenticate as the permitted user before reaching the Worker; the user's own access is seamless
    after login.
 3. `GET /api/health` on the deployed Worker returns `{ data: { status: 'ok', capabilities: {
-   aiScoring: false, transcription: false, imports: false } }, error: null }`.
+aiScoring: false, transcription: false, imports: false } }, error: null }`.
 4. Read/practice endpoints that need no CLI work against D1: listing/creating reading & listening
    sessions, recording answers, completing sessions, fetching questions/transcripts, exporting, and the
    writing/speaking **session + draft + sample-answer** reads all function (against whatever content
@@ -65,19 +69,23 @@ capabilities are Milestone 16 — this milestone establishes the running, access
    affecting the Node dev server (`npm run dev`).
 
 ## Data model changes
+
 None. D1 uses the identical SQLite schema and baseline migration produced in Milestone 13.
 
 ## API contract
+
 No new endpoints. The contract is the Milestone 14 portable-core subset, with `capabilities` reported as
 all-`false`. Endpoint paths, request/response shapes, error codes, and the JSON envelope are unchanged.
 (Infrastructure config — `wrangler.toml` bindings — is not an HTTP contract.)
 
 Bindings (operational contract):
+
 - `DB` — D1 database binding consumed by the DB factory.
 - `MEDIA` — R2 bucket binding consumed by the `MediaStore`.
 - `[assets]` — directory binding for `client/dist` with SPA fallback.
 
 ## Acceptance criteria
+
 - [ ] `wrangler.toml` defines one Worker with `main: server/worker.ts`, an `[assets]` binding for `client/dist`, a `DB` D1 binding, and a `MEDIA` R2 binding. (Behaviour.1, 6, 7)
 - [ ] `wrangler deploy` (after `npm run build`) publishes successfully and the root URL serves the SPA; deep links fall back to `index.html`. (Behaviour.1)
 - [ ] Cloudflare Access gates the deployed URL to the permitted user; an unauthenticated request is challenged before reaching the Worker. (Behaviour.2)
@@ -90,6 +98,7 @@ Bindings (operational contract):
 - [ ] The Worker bundle contains no `node:child_process` import (verified by a successful Workers build, which would otherwise fail or require unused polyfills). (Scope; relies on the M14 portable-core split)
 
 ## Open questions
+
 - **`nodejs_compat` extent.** The portable core may transitively use a few Node built-ins (e.g. `node:path`
   for key handling). To confirm which compat flags / polyfills the Worker build needs, and to remove or
   replace any that pull in heavy/unsupported modules. (Rule 4 during implementation.)
@@ -106,8 +115,9 @@ Bindings (operational contract):
   routing must yield to the Hono API for that prefix); set `run_worker_first`/route config accordingly.
 
 ## Revision history
+
 - 2026-06-20: Initial draft (Milestone 15). Part of the Cloudflare-hosting initiative; depends on
   `database-sqlite.md` (M13, shared SQLite schema for D1) and `server-runtime.md` (M14, portable Hono core
-  + DB factory + `MediaStore` + capabilities). Prerequisite for `content-deploy.md` (M16, seeding D1/R2 and
-  client gating). Decisions locked with the user: practice-only online, single user (Cloudflare Access),
-  free tier.
+  - DB factory + `MediaStore` + capabilities). Prerequisite for `content-deploy.md` (M16, seeding D1/R2 and
+    client gating). Decisions locked with the user: practice-only online, single user (Cloudflare Access),
+    free tier.

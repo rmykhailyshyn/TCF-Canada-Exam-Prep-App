@@ -39,16 +39,12 @@
       "indexes": {
         "audio_files_question_id_unique": {
           "name": "audio_files_question_id_unique",
-          "columns": [
-            "question_id"
-          ],
+          "columns": ["question_id"],
           "isUnique": true
         },
         "audio_files_file_path_unique": {
           "name": "audio_files_file_path_unique",
-          "columns": [
-            "file_path"
-          ],
+          "columns": ["file_path"],
           "isUnique": true
         }
       },
@@ -57,12 +53,8 @@
           "name": "audio_files_question_id_questions_id_fk",
           "tableFrom": "audio_files",
           "tableTo": "questions",
-          "columnsFrom": [
-            "question_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["question_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -142,9 +134,7 @@
       "indexes": {
         "explanations_question_id_unique": {
           "name": "explanations_question_id_unique",
-          "columns": [
-            "question_id"
-          ],
+          "columns": ["question_id"],
           "isUnique": true
         }
       },
@@ -153,12 +143,8 @@
           "name": "explanations_question_id_questions_id_fk",
           "tableFrom": "explanations",
           "tableTo": "questions",
-          "columnsFrom": [
-            "question_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["question_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -209,9 +195,7 @@
       "indexes": {
         "options_question_id_idx": {
           "name": "options_question_id_idx",
-          "columns": [
-            "question_id"
-          ],
+          "columns": ["question_id"],
           "isUnique": false
         }
       },
@@ -220,12 +204,8 @@
           "name": "options_question_id_questions_id_fk",
           "tableFrom": "options",
           "tableTo": "questions",
-          "columnsFrom": [
-            "question_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["question_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -275,9 +255,7 @@
       "indexes": {
         "passages_source_file_unique": {
           "name": "passages_source_file_unique",
-          "columns": [
-            "source_file"
-          ],
+          "columns": ["source_file"],
           "isUnique": true
         }
       },
@@ -336,16 +314,12 @@
       "indexes": {
         "question_results_session_id_idx": {
           "name": "question_results_session_id_idx",
-          "columns": [
-            "session_id"
-          ],
+          "columns": ["session_id"],
           "isUnique": false
         },
         "question_results_question_id_idx": {
           "name": "question_results_question_id_idx",
-          "columns": [
-            "question_id"
-          ],
+          "columns": ["question_id"],
           "isUnique": false
         }
       },
@@ -354,12 +328,8 @@
           "name": "question_results_session_id_sessions_id_fk",
           "tableFrom": "question_results",
           "tableTo": "sessions",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -367,12 +337,8 @@
           "name": "question_results_question_id_questions_id_fk",
           "tableFrom": "question_results",
           "tableTo": "questions",
-          "columnsFrom": [
-            "question_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["question_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -443,24 +409,17 @@
       "indexes": {
         "questions_section_idx": {
           "name": "questions_section_idx",
-          "columns": [
-            "section"
-          ],
+          "columns": ["section"],
           "isUnique": false
         },
         "questions_passage_id_idx": {
           "name": "questions_passage_id_idx",
-          "columns": [
-            "passage_id"
-          ],
+          "columns": ["passage_id"],
           "isUnique": false
         },
         "questions_source_file_sequence_unique": {
           "name": "questions_source_file_sequence_unique",
-          "columns": [
-            "source_file",
-            "sequence"
-          ],
+          "columns": ["source_file", "sequence"],
           "isUnique": true
         }
       },
@@ -469,12 +428,8 @@
           "name": "questions_passage_id_passages_id_fk",
           "tableFrom": "questions",
           "tableTo": "passages",
-          "columnsFrom": [
-            "passage_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["passage_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -625,9 +580,7 @@
       "indexes": {
         "speaking_evaluations_response_id_unique": {
           "name": "speaking_evaluations_response_id_unique",
-          "columns": [
-            "response_id"
-          ],
+          "columns": ["response_id"],
           "isUnique": true
         }
       },
@@ -636,12 +589,8 @@
           "name": "speaking_evaluations_response_id_speaking_responses_id_fk",
           "tableFrom": "speaking_evaluations",
           "tableTo": "speaking_responses",
-          "columnsFrom": [
-            "response_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["response_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -718,17 +667,12 @@
       "indexes": {
         "speaking_responses_session_id_idx": {
           "name": "speaking_responses_session_id_idx",
-          "columns": [
-            "session_id"
-          ],
+          "columns": ["session_id"],
           "isUnique": false
         },
         "speaking_responses_session_task_unique": {
           "name": "speaking_responses_session_task_unique",
-          "columns": [
-            "session_id",
-            "task_number"
-          ],
+          "columns": ["session_id", "task_number"],
           "isUnique": true
         }
       },
@@ -737,12 +681,8 @@
           "name": "speaking_responses_session_id_sessions_id_fk",
           "tableFrom": "speaking_responses",
           "tableTo": "sessions",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -750,12 +690,8 @@
           "name": "speaking_responses_speaking_task_id_speaking_tasks_id_fk",
           "tableFrom": "speaking_responses",
           "tableTo": "speaking_tasks",
-          "columnsFrom": [
-            "speaking_task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["speaking_task_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -826,17 +762,12 @@
       "indexes": {
         "speaking_tasks_task_number_idx": {
           "name": "speaking_tasks_task_number_idx",
-          "columns": [
-            "task_number"
-          ],
+          "columns": ["task_number"],
           "isUnique": false
         },
         "speaking_tasks_source_file_sequence_unique": {
           "name": "speaking_tasks_source_file_sequence_unique",
-          "columns": [
-            "source_file",
-            "sequence"
-          ],
+          "columns": ["source_file", "sequence"],
           "isUnique": true
         }
       },
@@ -899,9 +830,7 @@
       "indexes": {
         "transcript_segments_question_id_idx": {
           "name": "transcript_segments_question_id_idx",
-          "columns": [
-            "question_id"
-          ],
+          "columns": ["question_id"],
           "isUnique": false
         }
       },
@@ -910,12 +839,8 @@
           "name": "transcript_segments_question_id_questions_id_fk",
           "tableFrom": "transcript_segments",
           "tableTo": "questions",
-          "columnsFrom": [
-            "question_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["question_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -988,9 +913,7 @@
       "indexes": {
         "writing_evaluations_response_id_unique": {
           "name": "writing_evaluations_response_id_unique",
-          "columns": [
-            "response_id"
-          ],
+          "columns": ["response_id"],
           "isUnique": true
         }
       },
@@ -999,12 +922,8 @@
           "name": "writing_evaluations_response_id_writing_responses_id_fk",
           "tableFrom": "writing_evaluations",
           "tableTo": "writing_responses",
-          "columnsFrom": [
-            "response_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["response_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1075,17 +994,12 @@
       "indexes": {
         "writing_responses_session_id_idx": {
           "name": "writing_responses_session_id_idx",
-          "columns": [
-            "session_id"
-          ],
+          "columns": ["session_id"],
           "isUnique": false
         },
         "writing_responses_session_task_unique": {
           "name": "writing_responses_session_task_unique",
-          "columns": [
-            "session_id",
-            "task_number"
-          ],
+          "columns": ["session_id", "task_number"],
           "isUnique": true
         }
       },
@@ -1094,12 +1008,8 @@
           "name": "writing_responses_session_id_sessions_id_fk",
           "tableFrom": "writing_responses",
           "tableTo": "sessions",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1107,12 +1017,8 @@
           "name": "writing_responses_writing_task_id_writing_tasks_id_fk",
           "tableFrom": "writing_responses",
           "tableTo": "writing_tasks",
-          "columnsFrom": [
-            "writing_task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["writing_task_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1211,17 +1117,12 @@
       "indexes": {
         "writing_tasks_task_number_idx": {
           "name": "writing_tasks_task_number_idx",
-          "columns": [
-            "task_number"
-          ],
+          "columns": ["task_number"],
           "isUnique": false
         },
         "writing_tasks_source_file_task_number_unique": {
           "name": "writing_tasks_source_file_task_number_unique",
-          "columns": [
-            "source_file",
-            "task_number"
-          ],
+          "columns": ["source_file", "task_number"],
           "isUnique": true
         }
       },

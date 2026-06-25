@@ -1,5 +1,5 @@
-import type { SpeakingCompleteResult } from '../../lib/api';
-import { formatClock } from '../../lib/format';
+import type { SpeakingCompleteResult } from "../../lib/api";
+import { formatClock } from "../../lib/format";
 
 // spec: docs/specs/speaking-ui.md §Results (Behaviour.15–16)
 // Per-task score /20 + NCLC + the overall average, shown after completion.
@@ -10,7 +10,11 @@ type Props = {
   onHome: () => void;
 };
 
-export function SpeakingResults({ results, elapsedMs, onHome }: Props): JSX.Element {
+export function SpeakingResults({
+  results,
+  elapsedMs,
+  onHome,
+}: Props): JSX.Element {
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center p-6 text-center">
       <div className="w-full animate-fade-in-up overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-card-hover">
@@ -23,20 +27,28 @@ export function SpeakingResults({ results, elapsedMs, onHome }: Props): JSX.Elem
             <span className="text-2xl font-bold text-brand-200"> / 20</span>
           </p>
           <p className="mt-1 text-sm font-medium text-brand-200">
-            average · {results.submitted} / {results.tasks.length} tasks submitted
+            average · {results.submitted} / {results.tasks.length} tasks
+            submitted
             {elapsedMs !== null && <> · {formatClock(elapsedMs)}</>}
           </p>
         </div>
 
         <div className="divide-y divide-slate-100">
           {results.tasks.map((t) => (
-            <div key={t.taskNumber} className="flex items-center justify-between px-6 py-4 text-left">
+            <div
+              key={t.taskNumber}
+              className="flex items-center justify-between px-6 py-4 text-left"
+            >
               <div>
-                <div className="font-semibold text-slate-900">Task {t.taskNumber}</div>
-                <div className="text-xs text-slate-400">{t.level ?? 'not submitted'}</div>
+                <div className="font-semibold text-slate-900">
+                  Task {t.taskNumber}
+                </div>
+                <div className="text-xs text-slate-400">
+                  {t.level ?? "not submitted"}
+                </div>
               </div>
               <div className="text-lg font-bold tabular-nums text-slate-900">
-                {t.score == null ? '—' : `${t.score} / 20`}
+                {t.score == null ? "—" : `${t.score} / 20`}
               </div>
             </div>
           ))}

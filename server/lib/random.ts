@@ -19,7 +19,7 @@ export function shuffle<T>(items: readonly T[], rng: Rng = Math.random): T[] {
 // (real-mode selection only draws from positions known to have at least one keyed candidate).
 export function pickOne<T>(items: readonly T[], rng: Rng = Math.random): T {
   if (items.length === 0) {
-    throw new Error('pickOne called with an empty array');
+    throw new Error("pickOne called with an empty array");
   }
   return items[Math.floor(rng() * items.length)];
 }
