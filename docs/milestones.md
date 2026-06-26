@@ -472,7 +472,7 @@ that let the same route code bind to Node resources or Worker resources: a **DB 
 
 ## Milestone 15 — Cloudflare deployment (Worker + Assets + D1 + R2 + Access)
 
-**Status:** planned (spec drafted, pending approval)
+**Status:** ready for development (spec approved)
 
 Establish the running, access-gated cloud runtime: a single Worker serving the SPA (Workers Static
 Assets) + the Hono portable core, bound to **D1** and **R2**, gated by **Cloudflare Access** (single
@@ -490,13 +490,13 @@ never mounted.
 
 **Specs:**
 
-- `docs/specs/cloud-deployment.md` (draft)
+- `docs/specs/cloud-deployment.md` (approved)
 
 ---
 
 ## Milestone 16 — Content seeding + online practice mode + client gating
 
-**Status:** planned (spec drafted, pending approval)
+**Status:** ready for development (spec approved)
 
 Make the deployed instance usable: push locally-imported content to D1/R2 (**import locally → push to
 cloud**) and gate the client UI on `capabilities` so the practice-only online experience has no broken
@@ -517,6 +517,6 @@ no score).
 
 **Specs:**
 
-- `docs/specs/content-deploy.md` (draft)
+- `docs/specs/content-deploy.md` (approved)
 - `docs/specs/writing-evaluation.md` / `docs/specs/speaking-evaluation.md` / `docs/specs/progress-tracking.md`
   (to be annotated: AI scoring is a local/full-runtime capability; online sessions are unscored practice)
