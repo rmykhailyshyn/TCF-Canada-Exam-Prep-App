@@ -448,3 +448,30 @@ is what let an orthogonal engine swap pass through one seam instead of smearing 
   obsolescence into the next milestone's spec stops it from rotting into permanent surface area — the
   retirement is planned, not hoped for. (Here the source dev DB happened to be empty, so only the read path
   ran live; the verbatim type-conversion write path is simple enough to carry on inspection.)
+
+## Milestone 14 — Portable server runtime (Express → Hono)
+
+- **A framework swap with "byte-identical behaviour" is almost a pure refactor — until a sub-feature's
+  data flow fights the new module boundary.** Translating the entry + five routers to Hono and injecting
+  the DB through every service was mechanical and fully covered by the inherited suite (the old tests
+  _are_ the spec, again). The one genuine friction was the speaking recording upload: the plan placed it
+  in the portable core, but preserving the client contract (transcript returned from the upload) requires
+  Whisper at upload time — which the core must not import. The spec's seam ("portable vs. Node-only") and
+  the feature's data flow disagreed, and only writing the code surfaced it. **Lesson:** SDD's _what_ stayed
+  correct; the _where_ (which side of the portability seam a route lives on) is a runtime-capability fact
+  that the spec under-specified. Resolved as a Rule-4 note rather than bending behaviour to the plan.
+
+- **"Remove dependency X" is verifiable for _our_ surface but not always for the dependency graph.** We
+  deleted `pg`/`@types/pg` and the migration script, and nothing we author imports Postgres — yet a fresh
+  `npm install` still materialises `pg` because `drizzle-orm` declares it as an _optional peer_ that npm
+  auto-installs. The acceptance criterion as literally worded ("a fresh install pulls no Postgres driver")
+  is outside our control. **Lesson:** dependency-removal criteria should be scoped to "our package.json +
+  our imports," because transitive optional peers are the upstream's decision; writing the criterion
+  against the whole `node_modules` tree set an unmeetable bar. Recorded honestly in a Rule-4 note instead
+  of faking the tick.
+
+- **Type-only imports are the quiet hero of a portable/Node split.** The portable services reuse the CLI
+  modules' feedback _types_ via `import type`, which TypeScript erases — so the core stays free of
+  `child_process` at runtime while the type contracts remain shared and single-sourced. The spec asked for
+  the split; the cheap mechanism that makes it hold (erasable type imports + a one-line construction smoke
+  test guarding the import graph) was an implementation detail, not a spec'd one.

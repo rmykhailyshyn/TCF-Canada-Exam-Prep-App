@@ -1,7 +1,6 @@
-import { existsSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { basename, join } from "node:path";
 import { and, asc, eq, inArray } from "drizzle-orm";
-import { db } from "../db";
+import type { DbClient } from "../db/factory";
 import {
   audioFiles,
   options,
@@ -9,7 +8,7 @@ import {
   questions,
   transcriptSegments,
 } from "../db/schema";
-import { getMediaDir } from "../config/env";
+import type { MediaStore } from "../runtime/media-store";
 import {
   type DifficultyFilter,
   type ExportDocument,
@@ -31,6 +30,7 @@ import {
 // each carrying its options/answer key and passage (reading) or transcript + audio reference
 // (listening). `questions` is `[]` when nothing matches.
 export async function exportQuestions(
+  db: DbClient,
   section: SectionFilter,
   difficulty: DifficultyFilter,
 ): Promise<ExportDocument> {
@@ -149,11 +149,12 @@ export type ImportSummary = {
 // insert when absent, skip or overwrite-in-place when present. Any failure rolls back the whole
 // import, leaving the database unchanged (Behaviour.11).
 export async function importQuestions(
+  db: DbClient,
+  mediaStore: MediaStore,
   rawDocument: unknown,
   override: boolean,
 ): Promise<ImportSummary> {
   const incoming = validateDocument(rawDocument);
-  const mediaDir = getMediaDir();
   const warnings: string[] = [];
   let inserted = 0;
   let overridden = 0;
@@ -235,11 +236,13 @@ export async function importQuestions(
         }
 
         // Store the path RELATIVE to MEDIA_DIR (the portable form the serve layer resolves);
-        // the export carries the basename only, which lands under the listening/ subfolder.
+        // the export carries the basename only, which lands under the listening/ subfolder. The
+        // presence check goes through the MediaStore so the same logic works on the filesystem
+        // (Node) and on R2 (Worker, Milestone 15). spec: docs/specs/server-runtime.md §Behaviour.6
         const relPath = join("listening", q.audio.fileName);
-        if (!existsSync(resolve(mediaDir, relPath))) {
+        if (!(await mediaStore.exists(relPath))) {
           warnings.push(
-            `Audio file not found on disk: ${resolve(mediaDir, relPath)} (question listening/${q.sequence}). ` +
+            `Audio file not found in the media store: ${relPath} (question listening/${q.sequence}). ` +
               "Imported the reference; playback needs the MP3 placed in the media directory.",
           );
         }
@@ -259,7 +262,8 @@ export async function importQuestions(
   return { inserted, overridden, skipped, total: incoming.length, warnings };
 }
 
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+// The Drizzle transaction handle, derived from the injected DbClient (no module singleton).
+type Tx = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
 // Passages are keyed by their own UNIQUE(source_file); reuse the row when present so override
 // updates the passage text in place, otherwise insert. Returns the linked passage id.

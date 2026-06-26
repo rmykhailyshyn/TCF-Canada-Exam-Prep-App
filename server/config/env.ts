@@ -8,7 +8,7 @@ const repoRoot = resolve(here, "../..");
 loadDotenv({ path: resolve(repoRoot, ".env") });
 
 // libSQL/SQLite connection URL (a `file:` path locally). Defaults to a repo-local SQLite file so a
-// fresh checkout works with no setup — no Docker, no Postgres. spec: docs/specs/database-sqlite.md
+// fresh checkout works with no setup — no Docker, no separate database server. spec: docs/specs/database-sqlite.md
 const DEFAULT_DATABASE_URL = "file:./data/tcf_prep.db";
 
 // libSQL resolves a relative `file:` path against process.cwd(), which differs between the server

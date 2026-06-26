@@ -1,5 +1,5 @@
 import { asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
-import { db } from "../db";
+import type { DbClient } from "../db/factory";
 import {
   explanations,
   options,
@@ -79,6 +79,7 @@ export type CompleteSessionResult = {
 
 // spec: docs/specs/quiz-session.md §API contract POST /api/sessions
 export async function createSession(
+  db: DbClient,
   input: CreateSessionInput,
 ): Promise<CreateSessionResult> {
   const { section, mode } = input;
@@ -236,6 +237,7 @@ export async function createSession(
 
 // spec: docs/specs/quiz-session.md §API contract POST /api/sessions/:id/answers
 export async function recordAnswer(
+  db: DbClient,
   sessionId: number,
   questionId: number,
   chosenLabel: OptionLabel,
@@ -298,6 +300,7 @@ export async function recordAnswer(
 
 // spec: docs/specs/quiz-session.md §API contract POST /api/sessions/:id/complete
 export async function completeSession(
+  db: DbClient,
   sessionId: number,
   elapsedMs: number | null,
 ): Promise<CompleteSessionResult> {
@@ -387,7 +390,7 @@ export type SessionSummary = {
   elapsedMs: number | null;
 };
 
-export async function listSessions(): Promise<SessionSummary[]> {
+export async function listSessions(db: DbClient): Promise<SessionSummary[]> {
   const completed = await db
     .select()
     .from(sessions)
@@ -422,11 +425,13 @@ export async function listSessions(): Promise<SessionSummary[]> {
   // spec: docs/specs/progress-tracking.md §Writing & speaking sessions (Behaviour.9) — writing rows
   // carry an overall /20 average + tasks-submitted instead of correct/total/points.
   const writingBySession = await loadWritingAggregates(
+    db,
     completed.filter((s) => s.section === "writing").map((s) => s.id),
   );
   // spec: docs/specs/speaking-session.md §Behaviour.17 — speaking rows carry the same overall /20
   // average + tasks-submitted shape as writing (no correct/total/points).
   const speakingBySession = await loadSpeakingAggregates(
+    db,
     completed.filter((s) => s.section === "speaking").map((s) => s.id),
   );
 
@@ -488,6 +493,7 @@ export async function listSessions(): Promise<SessionSummary[]> {
 // Per writing session: the mean of per-task /20 scores (unscored tasks counting 0) and the number of
 // scored tasks. spec: docs/specs/progress-tracking.md §Writing & speaking sessions.
 async function loadWritingAggregates(
+  db: DbClient,
   sessionIds: number[],
 ): Promise<Map<number, { overallScore: number; tasksSubmitted: number }>> {
   const out = new Map<
@@ -527,6 +533,7 @@ async function loadWritingAggregates(
 // Per speaking session: the mean of per-task /20 scores (unscored tasks counting 0) and the number
 // of scored tasks — the same shape as writing. spec: docs/specs/speaking-session.md §Behaviour.17.
 async function loadSpeakingAggregates(
+  db: DbClient,
   sessionIds: number[],
 ): Promise<Map<number, { overallScore: number; tasksSubmitted: number }>> {
   const out = new Map<
@@ -590,7 +597,10 @@ export type SessionDetail = {
   results: QuestionResultRow[];
 };
 
-export async function getSession(sessionId: number): Promise<SessionDetail> {
+export async function getSession(
+  db: DbClient,
+  sessionId: number,
+): Promise<SessionDetail> {
   const [session] = await db
     .select()
     .from(sessions)

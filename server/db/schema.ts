@@ -12,9 +12,8 @@ import {
 // defined in the corresponding feature spec; run `npm run db:generate` after any change.
 //
 // Engine: SQLite via libSQL (spec: docs/specs/database-sqlite.md). The same sqlite-core schema
-// also targets Cloudflare D1 (itself SQLite) in a later milestone. Type representations differ
-// from the previous Postgres schema but the data model is unchanged: `serial` → `integer
-// autoincrement`, `boolean` → `integer {mode: 'boolean'}`, `timestamp` → `integer {mode:
+// also targets Cloudflare D1 (itself SQLite) in a later milestone. Types: `id` is `integer
+// autoincrement`, `boolean` is `integer {mode: 'boolean'}`, and timestamps are `integer {mode:
 // 'timestamp'}` (unix seconds ↔ JS Date), defaulting to `(unixepoch())` for "now".
 //
 // Indexes: SQLite auto-indexes primary keys and UNIQUE constraints but NOT plain foreign-key

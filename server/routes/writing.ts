@@ -1,148 +1,83 @@
-import { Router, type Request, type Response } from "express";
+import { Hono } from "hono";
 import { ApiError } from "../lib/errors";
-import { fail, ok } from "../lib/envelope";
+import { ok } from "../lib/envelope";
 import {
   type CreateWritingSessionInput,
-  completeWritingSession,
   createWritingSession,
   getWritingSession,
-  requestCorrection,
   saveDraft,
-  submitResponse,
 } from "../services/writing";
+import { type AppVars, errorResponse, readBody } from "./app-vars";
 
 // spec: docs/specs/writing-session.md §API contract
-// Thin route layer: validate input, call the service, wrap in the { data, error } envelope.
+// PORTABLE writing endpoints: create a session, read it back, autosave a draft. The CLI-backed
+// submit / correct / complete (Claude scoring) are registered by the Node entry
+// (routes/node-routes.ts). spec: docs/specs/server-runtime.md §Behaviour.8
+export const writingRouter = new Hono<{ Variables: AppVars }>();
 
-export const writingRouter = Router();
+writingRouter.onError(errorResponse);
 
 const MODES = ["learning", "real"] as const;
 
-function handle(res: Response, error: unknown): void {
-  if (error instanceof ApiError) {
-    res.status(error.status).json(fail(error.code, error.message));
-    return;
-  }
-  console.error("Unexpected error in writing route:", error);
-  res.status(500).json(fail("INTERNAL", "An unexpected error occurred."));
-}
-
-function sessionId(req: Request): number {
-  const id = Number(req.params.id);
+export function writingSessionId(idParam: string): number {
+  const id = Number(idParam);
   if (!Number.isInteger(id))
     throw new ApiError("BAD_REQUEST", "Invalid session id.");
   return id;
 }
 
-function taskNumber(req: Request): number {
-  const n = Number(req.params.taskNumber);
+export function writingTaskNumber(raw: string): number {
+  const n = Number(raw);
   if (!Number.isInteger(n) || n < 1 || n > 3) {
     throw new ApiError("BAD_REQUEST", "taskNumber must be 1, 2, or 3.");
   }
   return n;
 }
 
-function requireText(req: Request): string {
-  const body = (req.body ?? {}) as Record<string, unknown>;
+export function requireText(body: Record<string, unknown>): string {
   if (typeof body.text !== "string")
     throw new ApiError("BAD_REQUEST", "text must be a string.");
   return body.text;
 }
 
-writingRouter.post("/sessions", async (req: Request, res: Response) => {
-  try {
-    const body = (req.body ?? {}) as Record<string, unknown>;
-    if (!MODES.includes(body.mode as (typeof MODES)[number])) {
-      throw new ApiError("BAD_REQUEST", 'mode must be "learning" or "real".');
-    }
-    const input: CreateWritingSessionInput = {
-      mode: body.mode as CreateWritingSessionInput["mode"],
-    };
-    if (Array.isArray(body.taskNumbers)) {
-      if (!body.taskNumbers.every((n) => Number.isInteger(n))) {
-        throw new ApiError(
-          "BAD_REQUEST",
-          "taskNumbers must be an array of integers.",
-        );
-      }
-      input.taskNumbers = body.taskNumbers as number[];
-    }
-    res.json(ok(await createWritingSession(input)));
-  } catch (error) {
-    handle(res, error);
+writingRouter.post("/sessions", async (c) => {
+  const body = await readBody(c);
+  if (!MODES.includes(body.mode as (typeof MODES)[number])) {
+    throw new ApiError("BAD_REQUEST", 'mode must be "learning" or "real".');
   }
+  const input: CreateWritingSessionInput = {
+    mode: body.mode as CreateWritingSessionInput["mode"],
+  };
+  if (Array.isArray(body.taskNumbers)) {
+    if (!body.taskNumbers.every((n) => Number.isInteger(n))) {
+      throw new ApiError(
+        "BAD_REQUEST",
+        "taskNumbers must be an array of integers.",
+      );
+    }
+    input.taskNumbers = body.taskNumbers as number[];
+  }
+  return c.json(ok(await createWritingSession(c.get("db"), input)));
 });
 
-writingRouter.get("/sessions/:id", async (req: Request, res: Response) => {
-  try {
-    res.json(ok(await getWritingSession(sessionId(req))));
-  } catch (error) {
-    handle(res, error);
-  }
+writingRouter.get("/sessions/:id", async (c) => {
+  return c.json(
+    ok(
+      await getWritingSession(c.get("db"), writingSessionId(c.req.param("id"))),
+    ),
+  );
 });
 
-writingRouter.put(
-  "/sessions/:id/responses/:taskNumber",
-  async (req: Request, res: Response) => {
-    try {
-      res.json(
-        ok(await saveDraft(sessionId(req), taskNumber(req), requireText(req))),
-      );
-    } catch (error) {
-      handle(res, error);
-    }
-  },
-);
-
-writingRouter.post(
-  "/sessions/:id/responses/:taskNumber/submit",
-  async (req: Request, res: Response) => {
-    try {
-      res.json(
-        ok(
-          await submitResponse(
-            sessionId(req),
-            taskNumber(req),
-            requireText(req),
-          ),
-        ),
-      );
-    } catch (error) {
-      handle(res, error);
-    }
-  },
-);
-
-writingRouter.post(
-  "/sessions/:id/correct/:taskNumber",
-  async (req: Request, res: Response) => {
-    try {
-      res.json(
-        ok(
-          await requestCorrection(
-            sessionId(req),
-            taskNumber(req),
-            requireText(req),
-          ),
-        ),
-      );
-    } catch (error) {
-      handle(res, error);
-    }
-  },
-);
-
-writingRouter.post(
-  "/sessions/:id/complete",
-  async (req: Request, res: Response) => {
-    try {
-      const body = (req.body ?? {}) as Record<string, unknown>;
-      const elapsedMs = Number.isInteger(body.elapsedMs)
-        ? (body.elapsedMs as number)
-        : null;
-      res.json(ok(await completeWritingSession(sessionId(req), elapsedMs)));
-    } catch (error) {
-      handle(res, error);
-    }
-  },
-);
+writingRouter.put("/sessions/:id/responses/:taskNumber", async (c) => {
+  const body = await readBody(c);
+  return c.json(
+    ok(
+      await saveDraft(
+        c.get("db"),
+        writingSessionId(c.req.param("id")),
+        writingTaskNumber(c.req.param("taskNumber")),
+        requireText(body),
+      ),
+    ),
+  );
+});

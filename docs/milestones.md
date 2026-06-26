@@ -428,7 +428,7 @@ confirmed all 14 tables are read in FK order, and the verbatim type conversion i
 
 ## Milestone 14 — Portable server runtime (Express → Hono)
 
-**Status:** approved (ready to implement)
+**Status:** complete
 
 Replace Express with **Hono** so one backend codebase runs on Node locally (via `@hono/node-server`) and
 on Cloudflare Workers later, with no API/behaviour change locally. Introduces three small abstractions
@@ -436,23 +436,37 @@ that let the same route code bind to Node resources or Worker resources: a **DB 
 **`MediaStore` interface** (range read / put / exists), and a **capabilities flag**
 (`GET /api/health` → `{ aiScoring, transcription, imports }`, all `true` on Node).
 
-- [ ] Translate `server/index.ts` + the five route modules to Hono; services in `server/services/`
-      unchanged; envelope (`server/lib/envelope.ts`) reused; replace `multer` with Hono `formData`
-- [ ] DB factory (`createDb(env)`): libSQL on Node, D1 on Workers (M15); services receive the DB instead
-      of importing a singleton
-- [ ] `MediaStore` interface with a Node/filesystem implementation wrapping today's range-aware streaming
-      (R2 implementation in M15)
-- [ ] Structure the app as a **portable core** + a **Node-only extension** for the CLI-backed routes
-      (imports, enrichment, AI scoring submit, correction, transcription), so `node:child_process`/`node:fs`
-      never enter the future Worker bundle
-- [ ] **PostgreSQL cleanup** (data already migrated in M13): delete `scripts/migrate-pg-to-sqlite.ts` +
-      the `db:migrate-from-postgres` script, drop `pg`/`@types/pg`, and strip residual Postgres references
-      from code/config — only historical mentions in `docs/` remain
-- [ ] Dev DX unchanged (`npm run dev`, Vite proxy, e2e); all checks pass
+- [x] Translate `server/index.ts` + the five route modules to Hono; services in `server/services/`
+      DB-injected; envelope (`server/lib/envelope.ts`) reused; replace `multer` with Hono `parseBody`
+- [x] DB factory (`createDb()`): libSQL on Node (D1 on Workers in M15); services receive the DB instead
+      of importing a singleton (`server/db/index.ts` singleton kept only for Node-only `scripts/`)
+- [x] `MediaStore` interface with a Node/filesystem implementation (`NodeMediaStore`) wrapping today's
+      range-aware streaming (R2 implementation in M15)
+- [x] Structure the app as a **portable core** (`server/app.ts`) + a **Node-only extension**
+      (`server/routes/node-routes.ts` + `services/{writing,speaking}-node.ts`) for the CLI-backed routes
+      (imports, AI scoring submit, correction, transcription, recording upload), so
+      `node:child_process` / `node:fs` never enter the future Worker bundle
+- [x] **PostgreSQL cleanup** (data already migrated in M13): deleted `scripts/migrate-pg-to-sqlite.ts` +
+      the `db:migrate-from-postgres` script, dropped `pg`/`@types/pg`, and stripped residual Postgres
+      references from code/config (the only remaining `pg` is `drizzle-orm`'s optional peer — see the
+      spec's Rule-4 note)
+- [x] Dev DX unchanged (`npm run dev`, Vite proxy); typecheck / lint / test / build pass (e2e run by the
+      orchestrator)
+
+**Implementation notes:**
+
+- New files: `server/runtime/{capabilities,media-store,node-media-store}.ts`, `server/db/factory.ts`,
+  `server/app.ts`, `server/lib/range.ts`, `server/routes/{app-vars,node-routes}.ts`,
+  `server/services/{writing-node,speaking-node}.ts`, `server/app.test.ts`.
+- The speaking recording-upload route stays in the Node-only extension (not the core) because
+  byte-identical behaviour needs upload-time Whisper transcription (Rule-4 note in the spec).
+- Speaking recordings now persist a **relative** MediaStore key (was absolute) — portable + R2-ready.
+- 137 unit/render tests pass (incl. `parseRange` from its new `server/lib/range.ts` home + a new
+  portable-core construction smoke test).
 
 **Specs:**
 
-- `docs/specs/server-runtime.md` (draft)
+- `docs/specs/server-runtime.md` (implemented)
 
 ---
 

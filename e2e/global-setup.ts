@@ -68,7 +68,7 @@ function run(
 // webServer (or an AV/indexer scan of the freshly-written file) can hold the handle for several
 // seconds after Playwright stops the server; in that case we leave the file in place and rely on the
 // idempotent migrate + seeds below (seeds wipe their own source rows before re-inserting), which is
-// how the suite stayed deterministic on the previous Postgres setup (it never dropped the DB either).
+// how the suite stayed deterministic on the previous database setup (it never dropped the DB either).
 function resetE2eDatabase(): void {
   for (const suffix of ["", "-wal", "-shm"]) {
     const file = `${e2eDbPath()}${suffix}`;

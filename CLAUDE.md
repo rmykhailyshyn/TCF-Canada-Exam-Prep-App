@@ -20,14 +20,14 @@ This project also serves as a **testbed for evaluating spec-driven development**
 
 ## Stack
 
-| Layer               | Technology                                                  |
-| ------------------- | ----------------------------------------------------------- |
-| Frontend            | React 18, Vite, Tailwind CSS, TypeScript                    |
-| Backend             | Express (Node.js), TypeScript                               |
-| Database            | SQLite (libSQL) via Drizzle ORM                             |
-| Audio transcription | Whisper CLI (Apple Silicon, `mlx-whisper` or `whisper.cpp`) |
-| OCR                 | Tesseract OCR (CLI)                                         |
-| Package manager     | npm                                                         |
+| Layer               | Technology                                                    |
+| ------------------- | ------------------------------------------------------------- |
+| Frontend            | React 18, Vite, Tailwind CSS, TypeScript                      |
+| Backend             | Hono (on @hono/node-server locally; Worker-ready), TypeScript |
+| Database            | SQLite (libSQL) via Drizzle ORM                               |
+| Audio transcription | Whisper CLI (Apple Silicon, `mlx-whisper` or `whisper.cpp`)   |
+| OCR                 | Tesseract OCR (CLI)                                           |
+| Package manager     | npm                                                           |
 
 All tooling is local-first. No cloud services, no external APIs, no auth layer.
 
@@ -216,13 +216,6 @@ npm run db:migrate
 
 # Generate migration after schema change
 npm run db:generate
-
-# One-time PostgreSQL -> SQLite data migration (Milestone 13; preserves existing local dev data).
-# Run AFTER `npm run db:migrate` has created the SQLite schema. Reads from --from / PG_DATABASE_URL,
-# writes into DATABASE_URL, preserving primary keys + FK links. --dry-run prints per-table counts.
-# `pg` is retained only as a devDependency for this one-time script.
-npm run db:migrate-from-postgres -- --from <PG_DATABASE_URL>
-npm run db:migrate-from-postgres -- --dry-run
 
 # Seed a full 39-question reading section for local UI/dev (not part of any spec)
 npm run seed:dev

@@ -162,13 +162,11 @@ async function main(): Promise<void> {
         })),
       );
 
-      await tx
-        .insert(audioFiles)
-        .values({
-          questionId: qRow.id,
-          filePath: relAudioPath,
-          durationMs: 6000,
-        });
+      await tx.insert(audioFiles).values({
+        questionId: qRow.id,
+        filePath: relAudioPath,
+        durationMs: 6000,
+      });
 
       await tx.insert(transcriptSegments).values(
         q.segments.map((s, idx) => ({

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseRange } from "./questions";
+import { parseRange } from "../lib/range";
 
 // spec: docs/specs/listening-player.md §API contract — the audio route must support range
 // requests so the <audio> element can seek.

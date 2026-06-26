@@ -1,6 +1,6 @@
 import { extname } from "node:path";
 import { asc, eq } from "drizzle-orm";
-import { db } from "../db";
+import type { DbClient } from "../db/factory";
 import {
   audioFiles,
   passages,
@@ -8,14 +8,16 @@ import {
   transcriptSegments,
 } from "../db/schema";
 import { ApiError } from "../lib/errors";
-import { resolveMediaPath } from "../config/env";
 
 // spec: docs/specs/listening-player.md §API contract
-// Business logic for the listening player's two read endpoints. Services return plain typed values
-// or throw ApiError; the route layer owns the envelope (and, for audio, the byte stream).
+// Business logic for the listening player's read endpoints. Services return plain typed values or
+// throw ApiError; the route layer owns the envelope (and, for audio/images, the byte stream).
+// spec: docs/specs/server-runtime.md §Behaviour.5, 6 — the DB is injected (no singleton) and these
+// functions return the STORED media key (the path the MediaStore resolves), not an absolute path.
 
 export type AudioFileInfo = {
-  filePath: string;
+  // The stored, MediaStore-resolvable key (e.g. `listening/30q2.mp3`, or a legacy absolute path).
+  key: string;
   durationMs: number | null;
 };
 
@@ -27,16 +29,18 @@ export type TranscriptSegmentDto = {
 };
 
 export type PassageImageInfo = {
-  filePath: string;
+  // The stored, MediaStore-resolvable key (e.g. `reading/…Q39.png`, or a legacy absolute path).
+  key: string;
   contentType: string;
 };
 
 // spec: docs/specs/reading-quiz-ui.md §API contract GET /api/questions/:id/passage-image
-// Resolves the original passage image path for a reading question's linked passage. Throws
-// PASSAGE_IMAGE_NOT_FOUND when the question has no passage (a listening question, or an unknown
-// id). The stored `passages.source_file` is normally a path relative to MEDIA_DIR (e.g.
-// `reading/…Q39.png`); resolveMediaPath joins it onto MEDIA_DIR (legacy absolute rows pass through).
+// Returns the stored passage-image key for a reading question's linked passage. Throws
+// PASSAGE_IMAGE_NOT_FOUND when the question has no passage (a listening question, or an unknown id).
+// The route resolves the bytes through the MediaStore. The contentType is derived from the key's
+// extension so the route does not need to re-inspect the path.
 export async function getPassageImage(
+  db: DbClient,
   questionId: number,
 ): Promise<PassageImageInfo> {
   const [row] = await db
@@ -51,19 +55,20 @@ export async function getPassageImage(
       404,
     );
   }
-  const filePath = resolveMediaPath(row.sourceFile);
-  const contentType = /\.jpe?g$/i.test(extname(filePath))
+  const contentType = /\.jpe?g$/i.test(extname(row.sourceFile))
     ? "image/jpeg"
     : "image/png";
-  return { filePath, contentType };
+  return { key: row.sourceFile, contentType };
 }
 
 // spec: docs/specs/listening-player.md §API contract GET /api/questions/:id/audio
-// Resolves the MP3 path for a question. Throws NOT_FOUND when the question has no audio (e.g. a
-// reading question, or an unknown id). The stored `audio_files.file_path` is normally relative to
-// MEDIA_DIR (e.g. `listening/30q2.mp3`); resolveMediaPath joins it onto MEDIA_DIR (legacy absolute
-// rows pass through). The route streams the file with range support.
-export async function getAudioFile(questionId: number): Promise<AudioFileInfo> {
+// Returns the stored MP3 key for a question. Throws NOT_FOUND when the question has no audio (e.g. a
+// reading question, or an unknown id). The route streams the file through the MediaStore with range
+// support.
+export async function getAudioFile(
+  db: DbClient,
+  questionId: number,
+): Promise<AudioFileInfo> {
   const [row] = await db
     .select({
       filePath: audioFiles.filePath,
@@ -78,16 +83,14 @@ export async function getAudioFile(questionId: number): Promise<AudioFileInfo> {
       404,
     );
   }
-  return {
-    filePath: resolveMediaPath(row.filePath),
-    durationMs: row.durationMs,
-  };
+  return { key: row.filePath, durationMs: row.durationMs };
 }
 
 // spec: docs/specs/listening-player.md §API contract GET /api/questions/:id/transcript
 // Returns the question's phrase-level segments ordered by sequence. An unknown question id is a
 // NOT_FOUND; a known question with no segments returns an empty list.
 export async function getTranscript(
+  db: DbClient,
   questionId: number,
 ): Promise<TranscriptSegmentDto[]> {
   const [question] = await db
