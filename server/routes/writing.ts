@@ -1,6 +1,7 @@
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { ApiError } from "../lib/errors";
-import { ok } from "../lib/envelope";
+import { ok, fail } from "../lib/envelope";
 import {
   type CreateWritingSessionInput,
   createWritingSession,
@@ -16,6 +17,9 @@ import { type AppVars, errorResponse, readBody } from "./app-vars";
 export const writingRouter = new Hono<{ Variables: AppVars }>();
 
 writingRouter.onError(errorResponse);
+
+// Mirror the 1 MB JSON limit that Express applied globally. spec: docs/specs/server-runtime.md §Behaviour.3
+const ONE_MB = 1024 * 1024;
 
 const MODES = ["learning", "real"] as const;
 
@@ -68,16 +72,24 @@ writingRouter.get("/sessions/:id", async (c) => {
   );
 });
 
-writingRouter.put("/sessions/:id/responses/:taskNumber", async (c) => {
-  const body = await readBody(c);
-  return c.json(
-    ok(
-      await saveDraft(
-        c.get("db"),
-        writingSessionId(c.req.param("id")),
-        writingTaskNumber(c.req.param("taskNumber")),
-        requireText(body),
+writingRouter.put(
+  "/sessions/:id/responses/:taskNumber",
+  bodyLimit({
+    maxSize: ONE_MB,
+    onError: (c) =>
+      c.json(fail("PAYLOAD_TOO_LARGE", "Request body exceeds 1 MB."), 413),
+  }),
+  async (c) => {
+    const body = await readBody(c);
+    return c.json(
+      ok(
+        await saveDraft(
+          c.get("db"),
+          writingSessionId(c.req.param("id")),
+          writingTaskNumber(c.req.param("taskNumber")),
+          requireText(body),
+        ),
       ),
-    ),
-  );
-});
+    );
+  },
+);
