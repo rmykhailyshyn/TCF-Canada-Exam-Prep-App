@@ -2,7 +2,7 @@
 
 ## Status
 
-approved
+implemented
 
 ## Goal
 
@@ -121,3 +121,20 @@ Bindings (operational contract):
   - DB factory + `MediaStore` + capabilities). Prerequisite for `content-deploy.md` (M16, seeding D1/R2 and
     client gating). Decisions locked with the user: practice-only online, single user (Cloudflare Access),
     free tier.
+- 2026-06-26: Implemented (Milestone 15). Rule-4 divergences recorded during implementation:
+  (1) **`DbClient` widened** from `LibSQLDatabase<typeof schema>` to the shared
+  `BaseSQLiteDatabase<"async", any, typeof schema>` so the D1 client (`drizzle-orm/d1`, in
+  `server/worker.ts`) and the libSQL client both satisfy `AppVars.db` without casting — their
+  schema-typed query APIs are identical; only the run-result generic differs.
+  (2) **Routing precedence** (open question) resolved with `[assets] run_worker_first = ["/api/*"]`
+  plus `not_found_handling = "single-page-application"`, so Static Assets never shadows the API and
+  deep links fall back to `index.html`; the Worker only handles `/api/*`.
+  (3) **Content-type mapping extracted** to a pure `server/runtime/content-type.ts` shared by the
+  Node and R2 MediaStores (the R2 store must derive `contentType` without `node:path`).
+  (4) **Shared-secret fallback wired** as Hono middleware in `server/worker.ts` (gated on the
+  `ACCESS_SHARED_SECRET` Worker secret), in addition to being documented — default remains Cloudflare
+  Access. (5) **Worker typed in a separate program** (`server/tsconfig.worker.json`,
+  `@cloudflare/workers-types`) to avoid global-lib clashes with `@types/node`. Verified locally via
+  `npm run typecheck` / `npm test` (incl. `server/worker.test.ts`) / `npm run build`; actual
+  `wrangler deploy`, D1 provisioning, R2 bucket, and Cloudflare Access setup require the user's
+  Cloudflare account and were not exercised here (documented runbook in CLAUDE.md).

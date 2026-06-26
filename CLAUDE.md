@@ -299,6 +299,64 @@ npm run seed:listening-dev
 
 ---
 
+## Cloudflare deployment (Milestone 15)
+
+The app can be hosted online as a **single Cloudflare Worker** (free tier) that serves the built SPA
+(Workers Static Assets) plus the Hono `/api/*` portable core, bound to **D1** (data) and **R2**
+(media), gated by **Cloudflare Access**. The online instance is **practice-only**: `GET /api/health`
+reports `capabilities` all-`false` and the CLI-backed routes (imports, AI scoring, transcription,
+correction, enrichment) are never mounted — no Whisper/Tesseract/Claude binary runs on Workers. Local
+dev (`npm run dev`) is unaffected. Config lives in `wrangler.toml`; the Worker entry is
+`server/worker.ts`.
+
+```bash
+# 0. One-time: authenticate wrangler with your Cloudflare account
+npx wrangler login
+
+# 1. Provision D1 + R2, then paste the printed database_id into wrangler.toml ([[d1_databases]])
+npx wrangler d1 create tcf-prep
+npx wrangler r2 bucket create tcf-prep-media
+
+# 2. Apply the Milestone 13 SQLite baseline to D1 (creates all tables; empty, un-seeded)
+npm run cf:d1:migrate                 # wrangler d1 migrations apply DB --remote
+#   …add --local for the wrangler dev D1, e.g.: npx wrangler d1 migrations apply DB --local
+
+# 3. Build the client + deploy the Worker
+npm run cf:deploy                     # npm run build && wrangler deploy
+
+# 4. Optional: run the Worker locally against a local D1 + R2 (cloud parity; does not touch npm run dev)
+npm run cf:dev                        # wrangler dev
+
+# Content (questions, audio, images) is loaded separately in Milestone 16 (import locally → push to
+# cloud). A freshly deployed Worker has an empty D1/R2 until then.
+```
+
+**Access control.** Default is **Cloudflare Access** (Zero Trust, free): in the dashboard, add a
+self-hosted Access application for the Worker's route and a policy allowing only your identity (email
+OTP or an IdP). This needs **no application code** — the Worker only ever sees authenticated requests.
+
+_Fallback (no Access):_ set a Worker secret and the Worker enforces a shared-secret header itself:
+
+```bash
+npx wrangler secret put ACCESS_SHARED_SECRET      # production
+# For `wrangler dev`, put it in a local .dev.vars file (gitignored): ACCESS_SHARED_SECRET=<value>
+```
+
+When `ACCESS_SHARED_SECRET` is set, every request must carry `X-Access-Secret: <value>` or it gets a
+`401 UNAUTHORIZED` envelope (see `server/worker.ts`). When unset, the middleware is a no-op and Access
+gates the Worker in front.
+
+**D1 free-tier limits.** The free plan allows generous daily rows-read/written and ~5 GB storage — a
+single-user practice app is far inside them, but if usage grows this becomes a conscious decision (see
+Cloudflare's current D1 limits).
+
+**Notes.** `nodejs_compat` is enabled in `wrangler.toml` for the few Node built-ins the portable core
+may touch. D1 enforces foreign keys; the baseline migration's `references(...)` constraints behave as
+local. `wrangler deploy` / D1 provisioning require your Cloudflare credentials and were not exercised
+in CI — the local checks (`npm run typecheck`, `npm test`, `npm run build`) cover the worker code path.
+
+---
+
 ## Invariants
 
 - Always check `docs/specs/` before writing feature code. No spec → write it first, then wait for approval.
