@@ -5,7 +5,7 @@ import type {
   SpeakingCompleteResult,
   SpeakingTask,
 } from "../../lib/api";
-import { CapabilitiesContext } from "../../lib/capabilities";
+import { CapabilitiesContext } from "../../lib/capabilities-context";
 import { SpeakingResults } from "./SpeakingResults";
 import { SpeakingSession } from "./SpeakingSession";
 import { SpeakingSetup } from "./SpeakingSetup";

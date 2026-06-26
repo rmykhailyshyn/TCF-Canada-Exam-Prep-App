@@ -6,7 +6,7 @@ import type {
   WritingCompleteResult,
   WritingTask,
 } from "../../lib/api";
-import { CapabilitiesContext } from "../../lib/capabilities";
+import { CapabilitiesContext } from "../../lib/capabilities-context";
 import { VirtualKeyboard } from "./VirtualKeyboard";
 import { VK_KEYS, computeInsertion, glyphFor } from "./vkKeys";
 import { WordCounter } from "./WordCounter";

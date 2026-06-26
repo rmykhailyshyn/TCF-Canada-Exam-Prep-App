@@ -12,7 +12,7 @@ import {
   submitSpeakingResponse,
   uploadSpeakingRecording,
 } from "../../lib/api";
-import { useCapabilities } from "../../lib/capabilities";
+import { useCapabilities } from "../../lib/capabilities-context";
 import { type SpeakingConfig, preferredAudioMime } from "./types";
 
 // spec: docs/specs/speaking-session.md + docs/specs/speaking-ui.md

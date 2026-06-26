@@ -1,27 +1,13 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { type Capabilities, fetchCapabilities } from "./api";
+import { ALL_FALSE, CapabilitiesContext } from "./capabilities-context";
 
 // spec: docs/specs/content-deploy.md §Behaviour.3, 8
-// Provides the backend capability flags (aiScoring / transcription / imports) to the UI, fetched
-// once from GET /api/health on mount. Until the fetch resolves — and on any failure — the value is
-// the most-restrictive set (all false), so no capability-gated affordance ever flashes as enabled.
-
-const ALL_FALSE: Capabilities = {
-  aiScoring: false,
-  transcription: false,
-  imports: false,
-};
-
-// Exported so tests can supply a fixed capability value via <CapabilitiesContext.Provider>.
-export const CapabilitiesContext = createContext<Capabilities>(ALL_FALSE);
-
-// spec: docs/specs/content-deploy.md §Behaviour.3, 8 — fetch capabilities once and expose them.
+// Provides the backend capability flags (aiScoring / transcription / imports) to the UI, fetched once
+// from GET /api/health on mount. The context + reader hook live in ./capabilities-context (a
+// component-free module) so this file exports ONLY the provider component (react-refresh). Until the
+// fetch resolves — and on any failure — the value is the most-restrictive set, so no capability-gated
+// affordance ever flashes as enabled.
 export function CapabilitiesProvider({
   children,
 }: {
@@ -44,9 +30,4 @@ export function CapabilitiesProvider({
       {children}
     </CapabilitiesContext.Provider>
   );
-}
-
-// spec: docs/specs/content-deploy.md §Behaviour.3, 8 — read the current capability flags.
-export function useCapabilities(): Capabilities {
-  return useContext(CapabilitiesContext);
 }

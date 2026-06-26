@@ -11,7 +11,7 @@ import {
   importQuestions,
 } from "../lib/api";
 import { DIFFICULTY_BANDS } from "../lib/bands";
-import { useCapabilities } from "../lib/capabilities";
+import { useCapabilities } from "../lib/capabilities-context";
 
 // spec: docs/specs/question-export-import.md §Behaviour — the Question Bank page hosts an Export
 // panel (section + complexity filters → downloaded JSON) and an Import panel (upload + override).

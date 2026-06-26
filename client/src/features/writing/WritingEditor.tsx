@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { BrandMark } from "../../components/BrandMark";
-import { useCapabilities } from "../../lib/capabilities";
+import { useCapabilities } from "../../lib/capabilities-context";
 import { CountdownTimer } from "../quiz/CountdownTimer";
 import { ConfirmDialog } from "../quiz/ConfirmDialog";
 import { VirtualKeyboard } from "./VirtualKeyboard";

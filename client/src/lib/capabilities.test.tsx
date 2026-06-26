@@ -3,7 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { QuestionBankPage } from "../pages/QuestionBankPage";
 import { type Capabilities, fetchCapabilities } from "./api";
-import { CapabilitiesContext } from "./capabilities";
+import { CapabilitiesContext } from "./capabilities-context";
 
 // spec: docs/specs/content-deploy.md §Behaviour.3, 8
 

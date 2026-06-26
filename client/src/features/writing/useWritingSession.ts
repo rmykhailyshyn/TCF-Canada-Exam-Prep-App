@@ -11,7 +11,7 @@ import {
   saveWritingDraft,
   submitWritingResponse,
 } from "../../lib/api";
-import { useCapabilities } from "../../lib/capabilities";
+import { useCapabilities } from "../../lib/capabilities-context";
 import { type WritingConfig, countWords } from "./types";
 
 // spec: docs/specs/writing-session.md + docs/specs/writing-ui.md

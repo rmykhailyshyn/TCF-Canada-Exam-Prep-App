@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useCapabilities } from "../../lib/capabilities";
+import { useCapabilities } from "../../lib/capabilities-context";
 import type { SpeakingSession } from "./useSpeakingSession";
 
 // spec: docs/specs/speaking-ui.md §Recorder / Training mode (Behaviour.5–11)
