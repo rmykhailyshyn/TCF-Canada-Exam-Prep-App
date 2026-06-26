@@ -26,13 +26,24 @@ export type Env = {
 
 const app = new Hono<{ Bindings: Env; Variables: AppVars }>();
 
+// Constant-time string comparison to prevent timing side-channels on the shared-secret check.
+// Works in both the Workers runtime and the Node test environment (no runtime-specific API needed).
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
 // spec: docs/specs/cloud-deployment.md §Scope (Access fallback) — documented shared-secret fallback.
 // Default deployment relies on Cloudflare Access (no app code). When ACCESS_SHARED_SECRET is set as a
 // Worker secret, requests must carry a matching `X-Access-Secret` header to reach any route; when it
 // is unset this middleware is a no-op (Access gates the Worker in front).
 app.use("*", async (c, next) => {
   const expected = c.env.ACCESS_SHARED_SECRET;
-  if (expected && c.req.header("x-access-secret") !== expected) {
+  if (expected && !safeEqual(c.req.header("x-access-secret") ?? "", expected)) {
     return c.json(
       fail("UNAUTHORIZED", "Missing or invalid access secret."),
       401,
