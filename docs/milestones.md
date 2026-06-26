@@ -472,25 +472,44 @@ that let the same route code bind to Node resources or Worker resources: a **DB 
 
 ## Milestone 15 — Cloudflare deployment (Worker + Assets + D1 + R2 + Access)
 
-**Status:** ready for development (spec approved)
+**Status:** implemented
 
 Establish the running, access-gated cloud runtime: a single Worker serving the SPA (Workers Static
 Assets) + the Hono portable core, bound to **D1** and **R2**, gated by **Cloudflare Access** (single
 user, no app auth code). Online capabilities are all-`false` (practice-only); the CLI-backed routes are
 never mounted.
 
-- [ ] `wrangler.toml`: one Worker (`main: server/worker.ts`), `[assets]` = `client/dist` (SPA fallback),
-      `DB` D1 binding, `MEDIA` R2 binding
-- [ ] `server/worker.ts`: import the portable core, build DB from the `DB` binding, wire the **R2
-      `MediaStore`**, set capabilities all-`false`
-- [ ] Apply the M13 SQLite baseline to D1 (`wrangler d1 migrations apply`); range/206 media streaming
-      from R2; `/api/*` routing takes precedence over static assets
-- [ ] Cloudflare Access in front of the Worker (documented shared-secret middleware fallback)
-- [ ] Build + `wrangler deploy` scripts; optional `wrangler dev` parity; CLAUDE.md deployment runbook
+- [x] `wrangler.toml`: one Worker (`main: server/worker.ts`), `[assets]` = `client/dist`
+      (`not_found_handling = "single-page-application"` + `run_worker_first = ["/api/*"]`), `DB` D1
+      binding, `MEDIA` R2 binding, `nodejs_compat`
+- [x] `server/worker.ts`: imports the portable core (`createCoreApp`) only, builds the Drizzle DB from
+      the `DB` (D1) binding (`drizzle-orm/d1`), wires the **R2 `MediaStore`** (`server/runtime/r2-media-store.ts`),
+      sets `workerCapabilities` all-`false`, and never registers the CLI-backed routes (unknown `/api/*`
+      → `NOT_FOUND`)
+- [x] Apply the M13 SQLite baseline to D1 (`npm run cf:d1:migrate`); range/206 media streaming from R2
+      via the shared `serveMedia`; `/api/*` routing takes precedence over static assets
+      (`run_worker_first`)
+- [x] Cloudflare Access in front of the Worker (documented), plus a wired shared-secret middleware
+      fallback gated on the `ACCESS_SHARED_SECRET` Worker secret
+- [x] Build + deploy scripts (`cf:deploy`), `wrangler dev` parity (`cf:dev`), D1 migrate (`cf:d1:migrate`);
+      CLAUDE.md deployment runbook
+- [ ] Live `wrangler deploy` / D1 provisioning / R2 bucket / Access setup (require the user's Cloudflare
+      account — documented runbook; not exercised in CI)
+
+**Implementation notes (SDD Rule 4):** (1) **`DbClient` widened** to the shared
+`BaseSQLiteDatabase<"async", any, typeof schema>` so both the libSQL (Node) and D1 (Worker) clients
+satisfy `AppVars.db` without casting. (2) **Routing precedence** resolved with `run_worker_first =
+["/api/*"]` + SPA `not_found_handling`. (3) The Node store's extension→mime map was extracted to a pure
+`server/runtime/content-type.ts` shared with the R2 store. (4) The Worker is typed in a separate
+program (`server/tsconfig.worker.json`, `@cloudflare/workers-types`) to avoid global-lib clashes with
+`@types/node`; `typecheck:server` runs both. (5) A `server/worker.test.ts` smoke test asserts all-false
+capabilities, `NOT_FOUND` (not 500) for an unmounted CLI route, and the shared-secret gate. `npm run
+typecheck`, `npm run lint`, `npm test`, `npm run build` pass; the live Cloudflare steps need the user's
+account.
 
 **Specs:**
 
-- `docs/specs/cloud-deployment.md` (approved)
+- `docs/specs/cloud-deployment.md` (implemented)
 
 ---
 

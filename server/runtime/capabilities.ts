@@ -15,3 +15,12 @@ export const nodeCapabilities: Capabilities = {
   transcription: true,
   imports: true,
 };
+
+// spec: docs/specs/cloud-deployment.md §Behaviour.3 — the Cloudflare Worker is practice-only: it
+// cannot spawn the local CLIs (Claude/Whisper/Tesseract) or run imports, so every flag is false and
+// the CLI-backed routes are never mounted on the Worker entry.
+export const workerCapabilities: Capabilities = {
+  aiScoring: false,
+  transcription: false,
+  imports: false,
+};

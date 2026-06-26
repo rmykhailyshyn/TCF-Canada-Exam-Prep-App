@@ -6,9 +6,10 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, extname } from "node:path";
+import { dirname } from "node:path";
 import { Readable } from "node:stream";
 import { resolveMediaPath } from "../config/env";
+import { contentTypeForKey } from "./content-type";
 import type { MediaStore } from "./media-store";
 
 // spec: docs/specs/server-runtime.md §Behaviour.6; §Runtime abstractions
@@ -16,33 +17,8 @@ import type { MediaStore } from "./media-store";
 // resolveMediaPath() (relative keys join MEDIA_DIR; legacy absolute paths pass through), preserving
 // the exact range/streaming semantics the Express routes had. This module is the only MediaStore
 // implementation that imports `node:fs`, so it is registered solely by the Node entry and never
-// reaches the portable core (the future Worker bundle).
-
-// Derive the HTTP content type from a key's extension. Matches the previous inline logic in the
-// questions/speaking routes and services.
-function contentTypeForKey(key: string): string {
-  const ext = extname(key).toLowerCase();
-  switch (ext) {
-    case ".mp3":
-      return "audio/mpeg";
-    case ".png":
-      return "image/png";
-    case ".jpg":
-    case ".jpeg":
-      return "image/jpeg";
-    case ".webm":
-      return "audio/webm";
-    case ".ogg":
-      return "audio/ogg";
-    case ".m4a":
-    case ".mp4":
-      return "audio/mp4";
-    case ".wav":
-      return "audio/wav";
-    default:
-      return "application/octet-stream";
-  }
-}
+// reaches the portable core (the future Worker bundle). The content-type mapping is shared with the
+// R2 store via ./content-type.
 
 export class NodeMediaStore implements MediaStore {
   // spec: docs/specs/server-runtime.md §Behaviour.6 — size + contentType for range headers / 416.

@@ -1,0 +1,14 @@
+{
+  // spec: docs/specs/cloud-deployment.md §Open questions (nodejs_compat extent)
+  // The Cloudflare Worker entry (worker.ts), the R2 MediaStore, and the worker smoke test are typed
+  // against @cloudflare/workers-types (D1Database / R2Bucket / ReadableStream globals) in their own
+  // program — kept separate from the Node program so @types/node and workers-types globals never
+  // clash. The portable core they import (app.ts → routers → services) is node-free, so it type-checks
+  // cleanly here too.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["worker.ts", "worker.test.ts", "runtime/r2-media-store.ts"]
+}
