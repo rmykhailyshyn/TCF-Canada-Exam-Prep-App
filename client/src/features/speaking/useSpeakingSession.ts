@@ -12,6 +12,7 @@ import {
   submitSpeakingResponse,
   uploadSpeakingRecording,
 } from "../../lib/api";
+import { useCapabilities } from "../../lib/capabilities";
 import { type SpeakingConfig, preferredAudioMime } from "./types";
 
 // spec: docs/specs/speaking-session.md + docs/specs/speaking-ui.md
@@ -61,6 +62,9 @@ export type SpeakingSession = {
 };
 
 export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
+  // spec: docs/specs/content-deploy.md §Behaviour.5 — online (aiScoring=false) never submit/correct;
+  // the upload still stores the recording but the server returns an empty transcript, which is fine.
+  const { aiScoring } = useCapabilities();
   const [status, setStatus] = useState<SpeakingStatus>("loading");
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
@@ -253,7 +257,8 @@ export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
 
   const submit = useCallback(
     (taskNumber: number) => {
-      if (sessionId == null || busyTask != null) return;
+      // No scoring online (aiScoring=false); the UI hides the button, this guards too.
+      if (sessionId == null || busyTask != null || !aiScoring) return;
       setBusyTask(taskNumber);
       setTaskError((e) => ({ ...e, [taskNumber]: "" }));
       submitSpeakingResponse(sessionId, taskNumber)
@@ -271,12 +276,13 @@ export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
         )
         .finally(() => setBusyTask(null));
     },
-    [sessionId, busyTask],
+    [sessionId, busyTask, aiScoring],
   );
 
   const correct = useCallback(
     (taskNumber: number) => {
-      if (sessionId == null || busyTask != null) return;
+      // No correction endpoint online (aiScoring=false); the UI hides the button, this guards too.
+      if (sessionId == null || busyTask != null || !aiScoring) return;
       setBusyTask(taskNumber);
       setTaskError((e) => ({ ...e, [taskNumber]: "" }));
       requestSpeakingCorrection(sessionId, taskNumber)
@@ -294,7 +300,7 @@ export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
         )
         .finally(() => setBusyTask(null));
     },
-    [sessionId, busyTask],
+    [sessionId, busyTask, aiScoring],
   );
 
   const finish = useCallback(

@@ -6,6 +6,7 @@ import { fail } from "./lib/envelope";
 import { workerCapabilities } from "./runtime/capabilities";
 import { R2MediaStore } from "./runtime/r2-media-store";
 import { createCoreApp } from "./app";
+import { registerPracticeRoutes } from "./routes/practice-routes";
 import { type AppVars } from "./routes/app-vars";
 
 // spec: docs/specs/cloud-deployment.md §Behaviour.1–7; §Scope (server/worker.ts entry)
@@ -63,6 +64,15 @@ app.use("*", (c, next) => {
 
 // Portable core only — no Node-only CLI routes. spec: §Behaviour.4, 5.
 app.route("/", createCoreApp());
+
+// spec: docs/specs/content-deploy.md §Behaviour.4, 5, 7 — practice-only online behaviour. These
+// re-expose writing/speaking submit + complete + recording-upload as LOCK / STORE / FINALISE without
+// any Claude/Whisper step (capabilities stay all-false). They import only the portable services, so the
+// Worker bundle still contains no `node:child_process` / `node:fs`. Registered on a bindings-free
+// sub-app and mounted on the root (like createCoreApp) so the root middleware's context propagates.
+const practiceApp = new Hono<{ Variables: AppVars }>();
+registerPracticeRoutes(practiceApp);
+app.route("/", practiceApp);
 
 // Unknown /api/* routes (including the unmounted CLI-backed ones) return the standard NOT_FOUND
 // envelope, never a 500 — mirrors server/index.ts. spec: §Behaviour.5.

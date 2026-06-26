@@ -441,7 +441,7 @@ export async function listSessions(db: DbClient): Promise<SessionSummary[]> {
         ? writingBySession
         : speakingBySession
       ).get(s.id) ?? {
-        overallScore: 0,
+        overallScore: null,
         tasksSubmitted: 0,
       };
       return {
@@ -495,10 +495,12 @@ export async function listSessions(db: DbClient): Promise<SessionSummary[]> {
 async function loadWritingAggregates(
   db: DbClient,
   sessionIds: number[],
-): Promise<Map<number, { overallScore: number; tasksSubmitted: number }>> {
+): Promise<
+  Map<number, { overallScore: number | null; tasksSubmitted: number }>
+> {
   const out = new Map<
     number,
-    { overallScore: number; tasksSubmitted: number }
+    { overallScore: number | null; tasksSubmitted: number }
   >();
   if (sessionIds.length === 0) return out;
 
@@ -524,7 +526,12 @@ async function loadWritingAggregates(
   for (const [sessionId, scores] of bySession) {
     const tasksSubmitted = scores.filter((s) => s != null).length;
     const sum = scores.reduce<number>((acc, s) => acc + (s ?? 0), 0);
-    const overallScore = scores.length ? Math.round(sum / scores.length) : 0;
+    // spec: docs/specs/content-deploy.md §Behaviour.7 — null (not 0) when no task is scored, so an
+    // online/practice session is listed as unscored rather than 0 / 20.
+    const overallScore =
+      tasksSubmitted === 0 || scores.length === 0
+        ? null
+        : Math.round(sum / scores.length);
     out.set(sessionId, { overallScore, tasksSubmitted });
   }
   return out;
@@ -535,10 +542,12 @@ async function loadWritingAggregates(
 async function loadSpeakingAggregates(
   db: DbClient,
   sessionIds: number[],
-): Promise<Map<number, { overallScore: number; tasksSubmitted: number }>> {
+): Promise<
+  Map<number, { overallScore: number | null; tasksSubmitted: number }>
+> {
   const out = new Map<
     number,
-    { overallScore: number; tasksSubmitted: number }
+    { overallScore: number | null; tasksSubmitted: number }
   >();
   if (sessionIds.length === 0) return out;
 
@@ -564,7 +573,12 @@ async function loadSpeakingAggregates(
   for (const [sessionId, scores] of bySession) {
     const tasksSubmitted = scores.filter((s) => s != null).length;
     const sum = scores.reduce<number>((acc, s) => acc + (s ?? 0), 0);
-    const overallScore = scores.length ? Math.round(sum / scores.length) : 0;
+    // spec: docs/specs/content-deploy.md §Behaviour.7 — null (not 0) when no task is scored, so an
+    // online/practice session is listed as unscored rather than 0 / 20.
+    const overallScore =
+      tasksSubmitted === 0 || scores.length === 0
+        ? null
+        : Math.round(sum / scores.length);
     out.set(sessionId, { overallScore, tasksSubmitted });
   }
   return out;

@@ -9,6 +9,13 @@ implemented
 > (training only). Consumed by the speaking-session endpoints (`…/responses`, `…/submit`,
 > `…/correct`, `…/complete`) and surfaced by the speaking-ui spec.
 
+> **Milestone 16 annotation — transcription + AI scoring are local/full-runtime capabilities.**
+> Everything here applies to the **local** Node runtime (`capabilities.transcription = true`,
+> `aiScoring = true`). On the deployed Cloudflare Worker (both `false`, practice-only) the
+> recording-upload route **stores the audio without Whisper** (no transcript), submit + correction are
+> **not** mounted, and the session completes **unscored** (no fabricated /20; `overallScore: null`).
+> Online Speaking is record + playback + sample answer only. See `docs/specs/content-deploy.md`.
+
 ## Goal
 
 Turn a user's voice recording into a TCF _Expression orale_ evaluation. On upload, the audio is

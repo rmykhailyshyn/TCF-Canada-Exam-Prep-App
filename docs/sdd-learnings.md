@@ -475,3 +475,29 @@ is what let an orthogonal engine swap pass through one seam instead of smearing 
   `child_process` at runtime while the type contracts remain shared and single-sourced. The spec asked for
   the split; the cheap mechanism that makes it hold (erasable type imports + a one-line construction smoke
   test guarding the import graph) was an implementation detail, not a spec'd one.
+
+## Milestone 16 — Content seeding + online practice (a spec that assumed a capability the code lacked)
+
+- **The spec's "reuse the export/import service" default rested on coverage the service didn't have.**
+  content-deploy.md defaulted the D1 load to "reuse the export/import service / import endpoint." Planning
+  surfaced two facts the spec author hadn't traced: the export/import service covers reading/listening
+  **questions only** (no Writing/Speaking **tasks**), and its import endpoint is registered Node-only — so
+  it isn't even mounted on the Worker the deploy script targets. The spec read plausibly because it
+  described an _intent_ ("load content idempotently") in terms of an _existing mechanism_ that only half-fit.
+  SDD Rule 4 caught it at planning, not after a half-built mixed-mechanism deploy: the resolution
+  (uniform `wrangler d1 execute` over generated `INSERT OR REPLACE` SQL for **all** content tables) was a
+  conscious, documented divergence, decided with the user before any code.
+
+- **"No new endpoints" can hide "endpoints that don't exist yet."** The spec's API-contract section said
+  online behaviour needs "no new endpoints — gated by the existing `capabilities` flag." But online
+  Writing/Speaking submit/complete/recording were **Node-only** (they invoke Claude/Whisper), so the Worker
+  had _no_ submit/complete/upload at all. "Same path, behaviour gated by runtime" still required **new
+  portable handlers** — just not new _paths_. The cheap, zero-regression resolution (a `registerPracticeRoutes`
+  mounted only on the Worker, layering lock/store/complete-unscored fns onto the same paths) is invisible in
+  the spec; the spec only constrained the observable contract, which is exactly where it should stop.
+
+- **A nullable aggregate is a spec invariant, not a tidy-up.** "History shows online sessions without a
+  fabricated /20" sounds cosmetic but forced a real change: the writing/speaking overall-score aggregates
+  computed a mean-over-all-tasks that yielded `0` for a fully-unscored session. Making `overallScore` return
+  `null` when nothing is scored is the difference between "scored 0/20" and "not scored" — a correctness fix
+  the spec's Behaviour.7 pinned down precisely. Behavioural acceptance criteria earned their keep here.

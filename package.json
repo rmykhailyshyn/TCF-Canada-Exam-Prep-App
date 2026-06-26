@@ -19,6 +19,7 @@
     "cf:dev": "wrangler dev",
     "cf:deploy": "npm run build && wrangler deploy",
     "cf:d1:migrate": "wrangler d1 migrations apply DB --remote",
+    "deploy:content": "tsx scripts/deploy-content.ts",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx server/db/migrate.ts",

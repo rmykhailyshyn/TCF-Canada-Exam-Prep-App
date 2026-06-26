@@ -13,7 +13,11 @@ function scoreLabel(s: SessionSummary): string {
   // the overall /20 average + tasks submitted, not correct/total.
   if (s.section === "writing" || s.section === "speaking") {
     const time = s.elapsedMs !== null ? ` · ${formatClock(s.elapsedMs)}` : "";
-    return `${s.overallScore ?? 0} / 20 avg · ${s.tasksSubmitted ?? 0} tasks${time}`;
+    // spec: docs/specs/content-deploy.md §Behaviour.7 — an online (unscored) session has a null
+    // overall score; show "not scored" rather than a fabricated "0 / 20".
+    const score =
+      s.overallScore == null ? "not scored" : `${s.overallScore} / 20 avg`;
+    return `${score} · ${s.tasksSubmitted ?? 0} tasks${time}`;
   }
   if (s.mode === "real") {
     const points =

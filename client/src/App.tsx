@@ -9,6 +9,7 @@ import {
 import { TopNav } from "./components/TopNav";
 import { SetupScreen } from "./features/quiz/SetupScreen";
 import type { SessionConfig } from "./features/quiz/types";
+import { CapabilitiesProvider } from "./lib/capabilities";
 import { HistoryPage } from "./pages/HistoryPage";
 import { ListeningQuizPage } from "./pages/ListeningQuizPage";
 import { QuestionBankPage } from "./pages/QuestionBankPage";
@@ -62,17 +63,20 @@ function Home(): JSX.Element {
 function App(): JSX.Element {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/question-bank" element={<QuestionBankPage />} />
-        <Route path="/history" element={<HistoryPage />} />
-        <Route path="/history/:id" element={<SessionDetailPage />} />
-        <Route path="/review/:id" element={<ReviewPage />} />
-        <Route path="/writing" element={<WritingPage />} />
-        <Route path="/writing/:id" element={<WritingReviewPage />} />
-        <Route path="/speaking" element={<SpeakingPage />} />
-        <Route path="/speaking/:id" element={<SpeakingReviewPage />} />
-      </Routes>
+      {/* spec: docs/specs/content-deploy.md §Behaviour.3, 8 — capability flags available app-wide. */}
+      <CapabilitiesProvider>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/question-bank" element={<QuestionBankPage />} />
+          <Route path="/history" element={<HistoryPage />} />
+          <Route path="/history/:id" element={<SessionDetailPage />} />
+          <Route path="/review/:id" element={<ReviewPage />} />
+          <Route path="/writing" element={<WritingPage />} />
+          <Route path="/writing/:id" element={<WritingReviewPage />} />
+          <Route path="/speaking" element={<SpeakingPage />} />
+          <Route path="/speaking/:id" element={<SpeakingReviewPage />} />
+        </Routes>
+      </CapabilitiesProvider>
     </BrowserRouter>
   );
 }

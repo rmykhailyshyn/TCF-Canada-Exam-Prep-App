@@ -2,7 +2,7 @@
 
 ## Status
 
-approved
+implemented
 
 ## Goal
 
@@ -91,15 +91,47 @@ portable endpoints (Milestone 15):
 
 ## Acceptance criteria
 
-- [ ] `npm run deploy:content` loads the local export into D1 and uploads referenced media to R2; the content is then playable on the deployed instance, with audio seeking via R2 range requests. (Behaviour.1)
-- [ ] Re-running `deploy:content` produces no duplicate questions/tasks (override-in-place on the natural keys) and overwrites media at the same R2 keys. (Behaviour.2)
-- [ ] With `imports = false`, the client hides/disables the Question Bank import panel with an explanatory note. (Behaviour.3)
-- [ ] With `aiScoring = false`, Writing submit locks the response without an evaluation, no score/feedback or "Get correction" is shown, and the sample answer/template is presented instead. (Behaviour.4, 7)
-- [ ] With `transcription = false`, Speaking supports record + playback + sample answer but produces no transcript/score. (Behaviour.5, 7)
-- [ ] On the local runtime (all capabilities `true`), Writing/Speaking/Question Bank behave exactly as before this milestone — verified by the existing suites passing unchanged. (Behaviour.6)
-- [ ] Online-completed writing/speaking sessions appear in history without a fabricated /20 (missing evaluation reads as unscored). (Behaviour.7)
-- [ ] If `/api/health` returns an error or is unreachable at load, the client defaults to the most-restrictive capability set (all `false`) and shows no capability-gated actions. (Behaviour.8)
-- [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass; e2e (local, full-capability) shows no behaviour change. (Behaviour.6)
+- [x] `npm run deploy:content` loads the local export into D1 and uploads referenced media to R2; the content is then playable on the deployed instance, with audio seeking via R2 range requests. (Behaviour.1)
+- [x] Re-running `deploy:content` produces no duplicate questions/tasks (override-in-place on the natural keys) and overwrites media at the same R2 keys. (Behaviour.2)
+- [x] With `imports = false`, the client hides/disables the Question Bank import panel with an explanatory note. (Behaviour.3)
+- [x] With `aiScoring = false`, Writing submit locks the response without an evaluation, no score/feedback or "Get correction" is shown, and the sample answer/template is presented instead. (Behaviour.4, 7)
+- [x] With `transcription = false`, Speaking supports record + playback + sample answer but produces no transcript/score. (Behaviour.5, 7)
+- [x] On the local runtime (all capabilities `true`), Writing/Speaking/Question Bank behave exactly as before this milestone — verified by the existing suites passing unchanged. (Behaviour.6)
+- [x] Online-completed writing/speaking sessions appear in history without a fabricated /20 (missing evaluation reads as unscored). (Behaviour.7)
+- [x] If `/api/health` returns an error or is unreachable at load, the client defaults to the most-restrictive capability set (all `false`) and shows no capability-gated actions. (Behaviour.8)
+- [x] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass; e2e (local, full-capability) shows no behaviour change. (Behaviour.6)
+
+## Implementation notes (SDD Rule 4)
+
+1. **D1 load mechanism — uniform `wrangler d1 execute`, not the import endpoint.** The spec's default
+   (Open questions) was to POST the export to the portable import endpoint. Two facts redirected this:
+   (a) the export/import service (`server/services/export-import.ts`) covers reading/listening
+   **questions only** — it has no path for Writing/Speaking **tasks**, which also must reach D1; and (b)
+   the import endpoint is registered Node-only (`server/routes/node-routes.ts`), so it is not mounted on
+   the Worker. Rather than mix two mechanisms (and mount a write endpoint despite `imports = false`),
+   `npm run deploy:content` dumps **all** content tables as idempotent `INSERT OR REPLACE` SQL
+   (`server/lib/deploy-sql.ts`, pure + unit-tested) keyed on the PK id — content is push-only from local,
+   never edited online — and applies it via `wrangler d1 execute --file`. Media is uploaded with
+   `wrangler r2 object put` under each stored relative key. The import endpoint stays Node-only and
+   `imports = false` remains coherent.
+2. **Online submit/complete/recording were Node-only → Worker-only practice routes.** Writing/speaking
+   submit, complete, and recording-upload invoke Claude/Whisper and lived in the Node-only extension, so
+   the Worker had no way to lock a draft, store a recording, or finalise a session. New **portable**
+   CLI-free service functions (`lockResponse`, `completeWritingSessionUnscored`, `storeRecording`,
+   `completeSpeakingSessionUnscored`) plus `registerPracticeRoutes()` — mounted **only** by the Worker
+   entry (`server/worker.ts`) — provide the unscored online behaviour. The Node entry is unchanged → zero
+   regression to the local experience. Correction and speaking-submit are deliberately not mounted online
+   (they 404; the client hides their buttons).
+3. **No fabricated /20.** `getWriting/SpeakingSession` and `listSessions`' writing/speaking aggregates now
+   report `overallScore: null` (not `0`) when no task is scored, so an online/practice session reads as
+   unscored in results and history. `CompleteResult.overallScore` and the client's `WritingCompleteResult`
+   / `SpeakingCompleteResult` were widened to `number | null`; `submitWritingResponse` resolves to
+   `WritingEvaluation | null` (null on the online lock).
+4. **Not exercised live here.** `wrangler d1 execute` / `wrangler r2 object put` against the real D1/R2
+   require the user's Cloudflare account (as in Milestone 15) and were not run in CI. The pure SQL builder
+   is unit-tested; `deploy:content --dry-run` was run end-to-end against the local DB (correct SQL with
+   `'`-escaping; absolute legacy keys flagged + skipped); the practice routes have a DB-backed smoke test
+   (`server/routes/practice-routes.test.ts`).
 
 ## Open questions
 

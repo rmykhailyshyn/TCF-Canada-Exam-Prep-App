@@ -11,6 +11,7 @@ import {
   importQuestions,
 } from "../lib/api";
 import { DIFFICULTY_BANDS } from "../lib/bands";
+import { useCapabilities } from "../lib/capabilities";
 
 // spec: docs/specs/question-export-import.md §Behaviour — the Question Bank page hosts an Export
 // panel (section + complexity filters → downloaded JSON) and an Import panel (upload + override).
@@ -47,6 +48,10 @@ function triggerDownload(doc: ExportDocument): void {
 }
 
 export function QuestionBankPage(): JSX.Element {
+  // spec: docs/specs/content-deploy.md §Behaviour.3 — import is a local/full-runtime capability;
+  // online (imports=false) the import panel is hidden and replaced with an explanatory note. Export
+  // (a pure read) always stays available.
+  const { imports } = useCapabilities();
   return (
     <>
       {/* spec: section-navigation §Behaviour.2 — Question Bank is reachable via the persistent top menu.
@@ -58,7 +63,13 @@ export function QuestionBankPage(): JSX.Element {
             Question Bank
           </h1>
           <ExportPanel />
-          <ImportPanel />
+          {imports ? (
+            <ImportPanel />
+          ) : (
+            <p className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">
+              Importing is only available in the local app.
+            </p>
+          )}
         </div>
       </main>
     </>

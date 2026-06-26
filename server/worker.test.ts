@@ -42,6 +42,19 @@ describe("worker entry (Cloudflare practice-only runtime)", () => {
     expect(body.error?.code).toBe("NOT_FOUND");
   });
 
+  it("returns NOT_FOUND (not 500) for the unmounted writing-correct route", async () => {
+    // Correction is training-only and deliberately NOT mounted on the Worker (practice-only); it must
+    // fall through to the NOT_FOUND catch-all, never a 500. spec: content-deploy.md §Behaviour.5.
+    const res = await app.request(
+      "/api/writing/sessions/1/correct/1",
+      { method: "POST" },
+      env,
+    );
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: { code: string } | null };
+    expect(body.error?.code).toBe("NOT_FOUND");
+  });
+
   it("enforces the shared-secret header when ACCESS_SHARED_SECRET is set", async () => {
     const guarded: Env = { ...env, ACCESS_SHARED_SECRET: "s3cret" };
     const denied = await app.request("/api/health", undefined, guarded);

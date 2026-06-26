@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { BrandMark } from "../../components/BrandMark";
+import { useCapabilities } from "../../lib/capabilities";
 import { CountdownTimer } from "../quiz/CountdownTimer";
 import { ConfirmDialog } from "../quiz/ConfirmDialog";
 import { VirtualKeyboard } from "./VirtualKeyboard";
@@ -14,6 +15,9 @@ import type { WritingSession } from "./useWritingSession";
 type Props = { session: WritingSession };
 
 export function WritingEditor({ session }: Props): JSX.Element {
+  // spec: docs/specs/content-deploy.md §Behaviour.4 — online (aiScoring=false) there is no
+  // correction and submit only locks the response; relabel the action and drop "Get correction".
+  const { aiScoring } = useCapabilities();
   const [active, setActive] = useState(0);
   const [confirmOpen, setConfirmOpen] = useState(false);
   // spec: docs/specs/virtual-keyboard.md §Behaviour.2 — the accent keyboard inserts into the active
@@ -121,21 +125,27 @@ export function WritingEditor({ session }: Props): JSX.Element {
             />
             {!isReal && (
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => session.correct(n)}
-                  className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
-                >
-                  Get correction
-                </button>
+                {aiScoring && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => session.correct(n)}
+                    className="rounded-xl border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Get correction
+                  </button>
+                )}
                 <button
                   type="button"
                   disabled={busy}
                   onClick={() => session.submit(n)}
                   className="rounded-xl bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white shadow-brand-glow transition hover:bg-brand-700 disabled:opacity-50"
                 >
-                  {busy ? "Working…" : "Submit for score"}
+                  {busy
+                    ? "Working…"
+                    : aiScoring
+                      ? "Submit for score"
+                      : "Save & lock"}
                 </button>
               </div>
             )}

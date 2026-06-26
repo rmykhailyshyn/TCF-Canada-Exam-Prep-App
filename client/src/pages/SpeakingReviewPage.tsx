@@ -43,10 +43,18 @@ export function SpeakingReviewPage(): JSX.Element {
         {detail && (
           <>
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-2xl font-extrabold text-slate-900 tabular-nums">
-                {detail.session.overallScore ?? 0}{" "}
-                <span className="text-base text-slate-400">/ 20 avg</span>
-              </p>
+              {/* spec: docs/specs/content-deploy.md §Behaviour.7 — online (unscored) sessions have a
+                  null overall score; render "Practice — not scored" rather than "0 / 20 avg". */}
+              {detail.session.overallScore == null ? (
+                <p className="text-2xl font-extrabold text-slate-900">
+                  Practice — not scored
+                </p>
+              ) : (
+                <p className="text-2xl font-extrabold text-slate-900 tabular-nums">
+                  {detail.session.overallScore}{" "}
+                  <span className="text-base text-slate-400">/ 20 avg</span>
+                </p>
+              )}
               <p className="mt-1 text-sm text-slate-500">
                 {detail.session.submitted} / {detail.tasks.length} tasks
                 submitted

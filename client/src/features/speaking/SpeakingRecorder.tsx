@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useCapabilities } from "../../lib/capabilities";
 import type { SpeakingSession } from "./useSpeakingSession";
 
 // spec: docs/specs/speaking-ui.md §Recorder / Training mode (Behaviour.5–11)
@@ -24,6 +25,9 @@ export function SpeakingRecorder({
   isReal,
   recordingDisabled,
 }: Props): JSX.Element {
+  // spec: docs/specs/content-deploy.md §Behaviour.5 — online (no transcription/aiScoring) keep
+  // record + playback + sample answer, but hide the transcript, correction and scoring affordances.
+  const { aiScoring, transcription } = useCapabilities();
   const n = taskNumber;
   const isRecording = session.recordingTask === n;
   const isUploading = session.uploading[n] === true;
@@ -89,7 +93,7 @@ export function SpeakingRecorder({
           <p className="mt-3 text-sm text-red-700">{session.micError}</p>
         )}
 
-        {transcript != null && (
+        {transcription && transcript != null && (
           <div className="mt-4">
             <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
               Transcript
@@ -103,7 +107,7 @@ export function SpeakingRecorder({
           </div>
         )}
 
-        {!isReal && (
+        {!isReal && aiScoring && (
           <div className="mt-4 flex gap-2">
             <button
               type="button"

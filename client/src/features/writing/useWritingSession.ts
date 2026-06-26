@@ -11,6 +11,7 @@ import {
   saveWritingDraft,
   submitWritingResponse,
 } from "../../lib/api";
+import { useCapabilities } from "../../lib/capabilities";
 import { type WritingConfig, countWords } from "./types";
 
 // spec: docs/specs/writing-session.md + docs/specs/writing-ui.md
@@ -43,6 +44,9 @@ export type WritingSession = {
 };
 
 export function useWritingSession(config: WritingConfig): WritingSession {
+  // spec: docs/specs/content-deploy.md §Behaviour.4 — online (aiScoring=false) submit only locks the
+  // response (resolves to null, no evaluation stored) and correction is never requested.
+  const { aiScoring } = useCapabilities();
   const [status, setStatus] = useState<WritingStatus>("loading");
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
@@ -149,9 +153,11 @@ export function useWritingSession(config: WritingConfig): WritingSession {
         taskNumber,
         draftsRef.current[taskNumber] ?? "",
       )
-        .then((evaluation) =>
-          setEvaluations((ev) => ({ ...ev, [taskNumber]: evaluation })),
-        )
+        .then((evaluation) => {
+          // Online (aiScoring=false) the submit locks the response without an evaluation (null).
+          if (evaluation)
+            setEvaluations((ev) => ({ ...ev, [taskNumber]: evaluation }));
+        })
         .catch((err: unknown) =>
           setTaskError((e) => ({
             ...e,
@@ -168,7 +174,8 @@ export function useWritingSession(config: WritingConfig): WritingSession {
 
   const correct = useCallback(
     (taskNumber: number) => {
-      if (sessionId == null || busyTask != null) return;
+      // No correction endpoint online (aiScoring=false); the UI hides the button, this guards too.
+      if (sessionId == null || busyTask != null || !aiScoring) return;
       setBusyTask(taskNumber);
       setTaskError((e) => ({ ...e, [taskNumber]: "" }));
       requestWritingCorrection(
@@ -190,7 +197,7 @@ export function useWritingSession(config: WritingConfig): WritingSession {
         )
         .finally(() => setBusyTask(null));
     },
-    [sessionId, busyTask],
+    [sessionId, busyTask, aiScoring],
   );
 
   const finish = useCallback(

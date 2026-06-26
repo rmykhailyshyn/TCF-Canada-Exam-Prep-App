@@ -327,9 +327,23 @@ npm run cf:deploy                     # npm run build && wrangler deploy
 # 4. Optional: run the Worker locally against a local D1 + R2 (cloud parity; does not touch npm run dev)
 npm run cf:dev                        # wrangler dev
 
-# Content (questions, audio, images) is loaded separately in Milestone 16 (import locally → push to
-# cloud). A freshly deployed Worker has an empty D1/R2 until then.
+# 5. Push locally-imported content to the cloud (Milestone 16; import locally → deploy). Dumps every
+#    content table from the local SQLite DB as idempotent INSERT OR REPLACE SQL and applies it to D1 via
+#    `wrangler d1 execute --file`, then uploads referenced media (MP3s, passage images) to R2 under the
+#    same relative keys the R2 MediaStore reads. Re-running overwrites in place. Needs `wrangler login`.
+npm run deploy:content                 # push content + media to remote D1 + R2
+npm run deploy:content -- --dry-run     # print the generated SQL + planned R2 uploads, change nothing
+npm run deploy:content -- --local       # target the local `wrangler dev` D1/R2 instead of remote
+# Override the D1 name / R2 bucket with D1_DATABASE / R2_BUCKET env vars (defaults: tcf-prep,
+# tcf-prep-media). A freshly deployed Worker has an empty D1/R2 until deploy:content is run.
 ```
+
+**Online practice-only behaviour (Milestone 16).** The deployed Worker reports `capabilities` all-`false`,
+so the client hides the import panel, AI score/feedback, "Get correction", and the transcript. Online,
+Writing **submit** locks the response without a score (sample answer/template shown instead), Speaking is
+record + playback + sample answer (no Whisper, no score), and completed online sessions appear in history
+**unscored** (no fabricated /20). AI scoring/transcription remain local-only. The client fails safe to the
+most-restrictive capabilities if `/api/health` is unreachable.
 
 **Access control.** Default is **Cloudflare Access** (Zero Trust, free): in the dashboard, add a
 self-hosted Access application for the Worker's route and a policy allowing only your identity (email

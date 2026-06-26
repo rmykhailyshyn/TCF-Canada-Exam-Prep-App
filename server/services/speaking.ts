@@ -11,6 +11,7 @@ import { ApiError } from "../lib/errors";
 import { type Rng, pickOne } from "../lib/random";
 import { scoreToNclc } from "../lib/nclc";
 import { type TaskTiming, getSpeakingTiming } from "../config/exam";
+import type { MediaStore } from "../runtime/media-store";
 import type { SpeakingFeedback } from "./speakingEvaluation";
 
 // spec: docs/specs/speaking-session.md
@@ -55,7 +56,9 @@ export type SubmitResult = {
 };
 export type CompleteResult = {
   tasks: { taskNumber: number; score: number | null; level: string | null }[];
-  overallScore: number;
+  // spec: docs/specs/content-deploy.md §Behaviour.7 — null (not 0) when no task is scored, so an
+  // online/practice session is never shown a fabricated /20.
+  overallScore: number | null;
   submitted: number;
 };
 
@@ -321,12 +324,9 @@ export async function getSpeakingSession(
     };
   });
 
-  const scored = tasks.filter((t) => t.score != null);
-  const overallScore = tasks.length
-    ? Math.round(
-        tasks.reduce((sum, t) => sum + (t.score ?? 0), 0) / tasks.length,
-      )
-    : null;
+  // spec: docs/specs/content-deploy.md §Behaviour.7 — null (not 0) when nothing is scored, so an
+  // online/practice session reads as unscored. With at least one score the mean is over all tasks.
+  const overallScore = overallFromScores(tasks);
 
   return {
     session: {
@@ -337,9 +337,105 @@ export async function getSpeakingSession(
         : null,
       elapsedMs: session.elapsedMs ?? null,
       overallScore: session.completedAt ? overallScore : null,
-      submitted: scored.length,
+      submitted: tasks.filter((t) => t.score != null).length,
     },
     tasks,
+  };
+}
+
+// spec: docs/specs/content-deploy.md §Behaviour.7 — shared overall-score rule: null when no task is
+// scored; otherwise the mean over all tasks (unscored/unrecorded count as 0, per speaking §Behaviour.17a).
+function overallFromScores(tasks: { score: number | null }[]): number | null {
+  const hasScore = tasks.some((t) => t.score != null);
+  if (!hasScore || tasks.length === 0) return null;
+  return Math.round(
+    tasks.reduce((sum, t) => sum + (t.score ?? 0), 0) / tasks.length,
+  );
+}
+
+// spec: docs/specs/content-deploy.md §Behaviour.5 — PORTABLE online recording upload: store the audio
+// bytes through the MediaStore (R2 on the Worker) WITHOUT Whisper. No transcript/duration is produced;
+// the recording is kept only for in-session playback. The Node entry keeps the transcribing upload
+// (services/speaking-node.ts → saveRecording).
+export async function storeRecording(
+  db: DbClient,
+  mediaStore: MediaStore,
+  sessionId: number,
+  taskNumber: number,
+  audio: Uint8Array,
+  mimetype: string | undefined,
+): Promise<UploadResult> {
+  await loadSession(db, sessionId);
+  const row = await loadResponse(db, sessionId, taskNumber);
+
+  const ext = extensionForMime(mimetype);
+  const key = audioKeyFor(sessionId, taskNumber, ext);
+  // Re-recording replaces the prior take; drop a stale stored object if its key changed.
+  if (row.audioPath && row.audioPath !== key) {
+    await mediaStore.delete(row.audioPath);
+  }
+  await mediaStore.put(key, audio, `audio/${ext}`);
+
+  // No transcription online: clear any prior transcript/duration and the submitted flag.
+  await db
+    .update(speakingResponses)
+    .set({
+      audioPath: key,
+      transcript: null,
+      durationMs: null,
+      submittedAt: null,
+    })
+    .where(eq(speakingResponses.id, row.id));
+
+  return {
+    transcript: "",
+    audioUrl: audioUrlFor(sessionId, taskNumber),
+    durationMs: null,
+  };
+}
+
+// spec: docs/specs/content-deploy.md §Behaviour.4, 7 — PORTABLE online complete: finalise the session
+// (timestamp + elapsed) and report the aggregate WITHOUT scoring. No evaluations exist online, so every
+// task reads null and overallScore is null. Idempotent: a finalised session is not re-stamped.
+export async function completeSpeakingSessionUnscored(
+  db: DbClient,
+  sessionId: number,
+  elapsedMs: number | null,
+): Promise<CompleteResult> {
+  const session = await loadSession(db, sessionId);
+
+  const responses = await db
+    .select()
+    .from(speakingResponses)
+    .where(eq(speakingResponses.sessionId, sessionId))
+    .orderBy(asc(speakingResponses.taskNumber));
+  const evals = await loadEvaluations(
+    db,
+    responses.map((r) => r.id),
+  );
+
+  if (!session.completedAt) {
+    await db
+      .update(sessions)
+      .set({
+        completedAt: new Date(),
+        elapsedMs: session.mode === "real" ? elapsedMs : null,
+      })
+      .where(eq(sessions.id, sessionId));
+  }
+
+  const tasks = responses.map((r) => {
+    const score = evals.get(r.id)?.score ?? null;
+    return {
+      taskNumber: r.taskNumber,
+      score,
+      level: score == null ? null : scoreToNclc(score),
+    };
+  });
+  return {
+    tasks,
+    overallScore: overallFromScores(tasks),
+    submitted: tasks.filter((t) => t.score != null).length,
   };
 }
 

@@ -54,9 +54,15 @@ export type SubmitResult = {
 };
 export type CompleteResult = {
   tasks: { taskNumber: number; score: number | null; level: string | null }[];
-  overallScore: number;
+  // spec: docs/specs/content-deploy.md §Behaviour.7 — null (not 0) when no task is scored, so an
+  // online/practice session is never shown a fabricated /20.
+  overallScore: number | null;
   submitted: number;
 };
+
+// spec: docs/specs/content-deploy.md §Behaviour.4 — the online (practice-only) lock result: a draft is
+// locked (submitted) with its word count, but no evaluation is produced.
+export type LockResult = { wordCount: number; submitted: true };
 
 export type ResponseRow = typeof writingResponses.$inferSelect;
 
@@ -194,6 +200,24 @@ export async function saveDraft(
   return { wordCount };
 }
 
+// spec: docs/specs/content-deploy.md §Behaviour.4 — PORTABLE online submit: lock the draft (record
+// submittedAt + wordCount) WITHOUT invoking Claude. Used by the Worker practice routes when
+// capabilities.aiScoring is false; the Node entry keeps the scoring submit (services/writing-node.ts).
+export async function lockResponse(
+  db: DbClient,
+  sessionId: number,
+  taskNumber: number,
+  text: string,
+): Promise<LockResult> {
+  const row = await loadResponse(db, sessionId, taskNumber);
+  const wordCount = countWords(text);
+  await db
+    .update(writingResponses)
+    .set({ responseText: text, wordCount, submittedAt: new Date() })
+    .where(eq(writingResponses.id, row.id));
+  return { wordCount, submitted: true };
+}
+
 // Shared loader exported for the Node-only scoring path (services/writing-node.ts).
 export async function loadTaskForResponse(
   db: DbClient,
@@ -317,12 +341,10 @@ export async function getWritingSession(
     };
   });
 
-  const scored = tasks.filter((t) => t.score != null);
-  const overallScore = tasks.length
-    ? Math.round(
-        tasks.reduce((sum, t) => sum + (t.score ?? 0), 0) / tasks.length,
-      )
-    : null;
+  // spec: docs/specs/content-deploy.md §Behaviour.7 — null (not 0) when nothing is scored, so an
+  // online/practice session reads as unscored rather than 0 / 20. When at least one task is scored the
+  // mean is taken over all tasks (unscored tasks count as 0), matching real-mode local scoring.
+  const overallScore = overallFromScores(tasks);
 
   return {
     session: {
@@ -333,8 +355,74 @@ export async function getWritingSession(
         : null,
       elapsedMs: session.elapsedMs ?? null,
       overallScore: session.completedAt ? overallScore : null,
-      submitted: scored.length,
+      submitted: tasks.filter((t) => t.score != null).length,
     },
     tasks,
+  };
+}
+
+// spec: docs/specs/content-deploy.md §Behaviour.7 — shared overall-score rule: null when no task is
+// scored; otherwise the mean over all tasks (unscored count as 0).
+function overallFromScores(tasks: { score: number | null }[]): number | null {
+  const hasScore = tasks.some((t) => t.score != null);
+  if (!hasScore || tasks.length === 0) return null;
+  return Math.round(
+    tasks.reduce((sum, t) => sum + (t.score ?? 0), 0) / tasks.length,
+  );
+}
+
+// spec: docs/specs/content-deploy.md §Behaviour.4, 7 — PORTABLE online complete: finalise the session
+// (timestamp + elapsed) and report the aggregate WITHOUT scoring. No evaluations exist online, so every
+// task reads null and overallScore is null. Idempotent: a finalised session is not re-stamped. The Node
+// entry keeps the scoring complete (services/writing-node.ts).
+export async function completeWritingSessionUnscored(
+  db: DbClient,
+  sessionId: number,
+  elapsedMs: number | null,
+): Promise<CompleteResult> {
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.id, sessionId));
+  if (!session || session.section !== "writing") {
+    throw new ApiError(
+      "SESSION_NOT_FOUND",
+      `Writing session ${sessionId} not found.`,
+      404,
+    );
+  }
+
+  const responses = await db
+    .select()
+    .from(writingResponses)
+    .where(eq(writingResponses.sessionId, sessionId))
+    .orderBy(asc(writingResponses.taskNumber));
+  const evals = await loadEvaluations(
+    db,
+    responses.map((r) => r.id),
+  );
+
+  if (!session.completedAt) {
+    await db
+      .update(sessions)
+      .set({
+        completedAt: new Date(),
+        elapsedMs: session.mode === "real" ? elapsedMs : null,
+      })
+      .where(eq(sessions.id, sessionId));
+  }
+
+  const tasks = responses.map((r) => {
+    const score = evals.get(r.id)?.score ?? null;
+    return {
+      taskNumber: r.taskNumber,
+      score,
+      level: score == null ? null : scoreToNclc(score),
+    };
+  });
+  return {
+    tasks,
+    overallScore: overallFromScores(tasks),
+    submitted: tasks.filter((t) => t.score != null).length,
   };
 }
