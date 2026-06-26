@@ -567,7 +567,7 @@ score Writing/Speaking online when an API key is bound.
       `claude-api/<model>`); failures still surface as `ClaudeError` → `EVALUATION_FAILED` /
       `CORRECTION_FAILED` (no new error codes)
 - [ ] Worker: when `ANTHROPIC_API_KEY` is bound, use the API provider, report `capabilities.aiScoring:
-    true`, and mount the writing/speaking scoring + correction routes; transcription/imports/enrichment
+true`, and mount the writing/speaking scoring + correction routes; transcription/imports/enrichment
       stay unavailable on the Worker (`transcription: false`)
 - [ ] Unit tests: CLI passthrough unchanged; API provider driven by a stubbed `fetch` (success +
       failure); provenance strings; Worker health capability gated on the key
