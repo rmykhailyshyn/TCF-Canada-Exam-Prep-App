@@ -40,6 +40,9 @@ scripts/dev-audio/
 # Local Claude Code settings (machine-specific permission grants)
 .claude/
 
+# Graphify knowledge-graph output (generated tool artifacts)
+graphify-out/
+
 # Editor / OS
 .DS_Store
 .idea/
