@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react';
-import { Spinner } from '../components/Spinner';
-import { ListeningQuizScreen } from '../features/listening/ListeningQuizScreen';
-import { ResultsScreen } from '../features/quiz/ResultsScreen';
-import type { SessionConfig } from '../features/quiz/types';
-import { useQuizSession } from '../features/quiz/useQuizSession';
+import type { ReactNode } from "react";
+import { Spinner } from "../components/Spinner";
+import { ListeningQuizScreen } from "../features/listening/ListeningQuizScreen";
+import { ResultsScreen } from "../features/quiz/ResultsScreen";
+import type { SessionConfig } from "../features/quiz/types";
+import { useQuizSession } from "../features/quiz/useQuizSession";
 
 // spec: docs/specs/listening-quiz-ui.md §Behaviour
 // Route-level orchestrator: runs one listening session through its lifecycle (loading → active →
@@ -14,7 +14,7 @@ type Props = { config: SessionConfig; onExit: () => void };
 export function ListeningQuizPage({ config, onExit }: Props): JSX.Element {
   const session = useQuizSession(config);
 
-  if (session.status === 'loading') {
+  if (session.status === "loading") {
     return (
       <Centered>
         <Spinner label="Starting session…" />
@@ -22,10 +22,12 @@ export function ListeningQuizPage({ config, onExit }: Props): JSX.Element {
     );
   }
 
-  if (session.status === 'error') {
+  if (session.status === "error") {
     return (
       <Centered>
-        <p className="text-red-700">{session.error ?? 'Something went wrong.'}</p>
+        <p className="text-red-700">
+          {session.error ?? "Something went wrong."}
+        </p>
         <button
           type="button"
           onClick={onExit}
@@ -37,7 +39,7 @@ export function ListeningQuizPage({ config, onExit }: Props): JSX.Element {
     );
   }
 
-  if (session.status === 'finished' && session.results) {
+  if (session.status === "finished" && session.results) {
     return (
       <ResultsScreen
         results={session.results}

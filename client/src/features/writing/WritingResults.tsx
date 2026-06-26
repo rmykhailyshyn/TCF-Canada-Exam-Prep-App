@@ -1,5 +1,5 @@
-import type { WritingCompleteResult, WritingTask } from '../../lib/api';
-import { formatClock } from '../../lib/format';
+import type { WritingCompleteResult, WritingTask } from "../../lib/api";
+import { formatClock } from "../../lib/format";
 
 // spec: docs/specs/writing-ui.md §Results (Behaviour.16)
 // Per-task score /20 + NCLC + the overall average, shown after completion.
@@ -11,7 +11,12 @@ type Props = {
   onHome: () => void;
 };
 
-export function WritingResults({ results, tasks, elapsedMs, onHome }: Props): JSX.Element {
+export function WritingResults({
+  results,
+  tasks,
+  elapsedMs,
+  onHome,
+}: Props): JSX.Element {
   const titleByNumber = new Map(tasks.map((t) => [t.taskNumber, t.title]));
 
   return (
@@ -26,23 +31,31 @@ export function WritingResults({ results, tasks, elapsedMs, onHome }: Props): JS
             <span className="text-2xl font-bold text-brand-200"> / 20</span>
           </p>
           <p className="mt-1 text-sm font-medium text-brand-200">
-            average · {results.submitted} / {results.tasks.length} tasks submitted
+            average · {results.submitted} / {results.tasks.length} tasks
+            submitted
             {elapsedMs !== null && <> · {formatClock(elapsedMs)}</>}
           </p>
         </div>
 
         <div className="divide-y divide-slate-100">
           {results.tasks.map((t) => (
-            <div key={t.taskNumber} className="flex items-center justify-between px-6 py-4 text-left">
+            <div
+              key={t.taskNumber}
+              className="flex items-center justify-between px-6 py-4 text-left"
+            >
               <div>
                 <div className="font-semibold text-slate-900">
                   Task {t.taskNumber}
-                  {titleByNumber.get(t.taskNumber) ? ` · ${titleByNumber.get(t.taskNumber)}` : ''}
+                  {titleByNumber.get(t.taskNumber)
+                    ? ` · ${titleByNumber.get(t.taskNumber)}`
+                    : ""}
                 </div>
-                <div className="text-xs text-slate-400">{t.level ?? 'not submitted'}</div>
+                <div className="text-xs text-slate-400">
+                  {t.level ?? "not submitted"}
+                </div>
               </div>
               <div className="text-lg font-bold tabular-nums text-slate-900">
-                {t.score == null ? '—' : `${t.score} / 20`}
+                {t.score == null ? "—" : `${t.score} / 20`}
               </div>
             </div>
           ))}

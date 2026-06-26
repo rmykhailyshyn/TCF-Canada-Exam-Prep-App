@@ -1,13 +1,13 @@
-import { useState } from 'react';
-import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Spinner } from '../components/Spinner';
-import { TopNav } from '../components/TopNav';
-import { WritingEditor } from '../features/writing/WritingEditor';
-import { WritingResults } from '../features/writing/WritingResults';
-import { WritingSetup } from '../features/writing/WritingSetup';
-import type { WritingConfig } from '../features/writing/types';
-import { useWritingSession } from '../features/writing/useWritingSession';
+import { useState } from "react";
+import type { ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
+import { Spinner } from "../components/Spinner";
+import { TopNav } from "../components/TopNav";
+import { WritingEditor } from "../features/writing/WritingEditor";
+import { WritingResults } from "../features/writing/WritingResults";
+import { WritingSetup } from "../features/writing/WritingSetup";
+import type { WritingConfig } from "../features/writing/types";
+import { useWritingSession } from "../features/writing/useWritingSession";
 
 // spec: docs/specs/writing-ui.md — setup → editor → results, mirroring the reading/listening pages.
 
@@ -28,7 +28,7 @@ export function WritingPage(): JSX.Element {
     );
   }
 
-  return <WritingRunner config={config} onHome={() => navigate('/')} />;
+  return <WritingRunner config={config} onHome={() => navigate("/")} />;
 }
 
 function WritingRunner({
@@ -40,7 +40,7 @@ function WritingRunner({
 }): JSX.Element {
   const session = useWritingSession(config);
 
-  if (session.status === 'loading') {
+  if (session.status === "loading") {
     return (
       <Centered>
         <Spinner label="Starting writing session…" />
@@ -48,10 +48,12 @@ function WritingRunner({
     );
   }
 
-  if (session.status === 'error') {
+  if (session.status === "error") {
     return (
       <Centered>
-        <p className="text-red-700">{session.error ?? 'Something went wrong.'}</p>
+        <p className="text-red-700">
+          {session.error ?? "Something went wrong."}
+        </p>
         <button
           type="button"
           onClick={onHome}
@@ -63,7 +65,7 @@ function WritingRunner({
     );
   }
 
-  if (session.status === 'finished' && session.results) {
+  if (session.status === "finished" && session.results) {
     return (
       <WritingResults
         results={session.results}

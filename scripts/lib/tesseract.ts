@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawnSync } from "node:child_process";
 
 // spec: docs/specs/reading-import.md §Behaviour.5, §Behaviour.9
 // Apple Silicon / macOS only (CLAUDE.md): wraps the Tesseract OCR CLI for the passage-image path.
@@ -8,15 +8,15 @@ import { spawnSync } from 'node:child_process';
 export class TesseractError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'TesseractError';
+    this.name = "TesseractError";
   }
 }
 
 // Runs Tesseract on a PNG and returns the extracted text. Throws TesseractError on failure.
-export function runTesseract(pngPath: string, lang = 'fra'): string {
-  const bin = process.env.TESSERACT_BIN ?? 'tesseract';
-  const result = spawnSync(bin, [pngPath, 'stdout', '-l', lang], {
-    encoding: 'utf8',
+export function runTesseract(pngPath: string, lang = "fra"): string {
+  const bin = process.env.TESSERACT_BIN ?? "tesseract";
+  const result = spawnSync(bin, [pngPath, "stdout", "-l", lang], {
+    encoding: "utf8",
     maxBuffer: 16 * 1024 * 1024,
   });
   if (result.error) {
@@ -26,7 +26,9 @@ export function runTesseract(pngPath: string, lang = 'fra'): string {
     );
   }
   if (result.status !== 0) {
-    throw new TesseractError(`Tesseract exited ${result.status}: ${result.stderr?.trim()}`);
+    throw new TesseractError(
+      `Tesseract exited ${result.status}: ${result.stderr?.trim()}`,
+    );
   }
   return result.stdout.trim();
 }

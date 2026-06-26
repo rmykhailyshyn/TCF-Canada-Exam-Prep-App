@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { SpeakingSession } from './useSpeakingSession';
+import { useState } from "react";
+import type { SpeakingSession } from "./useSpeakingSession";
 
 // spec: docs/specs/speaking-ui.md §Recorder / Training mode (Behaviour.5–11)
 // Per-task panel: the French question, the record/stop control with local playback, the transcript
@@ -33,12 +33,15 @@ export function SpeakingRecorder({
   const error = session.taskError[n];
   const recording = session.recordings[n];
   const busy = session.busyTask === n;
-  const otherRecording = session.recordingTask != null && session.recordingTask !== n;
+  const otherRecording =
+    session.recordingTask != null && session.recordingTask !== n;
 
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card">
-        <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Task {n}</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+          Task {n}
+        </h2>
         <p className="mt-3 whitespace-pre-wrap text-slate-800" lang="fr">
           {question}
         </p>
@@ -52,7 +55,10 @@ export function SpeakingRecorder({
               onClick={() => session.stopRecording()}
               className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-red-700 active:scale-[0.98]"
             >
-              <span aria-hidden className="h-3 w-3 animate-pulse rounded-sm bg-white" />
+              <span
+                aria-hidden
+                className="h-3 w-3 animate-pulse rounded-sm bg-white"
+              />
               Stop recording
             </button>
           ) : (
@@ -63,24 +69,36 @@ export function SpeakingRecorder({
               className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 font-semibold text-white shadow-brand-glow transition enabled:hover:bg-brand-700 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
             >
               <span aria-hidden className="h-3 w-3 rounded-full bg-white" />
-              {recording ? 'Re-record' : 'Record'}
+              {recording ? "Re-record" : "Record"}
             </button>
           )}
-          {isUploading && <span className="text-sm text-slate-500">Transcribing…</span>}
+          {isUploading && (
+            <span className="text-sm text-slate-500">Transcribing…</span>
+          )}
           {recording && !isRecording && (
-            <audio controls src={recording.url} className="h-9" aria-label={`Playback task ${n}`} />
+            <audio
+              controls
+              src={recording.url}
+              className="h-9"
+              aria-label={`Playback task ${n}`}
+            />
           )}
         </div>
 
-        {session.micError && <p className="mt-3 text-sm text-red-700">{session.micError}</p>}
+        {session.micError && (
+          <p className="mt-3 text-sm text-red-700">{session.micError}</p>
+        )}
 
         {transcript != null && (
           <div className="mt-4">
             <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
               Transcript
             </h3>
-            <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700" lang="fr">
-              {transcript || '(no speech detected)'}
+            <p
+              className="mt-1 whitespace-pre-wrap text-sm text-slate-700"
+              lang="fr"
+            >
+              {transcript || "(no speech detected)"}
             </p>
           </div>
         )}
@@ -101,7 +119,7 @@ export function SpeakingRecorder({
               onClick={() => session.submit(n)}
               className="rounded-xl bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white shadow-brand-glow transition hover:bg-brand-700 disabled:opacity-50"
             >
-              {busy ? 'Working…' : 'Submit for score'}
+              {busy ? "Working…" : "Submit for score"}
             </button>
           </div>
         )}
@@ -123,8 +141,13 @@ export function SpeakingRecorder({
 
       {!isReal && correction && (
         <div className="rounded-2xl border border-sky-200 bg-sky-50/60 p-4">
-          <h3 className="text-sm font-semibold text-sky-900">Suggested correction</h3>
-          <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700" lang="fr">
+          <h3 className="text-sm font-semibold text-sky-900">
+            Suggested correction
+          </h3>
+          <p
+            className="mt-2 whitespace-pre-wrap text-sm text-slate-700"
+            lang="fr"
+          >
             {correction.correctedText}
           </p>
           {correction.suggestions.length > 0 && (
@@ -143,18 +166,29 @@ export function SpeakingRecorder({
             <span className="text-2xl font-extrabold text-emerald-800 tabular-nums">
               {evaluation.score} / 20
             </span>
-            <span className="text-sm font-semibold text-emerald-700">{evaluation.level}</span>
+            <span className="text-sm font-semibold text-emerald-700">
+              {evaluation.level}
+            </span>
           </div>
           <Feedback label="Strengths" text={evaluation.feedback.strengths} />
           <Feedback label="Errors" text={evaluation.feedback.errors} />
-          <Feedback label="Improvements" text={evaluation.feedback.improvements} />
+          <Feedback
+            label="Improvements"
+            text={evaluation.feedback.improvements}
+          />
         </div>
       )}
     </div>
   );
 }
 
-function Feedback({ label, text }: { label: string; text: string }): JSX.Element {
+function Feedback({
+  label,
+  text,
+}: {
+  label: string;
+  text: string;
+}): JSX.Element {
   return (
     <p className="mt-2 text-sm text-slate-700">
       <span className="font-semibold text-slate-900">{label}: </span>
@@ -163,7 +197,13 @@ function Feedback({ label, text }: { label: string; text: string }): JSX.Element
   );
 }
 
-function Collapsible({ title, children }: { title: string; children: React.ReactNode }): JSX.Element {
+function Collapsible({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}): JSX.Element {
   const [open, setOpen] = useState(false);
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white shadow-card">
@@ -173,9 +213,11 @@ function Collapsible({ title, children }: { title: string; children: React.React
         className="flex w-full items-center justify-between px-5 py-3 text-left text-sm font-semibold text-slate-700"
       >
         {title}
-        <span aria-hidden>{open ? '▴' : '▾'}</span>
+        <span aria-hidden>{open ? "▴" : "▾"}</span>
       </button>
-      {open && <div className="border-t border-slate-100 px-5 py-3">{children}</div>}
+      {open && (
+        <div className="border-t border-slate-100 px-5 py-3">{children}</div>
+      )}
     </div>
   );
 }

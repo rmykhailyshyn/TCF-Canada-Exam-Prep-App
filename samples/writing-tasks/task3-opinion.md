@@ -4,14 +4,17 @@ title: Expression d'un point de vue
 minWords: 120
 maxWords: 180
 ---
+
 Donnez votre point de vue en respectant le nombre de mots indiqué.
 
 ## Prompt
+
 Certaines personnes préfèrent voyager seules, tandis que d'autres ne conçoivent le voyage
 qu'en groupe. Dans un texte argumenté, comparez ces deux façons de voyager et donnez votre
 point de vue, en l'appuyant sur des exemples.
 
 ## Sample answer
+
 La question du voyage en solitaire revient souvent lorsqu'on évoque les vacances idéales.
 D'un côté, voyager seul offre une liberté totale : on choisit son rythme, ses
 destinations, et l'on s'ouvre plus facilement aux rencontres. De l'autre, le voyage en
@@ -23,6 +26,7 @@ recherche : l'introspection ou le partage. L'essentiel, à mon avis, est de vari
 expériences pour grandir.
 
 ## Template
+
 - Introduction : présenter le débat
 - Arguments en faveur du voyage en solitaire (+ exemple)
 - Arguments en faveur du voyage en groupe (+ exemple)

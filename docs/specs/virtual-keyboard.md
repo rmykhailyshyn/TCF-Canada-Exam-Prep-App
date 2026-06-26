@@ -1,6 +1,7 @@
 # Spec: On-Screen Virtual Keyboard (French accents)
 
 ## Status
+
 implemented
 
 > Milestone 12. A frontend input aid for typing French special characters (é, à, ç, …) that a
@@ -10,12 +11,14 @@ implemented
 > approved behaviour.
 
 ## Goal
+
 Let the user insert French accented and special characters into a text response by clicking on-screen
-buttons, exactly as the real TCF Canada exam software offers during the *Expression écrite*. This
+buttons, exactly as the real TCF Canada exam software offers during the _Expression écrite_. This
 removes the dependency on a French (AZERTY) physical keyboard or OS-level dead-key/compose sequences,
 so a candidate on any keyboard layout can produce correct French orthography while writing.
 
 ## Scope
+
 - In scope:
   - A reusable on-screen virtual keyboard / accent toolbar component (React) that renders clickable
     French special characters and inserts the chosen glyph into the associated text input at the
@@ -36,6 +39,7 @@ so a candidate on any keyboard layout can produce correct French orthography whi
   - IME/handwriting input, predictive text, or spell-check.
 
 ## Behaviour
+
 1. In the Writing editor, an on-screen virtual keyboard (accent toolbar) is shown next to each task's
    `<textarea>`, available in both training and real modes.
 2. Clicking a character button inserts that glyph into the **focused** task's textarea at the current
@@ -47,16 +51,17 @@ so a candidate on any keyboard layout can produce correct French orthography whi
 4. The keyboard provides the exact character set of the official TCF Canada exam keyboard — a **4×4
    grid** of 16 keys, in this order (confirmed from the real software):
 
-   | | | | |
-   |---|---|---|---|
-   | é | è | ê | ë |
-   | à | â | ù | û |
-   | ô | î | ï | ç |
-   | œ | æ | « | » |
+   |     |     |     |     |
+   | --- | --- | --- | --- |
+   | é   | è   | ê   | ë   |
+   | à   | â   | ù   | û   |
+   | ô   | î   | ï   | ç   |
+   | œ   | æ   | «   | »   |
 
    Below the grid sits a **shift / caps toggle** key (rendered as `⇧ abc`, matching the official UI).
    Toggling it switches the 14 letter keys between lowercase and their **uppercase** variants
    (`É È Ê Ë À Â Ù Û Ô Î Ï Ç Œ Æ`); the guillemets `«` `»` are unaffected by the toggle.
+
 5. The layout and character set **match the official TCF Canada exam software** (the 4×4 grid above
    plus the `⇧ abc` toggle), so the practice environment matches the real exam.
 6. The buttons are accessible: each is focusable and operable by keyboard (Enter/Space), has an
@@ -66,14 +71,17 @@ so a candidate on any keyboard layout can produce correct French orthography whi
    textarea regains focus, and the toolbar is usable interchangeably with the physical keyboard.
 
 ## Data model changes
+
 None. Frontend-only.
 
 ## API contract
+
 None. The component reads from and writes to the existing Writing editor state; it introduces no new
 endpoints and changes none. Inserted text flows through the existing writing-session draft/autosave
 endpoints unchanged.
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [x] The Writing editor shows an on-screen accent keyboard next to each task's textarea in both training and real modes. (Behaviour.1)
@@ -84,6 +92,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [x] Using the toolbar does not disrupt normal physical-keyboard typing into the same textarea. (Behaviour.7)
 
 ## Open questions
+
 - ~~**Exact glyph set & layout.**~~ **Resolved 2026-06-17:** confirmed from a screenshot of the real
   TCF software — the 16-key 4×4 grid in §Behaviour.4 (`é è ê ë / à â ù û / ô î ï ç / œ æ « »`) with a
   `⇧ abc` shift toggle to uppercase.
@@ -95,6 +104,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   implementation; default to a compact toolbar directly above each textarea.
 
 ## Revision history
+
 - 2026-06-17: Initial draft (Milestone 12).
 - 2026-06-17: Set the exact key set/layout to match a screenshot of the real TCF software — 16-key 4×4
   grid (`é è ê ë / à â ù û / ô î ï ç / œ æ « »`) + `⇧ abc` shift toggle; resolved the glyph-set open

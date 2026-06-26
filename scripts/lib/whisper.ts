@@ -1,7 +1,7 @@
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { basename, extname, join } from 'node:path';
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, extname, join } from "node:path";
 
 // spec: docs/specs/listening-import.md §Behaviour.7, §Behaviour.12
 // Apple Silicon / macOS only (CLAUDE.md): wraps the Whisper CLI to transcribe one MP3 into
@@ -14,7 +14,7 @@ import { basename, extname, join } from 'node:path';
 export class WhisperError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'WhisperError';
+    this.name = "WhisperError";
   }
 }
 
@@ -52,14 +52,15 @@ export function parseWhisperJson(raw: string): WhisperResult {
 
   const segments: TranscriptSegment[] = [];
   for (const seg of json.segments ?? []) {
-    const text = (seg.text ?? '').trim();
+    const text = (seg.text ?? "").trim();
     if (!text) continue;
     const startMs = Math.max(0, Math.round((seg.start ?? 0) * 1000));
     const endMs = Math.max(startMs, Math.round((seg.end ?? 0) * 1000));
     segments.push({ sequence: segments.length + 1, text, startMs, endMs });
   }
 
-  const durationMs = segments.length > 0 ? segments[segments.length - 1].endMs : null;
+  const durationMs =
+    segments.length > 0 ? segments[segments.length - 1].endMs : null;
   return { segments, durationMs };
 }
 
@@ -67,25 +68,26 @@ export function parseWhisperJson(raw: string): WhisperResult {
 // binary, a non-zero exit, or absent/unparseable output. mlx_whisper writes `<name>.json` into
 // an output directory, so we transcribe into a throwaway temp dir and read the result back.
 export function runWhisper(mp3Path: string): WhisperResult {
-  const bin = process.env.WHISPER_CMD ?? 'mlx_whisper';
-  const model = process.env.WHISPER_MODEL ?? 'mlx-community/whisper-large-v3-turbo';
-  const outDir = mkdtempSync(join(tmpdir(), 'tcf-whisper-'));
+  const bin = process.env.WHISPER_CMD ?? "mlx_whisper";
+  const model =
+    process.env.WHISPER_MODEL ?? "mlx-community/whisper-large-v3-turbo";
+  const outDir = mkdtempSync(join(tmpdir(), "tcf-whisper-"));
 
   try {
     const result = spawnSync(
       bin,
       [
         mp3Path,
-        '--model',
+        "--model",
         model,
-        '--language',
-        'fr',
-        '--output-format',
-        'json',
-        '--output-dir',
+        "--language",
+        "fr",
+        "--output-format",
+        "json",
+        "--output-dir",
         outDir,
       ],
-      { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+      { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
     );
 
     if (result.error) {
@@ -95,19 +97,25 @@ export function runWhisper(mp3Path: string): WhisperResult {
       );
     }
     if (result.status !== 0) {
-      throw new WhisperError(`Whisper exited ${result.status}: ${result.stderr?.trim()}`);
+      throw new WhisperError(
+        `Whisper exited ${result.status}: ${result.stderr?.trim()}`,
+      );
     }
 
     // mlx_whisper names the output `<input-basename-without-ext>.json`; fall back to the first
     // `.json` in the dir if the naming differs across CLI versions.
     const expected = `${basename(mp3Path, extname(mp3Path))}.json`;
-    const produced = readdirSync(outDir).filter((f) => f.toLowerCase().endsWith('.json'));
+    const produced = readdirSync(outDir).filter((f) =>
+      f.toLowerCase().endsWith(".json"),
+    );
     const jsonName = produced.includes(expected) ? expected : produced[0];
     if (!jsonName) {
-      throw new WhisperError(`Whisper produced no JSON output for ${basename(mp3Path)}.`);
+      throw new WhisperError(
+        `Whisper produced no JSON output for ${basename(mp3Path)}.`,
+      );
     }
 
-    return parseWhisperJson(readFileSync(join(outDir, jsonName), 'utf8'));
+    return parseWhisperJson(readFileSync(join(outDir, jsonName), "utf8"));
   } finally {
     rmSync(outDir, { recursive: true, force: true });
   }

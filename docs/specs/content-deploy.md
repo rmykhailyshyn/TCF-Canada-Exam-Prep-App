@@ -1,9 +1,11 @@
 # Spec: Content Seeding + Online Practice Mode + Client Capability Gating
 
 ## Status
+
 draft
 
 ## Goal
+
 Make the deployed Cloudflare instance (Milestone 15) usable: get locally-imported content into D1 and
 R2, and adapt the client so the online (practice-only) experience is coherent — no broken buttons for
 features the cloud cannot provide. Content originates **locally** (the OCR/Whisper/Claude pipelines are
@@ -15,6 +17,7 @@ cloud runtime into a working study tool for the single user, and it defines the 
 Writing/Speaking when AI scoring is unavailable.
 
 ## Scope
+
 - In scope:
   - A **content-deploy script** (`npm run deploy:content`, local/Node) that pushes the local content to
     the deployed instance:
@@ -45,11 +48,12 @@ Writing/Speaking when AI scoring is unavailable.
   - Automatic/continuous sync — `deploy:content` is run manually when local content changes.
 
 ## Behaviour
+
 1. After `npm run deploy:content`, the deployed instance has the exported reading/listening questions
    and writing/speaking tasks in D1, and their audio/passage-image media in R2; the content is playable
    online (audio streams from R2 with seeking).
 2. Re-running `deploy:content` is **idempotent** — it reuses the import feature's `(source_file,
-   sequence)` / `(source_file, task_number)` override semantics so content updates in place without
+sequence)` / `(source_file, task_number)` override semantics so content updates in place without
    duplicates, and re-uploads media to the same R2 keys.
 3. On load, the client reads `capabilities` from `/api/health`. When `imports = false` (online), the
    Question Bank **import** panel is hidden or disabled with an explanatory note; **export** (a read) may
@@ -68,13 +72,16 @@ Writing/Speaking when AI scoring is unavailable.
    affordances appear.
 
 ## Data model changes
+
 None. Online submit reuses the existing `writing_responses` / `speaking_responses` rows and simply omits
 the corresponding `*_evaluations` row when AI scoring is unavailable. (History/score reads already treat a
 missing evaluation as "not yet scored.")
 
 ## API contract
+
 No new endpoints. Behaviour is gated by the existing `capabilities` flag (Milestone 14) and the existing
 portable endpoints (Milestone 15):
+
 - The **import** endpoint is the load path into D1 (already portable, pure-DB). The content-deploy script
   is its client; if `wrangler d1 execute` is used instead, no endpoint is involved for the DB load.
 - Online Writing **submit** returns the response locked but **without** an evaluation payload when
@@ -83,6 +90,7 @@ portable endpoints (Milestone 15):
 - `fetchCapabilities()` is a client helper over the existing `GET /api/health`; no server change.
 
 ## Acceptance criteria
+
 - [ ] `npm run deploy:content` loads the local export into D1 and uploads referenced media to R2; the content is then playable on the deployed instance, with audio seeking via R2 range requests. (Behaviour.1)
 - [ ] Re-running `deploy:content` produces no duplicate questions/tasks (override-in-place on the natural keys) and overwrites media at the same R2 keys. (Behaviour.2)
 - [ ] With `imports = false`, the client hides/disables the Question Bank import panel with an explanatory note. (Behaviour.3)
@@ -94,6 +102,7 @@ portable endpoints (Milestone 15):
 - [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass; e2e (local, full-capability) shows no behaviour change. (Behaviour.6)
 
 ## Open questions
+
 - **D1 load mechanism: import endpoint vs. `wrangler d1 execute`.** Posting the export JSON to the
   Worker's portable import endpoint reuses validated, idempotent logic and goes through Access; generating
   SQL for `wrangler d1 execute --file` avoids an HTTP round-trip but duplicates write logic. Default:
@@ -112,6 +121,7 @@ portable endpoints (Milestone 15):
   substituted) is left to the implementer.
 
 ## Revision history
+
 - 2026-06-20: Initial draft (Milestone 16). Part of the Cloudflare-hosting initiative; depends on
   `database-sqlite.md` (M13), `server-runtime.md` (M14, `capabilities` + portable import/export), and
   `cloud-deployment.md` (M15, D1/R2/Worker). Defines the online practice-only behaviour for

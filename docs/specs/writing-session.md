@@ -1,6 +1,7 @@
 # Spec: Writing Session
 
 ## Status
+
 implemented
 
 > Milestone 10. Session lifecycle for the Writing section. The scoring/feedback produced on submit
@@ -8,6 +9,7 @@ implemented
 > UI in the writing-ui spec. Reuses the existing `sessions` table from quiz-session.
 
 ## Goal
+
 Define the session model for the Writing section — the third exam section after reading and
 listening. A writing session represents one attempt at the Writing tasks in either **training mode**
 (no time limit, guidance shown, on-request correction) or **real mode** (a single **60-minute**
@@ -16,6 +18,7 @@ limit across all three tasks, no guidance). Unlike reading/listening, responses 
 shared `sessions` row for lifecycle/timing. Submission and scoring are covered in writing-evaluation.
 
 ## Scope
+
 - In scope:
   - Session creation for the Writing section: mode selection and the task set presented.
   - Training mode: a user-chosen **single task or all three**, no timer, sample answer + template
@@ -37,6 +40,7 @@ shared `sessions` row for lifecycle/timing. Submission and scoring are covered i
 ## Behaviour
 
 ### Mode selection
+
 1. Before starting, the user selects the Writing section and a mode: **Training** or **Real**.
 2. The app displays the mode rules before the session begins:
    - Training: no time limit; sample answer + template available; on-request correction; submit any
@@ -47,12 +51,14 @@ shared `sessions` row for lifecycle/timing. Submission and scoring are covered i
    or **all three**. In **real mode** all three tasks are always included.
 
 ### Mode storage note (reuse)
+
 The writing session reuses the shared `sessions` table. The user-facing "Training" mode is stored as
 `mode = 'learning'` (the existing enum value) so session history, completion, and review queries
 remain uniform across all three sections; the Writing UI simply labels `'learning'` as "Training".
 `difficulty` is always null for writing (no difficulty bands). See Open questions.
 
 ### Task selection
+
 4. A `task_number` (1–3) may have **more than one** imported `writing_tasks` row (a candidate pool;
    see writing-import). Selection resolves the pool into the presented set:
    - **Real mode** selects, independently for each task number 1–3, exactly **one** task at random
@@ -66,6 +72,7 @@ remain uniform across all three sections; the Writing UI simply labels `'learnin
    mode or training-all-three: any of 1–3 empty; in training-single: the chosen number empty).
 
 ### Training mode
+
 7. The session presents the selected task(s) with no time constraint and no countdown.
 8. For each presented task the payload includes its `sample_answer` and `template` (when authored) so
    the UI can show guidance.
@@ -77,6 +84,7 @@ remain uniform across all three sections; the Writing UI simply labels `'learnin
 11. The session ends when the user explicitly finishes (or quits).
 
 ### Real mode
+
 12. A single 60-minute countdown is displayed for the whole session, initialised from the configured
     writing time limit. `sample_answer`/`template` are **omitted** from the payload; correction is
     unavailable.
@@ -87,23 +95,26 @@ remain uniform across all three sections; the Writing UI simply labels `'learnin
     expiry. Elapsed time is recorded on the session row.
 
 ### Completion & results
+
 15. On completion each submitted response has (or receives) an evaluation (writing-evaluation). The
     completion result reports, per task: the response, its `score` (/20), `level` (NCLC estimate), and
     feedback; plus an **overall** summary (the mean of the per-task scores, and the count of tasks
     submitted). An empty/unsubmitted task contributes a score of 0 to the overall mean in real mode.
 16. After completion the user can re-open the session read-only (results/review) via
     `GET /api/writing/sessions/:id`.
-16a. The completed session appears in the **unified session history** (progress-tracking spec) as a
+    16a. The completed session appears in the **unified session history** (progress-tracking spec) as a
     "Writing" row with its overall /20 average and tasks-submitted count, intermixed newest-first with
     reading/listening/speaking attempts. Its per-task responses, scores, NCLC levels, and feedback are
     persisted (`writing_responses` + `writing_evaluations`) and are not deleted by normal use, so any
     past attempt remains available for later review and analysis.
 
 ### Configuration
+
 17. The writing time limit is read from `exam.config.json` (repo root) and never hardcoded. Default:
     - Writing: **60 minutes**, **3 tasks**.
 
 ## Data model changes
+
 Reuses the existing `sessions` table with one constraint change, and adds one new table.
 
 ```
@@ -127,15 +138,19 @@ writing_responses
   unique (session_id, task_number)            -- one response row per task per session
   check (task_number between 1 and 3)
 ```
+
 The per-response score + feedback live in `writing_evaluations` (writing-evaluation spec), keyed by
 `response_id`.
 
 ## API contract
+
 All endpoints use the standard `{ "data": …, "error": null }` / `{ "data": null, "error": {…} }`
 envelope. Scoring fields returned on submit/complete are produced by the writing-evaluation layer.
 
 ### POST /api/writing/sessions
+
 Start a writing session.
+
 ```
 Request:  { "mode": "learning" | "real", "taskNumbers"?: number[] }
 Response: { "data": { "sessionId": number, "mode": "learning" | "real",
@@ -143,6 +158,7 @@ Response: { "data": { "sessionId": number, "mode": "learning" | "real",
 Error (no tasks): { "data": null, "error": { "code": "NO_TASKS", "message": "..." } }
 Error (bad mode): { "data": null, "error": { "code": "INVALID_MODE", "message": "..." } }
 ```
+
 - `taskNumbers` is meaningful only in training mode: omit (or `[1,2,3]`) for all three, or a single
   `[n]` to practise one task. In real mode it is ignored (always all three).
 - `tasks` is the resolved set (Behaviour.4), ordered by `task_number`. Each `WritingTask` carries
@@ -151,48 +167,60 @@ Error (bad mode): { "data": null, "error": { "code": "INVALID_MODE", "message": 
 - `timeLimitMs` is `null` in training mode and the configured 60-min value in real mode.
 
 ### PUT /api/writing/sessions/:id/responses/:taskNumber
+
 Autosave a draft response (no scoring).
+
 ```
 Request:  { "text": string }
 Response: { "data": { "wordCount": number }, "error": null }
 ```
+
 Upserts the `writing_responses` row for `(session_id, task_number)`, updates `response_text` and the
 computed `word_count`, and leaves `submitted_at` null.
 
 ### POST /api/writing/sessions/:id/responses/:taskNumber/submit
+
 Submit one task's response and evaluate it (see writing-evaluation). Allowed in both modes.
+
 ```
 Request:  { "text": string }
 Response: { "data": { "score": number, "level": string,
                       "feedback": WritingFeedback }, "error": null }
 Error (eval failure): { "data": null, "error": { "code": "EVALUATION_FAILED", "message": "..." } }
 ```
+
 Saves the response (sets `submitted_at`), invokes the Claude evaluation, persists a
 `writing_evaluations` row, and returns the score/level/feedback. Resubmitting replaces the prior
 evaluation for that response. `WritingFeedback` is defined in the writing-evaluation spec.
 
 ### POST /api/writing/sessions/:id/correct/:taskNumber
+
 Training mode only — request a correction/suggestions for the current draft (see writing-evaluation).
 Returns `MODE_NOT_ALLOWED` if the session is real mode.
 
 ### POST /api/writing/sessions/:id/complete
+
 Finalise the session (manual submit, timer expiry, or training "finish").
+
 ```
 Request:  { "elapsedMs": number | null }
 Response: { "data": { "tasks": Array<{ taskNumber: number, score: number | null,
                       level: string | null }>, "overallScore": number, "submitted": number },
             "error": null }
 ```
+
 In real mode the server submits/evaluates any task still in draft (Behaviour.14) before computing the
 aggregate. `elapsedMs` is null in training mode. `overallScore` is the mean of the per-task scores
 (unsubmitted tasks counting as 0 in real mode); `submitted` is the number of tasks actually answered.
 
 ### GET /api/writing/sessions/:id
+
 Read-only results/review: the session, its resolved tasks (with prompts; sample answer/template
 included only for training sessions), each response's text, and its stored evaluation
 (score/level/feedback) — or `null` where a task was never submitted.
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [ ] `POST /api/writing/sessions` starts a session for `mode` `learning`/`real`; training mode honours `taskNumbers` (single or all three), real mode always returns all three. (Behaviour.1, 3, 4; API contract)
@@ -209,6 +237,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] A completed writing session appears in the unified history list (`GET /api/sessions`) with its overall /20 average + tasks-submitted, and its per-task responses/scores/feedback remain persisted and retrievable afterward for analysis. (Behaviour.16a; progress-tracking spec)
 
 ## Open questions
+
 - ~~**Mode storage value.** "Training" is stored as `mode = 'learning'` vs. adding a `'training'`
   enum value.~~ **Resolved 2026-06-17:** the writing "Training" mode **is** the existing `learning`
   mode — stored as `mode = 'learning'` and only labelled "Training" in the Writing UI. No new enum
@@ -224,6 +253,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   sessions, Behaviour.9–12), per SDD Rule 4, rather than silently changed.
 
 ## Revision history
+
 - 2026-06-17: Initial draft (Milestone 10).
 - 2026-06-17: Resolved the mode-storage open question — the writing "Training" mode is the existing
   `learning` mode (`mode = 'learning'`, labelled "Training" in the UI); no new enum value.

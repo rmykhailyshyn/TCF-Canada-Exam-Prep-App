@@ -8,7 +8,10 @@ type Props = {
   label?: string;
 };
 
-export function BrandMark({ context, label = 'TCF Canada Prep' }: Props): JSX.Element {
+export function BrandMark({
+  context,
+  label = "TCF Canada Prep",
+}: Props): JSX.Element {
   return (
     <div className="flex items-center gap-2.5">
       <span
@@ -17,7 +20,9 @@ export function BrandMark({ context, label = 'TCF Canada Prep' }: Props): JSX.El
       >
         TC
       </span>
-      <span className="font-semibold tracking-tight text-slate-900">{label}</span>
+      <span className="font-semibold tracking-tight text-slate-900">
+        {label}
+      </span>
       {context && (
         <>
           <span className="text-slate-300" aria-hidden>

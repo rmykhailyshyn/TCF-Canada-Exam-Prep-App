@@ -1,9 +1,9 @@
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
-import { basename, isAbsolute, join, resolve } from 'node:path';
-import { eq } from 'drizzle-orm';
-import { db, client } from '../server/db';
-import { getMediaDir } from '../server/config/env';
-import { audioFiles, passages } from '../server/db/schema';
+import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { basename, isAbsolute, join, resolve } from "node:path";
+import { eq } from "drizzle-orm";
+import { db, client } from "../server/db";
+import { getMediaDir } from "../server/config/env";
+import { audioFiles, passages } from "../server/db/schema";
 
 // One-time, idempotent migration: rewrite legacy ABSOLUTE media paths in the DB to the portable
 // form — a path RELATIVE to MEDIA_DIR under a section subfolder (listening/ or reading/) — and copy
@@ -15,7 +15,7 @@ type Row = { id: number; path: string };
 
 // Move one row's file into MEDIA_DIR/<section>/ (if the source still exists) and return the new
 // relative path. Already-relative paths are returned unchanged (no copy).
-function relocate(section: 'listening' | 'reading', current: string): string {
+function relocate(section: "listening" | "reading", current: string): string {
   if (!isAbsolute(current)) return current;
   const mediaDir = getMediaDir();
   const rel = join(section, basename(current));
@@ -24,7 +24,9 @@ function relocate(section: 'listening' | 'reading', current: string): string {
   if (existsSync(current) && !existsSync(dest)) {
     copyFileSync(current, dest);
   } else if (!existsSync(current) && !existsSync(dest)) {
-    console.warn(`• Source missing on disk: ${current} — rewrote the reference, but the file must be placed at ${dest}.`);
+    console.warn(
+      `• Source missing on disk: ${current} — rewrote the reference, but the file must be placed at ${dest}.`,
+    );
   }
   return rel;
 }
@@ -37,9 +39,12 @@ async function main(): Promise<void> {
     .select({ id: audioFiles.id, path: audioFiles.filePath })
     .from(audioFiles);
   for (const row of audioRows) {
-    const rel = relocate('listening', row.path);
+    const rel = relocate("listening", row.path);
     if (rel !== row.path) {
-      await db.update(audioFiles).set({ filePath: rel }).where(eq(audioFiles.id, row.id));
+      await db
+        .update(audioFiles)
+        .set({ filePath: rel })
+        .where(eq(audioFiles.id, row.id));
       audioMigrated += 1;
     }
   }
@@ -48,9 +53,12 @@ async function main(): Promise<void> {
     .select({ id: passages.id, path: passages.sourceFile })
     .from(passages);
   for (const row of passageRows) {
-    const rel = relocate('reading', row.path);
+    const rel = relocate("reading", row.path);
     if (rel !== row.path) {
-      await db.update(passages).set({ sourceFile: rel }).where(eq(passages.id, row.id));
+      await db
+        .update(passages)
+        .set({ sourceFile: rel })
+        .where(eq(passages.id, row.id));
       passageMigrated += 1;
     }
   }
@@ -63,6 +71,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error('Media-path migration failed:', error);
+  console.error("Media-path migration failed:", error);
   process.exit(1);
 });

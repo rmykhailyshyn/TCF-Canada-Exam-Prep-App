@@ -1,6 +1,7 @@
 # Spec: Speaking Quiz UI
 
 ## Status
+
 implemented
 
 > Milestone 11. The React UI for the Speaking section. Consumes the speaking-session endpoints; the
@@ -8,6 +9,7 @@ implemented
 > audio-playback pattern and the real-mode timer pattern; introduces in-browser audio recording.
 
 ## Goal
+
 Provide the front-end for the Speaking section: entry from the section picker, a Training/Real mode
 selector, an **in-browser audio recorder** for each of the three TCF speaking tasks, per-task prep +
 recording countdowns in real mode, training-mode guidance (sample answer + transcript + on-request
@@ -15,6 +17,7 @@ correction), and a results view showing each task's recording playback, transcri
 NCLC level, and feedback.
 
 ## Scope
+
 - In scope:
   - A Speaking entry on the section picker and a Speaking route.
   - Mode selection (Training / Real) and, in training mode, a task selector (single task vs. all three).
@@ -40,6 +43,7 @@ NCLC level, and feedback.
 ## Behaviour
 
 ### Entry & mode selection
+
 1. The section picker shows a **Speaking** option alongside Reading, Listening, and Writing; selecting
    it routes to the Speaking start screen.
 2. The start screen lets the user choose **Training** or **Real** and shows each mode's rules (training:
@@ -51,6 +55,7 @@ NCLC level, and feedback.
    `NO_TASKS` error shows a clear "no speaking tasks imported" message.
 
 ### Recorder
+
 5. Each presented task shows its `question` (French content `lang="fr"`) and a recorder control.
 6. On first record the UI requests **microphone permission** via `getUserMedia`; if denied, it shows a
    clear message and a retry affordance. Recording uses MediaRecorder; **Record** starts, **Stop**
@@ -60,6 +65,7 @@ NCLC level, and feedback.
    user can re-upload. Re-recording replaces the take and (on re-upload) the transcript.
 
 ### Training mode
+
 8. Each task shows a collapsible **Sample answer** panel from the task payload (`lang="fr"`; hidden when
    absent) and, after upload, the **transcript** of the user's recording.
 9. A **Get correction** action calls `POST …/correct/:taskNumber` and renders the corrected text +
@@ -70,6 +76,7 @@ NCLC level, and feedback.
 11. The user finishes the session explicitly ("Finish"), calling `POST …/complete`.
 
 ### Real mode
+
 12. Tasks are presented one at a time in ascending order. Each task first runs a **prep countdown**
     (`prepSeconds`; skipped/zero for task 1) during which the prompt is shown and recording is disabled,
     then a **recording countdown** (`recordSeconds`) during which the user records. Recording
@@ -82,6 +89,7 @@ NCLC level, and feedback.
     `elapsedMs` and routes to results.
 
 ### Results / review
+
 15. The results view shows, per task: an **audio player** for the recording (streamed from
     `GET …/responses/:taskNumber/audio`), the **transcript**, the **score (/20)**, the **NCLC level**
     (derived from the score), and the structured feedback (strengths / errors / improvements), plus an
@@ -90,9 +98,11 @@ NCLC level, and feedback.
     review the sample answer remains visible, in a **real** review it is not part of the payload.
 
 ## Data model changes
+
 None. Presentation only; persistence is defined in speaking-session and speaking-evaluation.
 
 ## API contract
+
 Consumes the speaking-session endpoints (`POST /api/speaking/sessions`, `POST …/responses/:taskNumber`,
 `POST …/responses/:taskNumber/submit`, `POST …/correct/:taskNumber`,
 `GET …/responses/:taskNumber/audio`, `POST …/complete`, `GET /api/speaking/sessions/:id`) and renders
@@ -100,6 +110,7 @@ the `SpeakingTask`, `SpeakingEvaluation`/`SpeakingFeedback`, and `SpeakingCorrec
 those specs. No new endpoints.
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [ ] The section picker offers Speaking and routes to a start screen with Training/Real selection and (training) a single-vs-all-three task choice. (Behaviour.1, 2, 3)
@@ -112,6 +123,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] Evaluation/correction failures (`EVALUATION_FAILED` / `CORRECTION_FAILED`) show a retry affordance without losing the recording/transcript. (Behaviour.9, 10)
 
 ## Open questions
+
 - **MediaRecorder MIME type.** Pick the recording MIME (`audio/webm;codecs=opus` is the common
   default) and align it with the server's transcription input (see speaking-evaluation Open questions
   on a possible `ffmpeg` transcode).
@@ -123,6 +135,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   for the prep→record two-phase, per-task structure.
 
 ## Revision history
+
 - 2026-06-17: Initial draft (Milestone 11).
 - 2026-06-18: Approved (Milestone 11).
 - 2026-06-18: Implemented — `client/src/features/speaking/` (`useSpeakingSession`, `SpeakingSetup`, `SpeakingSession`, `SpeakingRecorder`, `SpeakingResults`) + `SpeakingPage`/`SpeakingReviewPage`; MediaRecorder MIME negotiated to `audio/webm;codecs=opus`; auto-advance in real mode; reuses the quiz `CountdownTimer`/`ConfirmDialog`. Speaking entry added to the Home nav (full section picker is Milestone 12).

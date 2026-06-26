@@ -20,14 +20,14 @@ This project also serves as a **testbed for evaluating spec-driven development**
 
 ## Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 18, Vite, Tailwind CSS, TypeScript |
-| Backend | Express (Node.js), TypeScript |
-| Database | SQLite (libSQL) via Drizzle ORM |
-| Audio transcription | Whisper CLI (Apple Silicon, `mlx-whisper` or `whisper.cpp`) |
-| OCR | Tesseract OCR (CLI) |
-| Package manager | npm |
+| Layer               | Technology                                                    |
+| ------------------- | ------------------------------------------------------------- |
+| Frontend            | React 18, Vite, Tailwind CSS, TypeScript                      |
+| Backend             | Hono (on @hono/node-server locally; Worker-ready), TypeScript |
+| Database            | SQLite (libSQL) via Drizzle ORM                               |
+| Audio transcription | Whisper CLI (Apple Silicon, `mlx-whisper` or `whisper.cpp`)   |
+| OCR                 | Tesseract OCR (CLI)                                           |
+| Package manager     | npm                                                           |
 
 All tooling is local-first. No cloud services, no external APIs, no auth layer.
 
@@ -40,52 +40,66 @@ All tooling is local-first. No cloud services, no external APIs, no auth layer.
 These rules are **non-negotiable** for this project. Their purpose is to generate clean signal about whether SDD improves output quality.
 
 ### Rule 1 — Spec before code
+
 No implementation file may be created or modified for a new feature without a corresponding spec in `docs/specs/`. If a spec doesn't exist, write it first, then pause and wait for approval before coding.
 
 ### Rule 2 — Spec structure
+
 Every spec file must use this template:
 
 ```markdown
 # Spec: <Feature Name>
 
 ## Status
+
 draft | approved | implemented | revised
 
 ## Goal
+
 One paragraph. What problem does this solve? What should the user be able to do?
 
 ## Scope
+
 - In scope: …
 - Out of scope: …
 
 ## Behaviour
+
 Numbered list of observable behaviours. Written from the user's perspective.
 No implementation detail here — only what the system should do, not how.
 
 ## Data model changes (if any)
+
 Drizzle schema additions or modifications.
 
 ## API contract (if any)
+
 Endpoint, request shape, response shape, error cases.
 
 ## Acceptance criteria
+
 Checklist of concrete, testable pass/fail conditions that verify the spec is implemented.
 Each item references the behaviour or API item it covers, e.g. `(Behaviour.3)` or `(API contract)`.
 
 ## Open questions
+
 Unresolved decisions that need an answer before implementation begins.
 
 ## Revision history
+
 - YYYY-MM-DD: …
 ```
 
 ### Rule 3 — Spec approval gate
+
 A spec moves from `draft` to `approved` only when the human explicitly confirms it. Claude Code must not begin implementation on a `draft` spec.
 
 ### Rule 4 — Divergence is a spec defect, not a code defect
+
 If implementation reveals the spec was wrong or incomplete, update the spec first and flag the revision. Do not silently patch the code to paper over a spec gap.
 
 ### Rule 5 — Traceability comments
+
 Every non-trivial function or component must include a one-line comment referencing its spec:
 
 ```typescript
@@ -133,17 +147,20 @@ Every non-trivial function or component must include a one-line comment referenc
 ## Coding Conventions
 
 ### TypeScript
+
 - Strict mode on (`"strict": true` in tsconfig). No `any` unless escape-hatched with a comment explaining why.
 - Prefer `type` over `interface` for data shapes. Use `interface` only for extensible contracts.
 - Explicit return types on all exported functions.
 
 ### React
+
 - Functional components only. No class components.
 - Custom hooks live in `features/<name>/use<Name>.ts`. Hooks do not import from other hooks in different feature folders — go through a service or a shared lib instead.
 - No prop drilling past two levels. Use context or co-locate state closer to where it's needed.
 - Keep components under 200 lines. If a component is growing, split it.
 
 ### Express
+
 - Route handlers are thin: validate input, call a service, return the result. Business logic belongs in `services/`.
 - All routes return consistent JSON envelopes:
   ```json
@@ -154,11 +171,13 @@ Every non-trivial function or component must include a one-line comment referenc
 - No raw SQL. All database access goes through Drizzle queries.
 
 ### Drizzle
+
 - Schema changes require a migration. Never mutate the DB directly during development.
 - Run `drizzle-kit generate` after every schema change. Commit both the schema and the migration together.
 - The database connection string is read from `DATABASE_URL` in `.env` (a libSQL `file:` URL; relative paths resolve against the repo root). Never hardcode connection details.
 
 ### Whisper / Tesseract
+
 - CLI calls are wrapped in `scripts/` or `server/services/`. Never inline shell commands in route handlers.
 - Always handle non-zero exit codes explicitly. Log stderr for debugging.
 
@@ -197,13 +216,6 @@ npm run db:migrate
 
 # Generate migration after schema change
 npm run db:generate
-
-# One-time PostgreSQL -> SQLite data migration (Milestone 13; preserves existing local dev data).
-# Run AFTER `npm run db:migrate` has created the SQLite schema. Reads from --from / PG_DATABASE_URL,
-# writes into DATABASE_URL, preserving primary keys + FK links. --dry-run prints per-table counts.
-# `pg` is retained only as a devDependency for this one-time script.
-npm run db:migrate-from-postgres -- --from <PG_DATABASE_URL>
-npm run db:migrate-from-postgres -- --dry-run
 
 # Seed a full 39-question reading section for local UI/dev (not part of any spec)
 npm run seed:dev
@@ -309,6 +321,7 @@ This section is for meta-observations about the methodology itself. Add entries 
 See `docs/sdd-learnings.md` for the full log.
 
 Key questions being evaluated:
+
 - Does writing specs before code reduce rework?
 - Does the spec approval gate cause friction, or does it prevent bad decisions?
 - Are spec traceability comments useful during debugging, or just noise?

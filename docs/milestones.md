@@ -1,6 +1,7 @@
 # Milestones
 
 ## Milestone 1 — Project scaffold + DB setup
+
 **Status:** complete
 
 - [x] Initialise monorepo: `client/` (React 18 + Vite 6 + Tailwind 3 + TS), `server/` (Express + TS) via npm workspaces
@@ -15,6 +16,7 @@
 ---
 
 ## Milestone 2 — Reading section: import pipeline + quiz UI
+
 **Status:** complete
 
 - [x] PDF import script: `npm run ocr -- --dir <path>` — discovers one results PDF + one passage image per question (filename carries the sequence number), parses options/answer key via the Python pdfplumber parser, OCRs each image into passage + question prompt (split at the footer), cross-checks the score, idempotently persists passages + questions + options. Validated against a **real reading** results PDF (reproduces 19/39 correct, 266/699 pts) and a real Q39 passage image (and earlier against a real listening PDF, 27/437).
@@ -35,6 +37,7 @@ detection and re-validated against both real reading (19/266) and listening (27/
 section for exercising the UI without a full import.
 
 **Specs:**
+
 - `docs/specs/reading-import.md` (implemented)
 - `docs/specs/quiz-session.md` (implemented)
 - `docs/specs/reading-quiz-ui.md` (implemented)
@@ -42,6 +45,7 @@ section for exercising the UI without a full import.
 ---
 
 ## Milestone 3 — Listening section: import pipeline + player + quiz UI
+
 **Status:** complete
 
 - [x] Audio import script: `npm run transcribe -- --dir <path>` — discovers one results PDF + MP3s in directory, parses questions/options/correct answers from the PDF (shared parser, green-fill answer key), matches each MP3 to its question by the sequence number in its filename, transcribes via `mlx_whisper` (`WHISPER_CMD`/`WHISPER_MODEL` overridable), persists questions + options + audio path + transcript segments. Idempotent; score cross-check; per-question skip on indeterminate answer / missing MP3 / Whisper failure
@@ -63,6 +67,7 @@ pure transform and the range/answer-key logic are unit-tested, and the shared PD
 already validated against a real listening PDF (27/437).
 
 **Specs:**
+
 - `docs/specs/listening-import.md` (implemented)
 - `docs/specs/listening-player.md` (implemented)
 - `docs/specs/listening-quiz-ui.md` (implemented)
@@ -70,6 +75,7 @@ already validated against a real listening PDF (27/437).
 ---
 
 ## Milestone 4 — Progress tracking + session history
+
 **Status:** complete
 
 - [x] Session model: type (reading | listening), mode (learning | real), started/completed timestamps
@@ -79,11 +85,13 @@ already validated against a real listening PDF (27/437).
 - [x] Session history list page
 
 **Specs:**
+
 - `docs/specs/progress-tracking.md`
 
 ---
 
 ## Milestone 5 — Question bank export / import (web UI)
+
 **Status:** complete
 
 - [x] Question Bank page (`/question-bank`): Export panel filtering by section (reading/listening/both) and complexity (difficulty bands / all)
@@ -102,11 +110,13 @@ absent on disk (the reference still imports). No schema change — override reus
 override-in-place preserves `questions.id`, all four error envelopes).
 
 **Specs:**
+
 - `docs/specs/question-export-import.md` (implemented)
 
 ---
 
 ## Milestone 6 — Review mode
+
 **Status:** complete
 
 - [x] After a session ends, user can enter review mode — from the results summary "Review answers" button and from a history session row (`/review/:id`); read-only
@@ -116,7 +126,7 @@ override-in-place preserves `questions.id`, all four error envelopes).
 - [x] `npm run typecheck`, `npm run lint`, `npm test` (68 tests), `npm run build` all pass
 
 **Implementation notes (SDD Rule 4):** no new endpoint — `GET /api/sessions/:id` per-question
-`results` were *additively enriched* with the review content (text, passage excerpt, options,
+`results` were _additively enriched_ with the review content (text, passage excerpt, options,
 `correctLabel`, derived `difficulty`, and the learning-mode-only `explanation`), so review mode
 reuses the single endpoint the spec says it consumes. Retry needed **zero** server change: the
 existing `POST /api/sessions` already accepts `questionIds` + `difficulty` and enforces the
@@ -124,11 +134,13 @@ band-subset constraint (`QUESTIONS_OUT_OF_BAND`). The pure band-grouping (`group
 is unit-tested; the `vitest` `include` was widened to pick up `client/**/*.test.ts`.
 
 **Specs:**
+
 - `docs/specs/review-mode.md` (implemented)
 
 ---
 
 ## Milestone 7 — LLM enrichment
+
 **Status:** complete
 
 - [x] `npm run enrich` CLI command generates per-question explanations (why the correct answer is right, why each other option is wrong), in **English**, citing the clue in the passage (reading) / transcript (listening)
@@ -146,23 +158,25 @@ against a real `claude` CLI, including the graceful skip when the model declined
 mismatched seed row.
 
 **Specs:**
+
 - `docs/specs/llm-enrichment.md`
 
 ---
 
 ## Milestone 8 — Randomized question selection & ordering
+
 **Status:** complete
 
 - [x] Learning mode: present the selected difficulty band's questions in **random order** (all band questions included; only presentation order shuffled, per session)
 - [x] Real mode: build a 39-question exam by selecting **one randomly chosen question per occupied sequence position 1–39** — e.g. when five questions exist at position 1, exactly one is shown
-- [x] Real mode: selected questions remain in ascending `sequence` order (1 → 39); only *which* question fills each position is random
+- [x] Real mode: selected questions remain in ascending `sequence` order (1 → 39); only _which_ question fills each position is random
 - [x] Per-position draw respects the answer key: draws only from keyed candidates; `ANSWER_KEY_MISSING` only when an occupied position has no keyed candidate
 - [x] Resolution is per session (re-entering re-draws / re-shuffles); the resolved set + order are stable for that session's lifetime
 - [x] Reading questions: passage panel shows the **original passage image on top** with the **OCR'd text directly below it**; served via a new read-only `GET /api/questions/:id/passage-image`, with graceful fallback to text-only when the image is missing on disk
 - [x] `npm run typecheck`, `npm run lint`, `npm test` (88 tests), `npm run build`, `npm run test:e2e` (14 tests) all pass
 
 **Implementation notes (SDD Rule 4):** (1) **No schema change.** Rather than persist each session's
-randomly-resolved set, real-mode `total`/`pointsPossible` are computed from the section's *distinct*
+randomly-resolved set, real-mode `total`/`pointsPossible` are computed from the section's _distinct_
 sequence positions, so multiple imports per position never double-count; review/history already
 reconstruct from the per-position `question_results`. Selection/shuffle live in a unit-tested
 `server/lib/random.ts` with an injectable RNG. (2) The passage image is served from
@@ -177,12 +191,14 @@ Stale selectors from the earlier UI redesign (`Start` → `Start session`, `4 / 
 fixed, and the listening specs made order-tolerant for the new learning shuffle.
 
 **Specs:**
+
 - `docs/specs/quiz-session.md` (implemented — §Question selection and ordering, Behaviour.19–22)
 - `docs/specs/reading-quiz-ui.md` (implemented — passage image + OCR text display, Behaviour.3a–3c + `GET /api/questions/:id/passage-image`)
 
 ---
 
 ## Milestone 9 — SDD retrospective + polish
+
 **Status:** complete
 
 - [x] Complete `docs/sdd-learnings.md` retrospective — added the Milestone 8 entry and a final synthesis answering the four "key questions under evaluation" (rework, the approval gate, traceability comments, solo-vs-team), plus a "where SDD was silent" section on the code-vs-reality boundary
@@ -194,7 +210,7 @@ fixed, and the listening specs made order-tolerant for the new learning shuffle.
 - [x] Final typecheck + lint + test pass — `npm run typecheck`, `npm run lint`, `npm test` (88), `npm run build`, `npm run test:e2e` (14) all green
 
 **Note (out of scope, flagged):** `listSessions` and `getSession` report `total` as the number of
-*recorded answers*, while `completeSession` reports the full exam size — they diverge for an
+_recorded answers_, while `completeSession` reports the full exam size — they diverge for an
 abandoned/timed-out real session. This is a pre-existing semantic inconsistency in the
 progress-tracking spec, not a polish item; left for a future spec revision rather than patched
 silently (SDD Rule 4).
@@ -204,9 +220,10 @@ silently (SDD Rule 4).
 ---
 
 ## Milestone 10 — Writing section: tasks import + session/UI + LLM evaluation
+
 **Status:** complete
 
-Introduces the third exam section (TCF *Expression écrite*): three free-text tasks, a single
+Introduces the third exam section (TCF _Expression écrite_): three free-text tasks, a single
 60-minute real-mode limit, an untimed training mode with sample answers + templates + on-request
 Claude correction, and — in both modes — a score + feedback produced by the local Claude CLI on
 submit. Diverges from reading/listening in three ways the specs make explicit: free-text (not MCQ,
@@ -215,23 +232,23 @@ server-side Claude CLI invocation (which llm-enrichment had scoped out); and an 
 imported from a **directory of markdown files** (no answer key, no OCR/Whisper).
 
 - [x] Writing task import: `npm run import:writing -- --dir <path>` — discovers `*.md` task files
-  (front-matter + `## Prompt` / `## Sample answer` / `## Template`), idempotent on
-  `(source_file, task_number)`, skip-and-continue on malformed files, `--dry-run`; new `writing_tasks` table
+      (front-matter + `## Prompt` / `## Sample answer` / `## Template`), idempotent on
+      `(source_file, task_number)`, skip-and-continue on malformed files, `--dry-run`; new `writing_tasks` table
 - [x] Writing session: reuse the `sessions` table (`section = 'writing'`); training mode (single task
-  or all three, untimed, guidance shown) and real mode (all three, one 60-min budget from
-  `exam.config.json`, auto/manual submit); per-task draft autosave + submit; new `writing_responses`
-  table; `POST /api/writing/sessions`, `PUT/POST …/responses`, `…/correct`, `…/complete`, `GET …/:id`
+      or all three, untimed, guidance shown) and real mode (all three, one 60-min budget from
+      `exam.config.json`, auto/manual submit); per-task draft autosave + submit; new `writing_responses`
+      table; `POST /api/writing/sessions`, `PUT/POST …/responses`, `…/correct`, `…/complete`, `GET …/:id`
 - [x] Writing evaluation: request-time local Claude CLI wrapper in `server/services/writingEvaluation.ts`
-  (reusing the shared `server/lib/claude-cli.ts` primitives + `server/lib/nclc.ts` for the derived NCLC
-  level) — scoring + feedback on submit (both modes), on-request correction (training only, ephemeral);
-  graceful `EVALUATION_FAILED` / `CORRECTION_FAILED`; new `writing_evaluations` table
+      (reusing the shared `server/lib/claude-cli.ts` primitives + `server/lib/nclc.ts` for the derived NCLC
+      level) — scoring + feedback on submit (both modes), on-request correction (training only, ephemeral);
+      graceful `EVALUATION_FAILED` / `CORRECTION_FAILED`; new `writing_evaluations` table
 - [x] Writing UI: section entry + mode/task selector, per-task textarea editor with a live word counter
-  shown as `current / target` (target = task `minWords`, e.g. `33 / 60`), single 60-min real-mode
-  countdown (reused timer), training sample-answer/template panels + "Get correction", per-task +
-  overall results (score/20 + NCLC + feedback), read-only review
+      shown as `current / target` (target = task `minWords`, e.g. `33 / 60`), single 60-min real-mode
+      countdown (reused timer), training sample-answer/template panels + "Get correction", per-task +
+      overall results (score/20 + NCLC + feedback), read-only review
 - [x] History: completed writing attempts retained (responses + per-task scores + feedback persisted)
-  and listed in the unified session history with an overall /20 average, routing to a writing review
-  view (progress-tracking revision; `GET /api/sessions` extended with `overallScore`/`tasksSubmitted`)
+      and listed in the unified session history with an overall /20 average, routing to a writing review
+      view (progress-tracking revision; `GET /api/sessions` extended with `overallScore`/`tasksSubmitted`)
 - [x] `npm run typecheck`, `npm run lint`, `npm test` (114), `npm run build` all pass
 
 **Implementation notes (SDD Rule 4):** (1) **Shared CLI primitives** — the enrichment wrapper's pure
@@ -251,6 +268,7 @@ end-to-end — but the pure parsers/prompts/derivation are unit-tested and typec
 A sample task bank lives in `samples/writing-tasks/` for `npm run import:writing -- --dir samples/writing-tasks`.
 
 **Specs:**
+
 - `docs/specs/writing-import.md` (implemented)
 - `docs/specs/writing-session.md` (implemented)
 - `docs/specs/writing-evaluation.md` (implemented)
@@ -260,39 +278,41 @@ A sample task bank lives in `samples/writing-tasks/` for `npm run import:writing
 ---
 
 ## Milestone 11 — Speaking section: tasks import + session/UI + Whisper transcription + LLM evaluation
+
 **Status:** implemented
 
-Introduces the fourth exam section (TCF *Expression orale*): three spoken tasks the user answers by
+Introduces the fourth exam section (TCF _Expression orale_): three spoken tasks the user answers by
 **recording their voice** in the browser. On submit, the audio is saved, **transcribed by the local
 Whisper CLI**, and the transcript is scored by the **local Claude CLI** (per-task /20 + NCLC level +
-feedback, acting as an *Expression orale* examiner). Mirrors Writing (Milestone 10) but differs in
+feedback, acting as an _Expression orale_ examiner). Mirrors Writing (Milestone 10) but differs in
 three ways: a **JSON** task import (`[{ task, question, answer }]`), **voice recording → Whisper →
 Claude** instead of typing, and **per-task TCF-authentic timing** (a prep phase before tasks 2 & 3).
 Adds **request-time Whisper transcription** on the server — which, like the listening import, is
 Apple-Silicon/macOS-only; the Claude scoring step is platform-agnostic.
 
 - [x] Speaking task import: `npm run import:speaking -- --file <path.json>` — parses a JSON array of
-  `{ task, question, answer }`, idempotent on `(source_file, sequence)`, skip-and-continue + `--dry-run`;
-  new `speaking_tasks` table
+      `{ task, question, answer }`, idempotent on `(source_file, sequence)`, skip-and-continue + `--dry-run`;
+      new `speaking_tasks` table
 - [x] Speaking session: reuse the `sessions` table (`section = 'speaking'`); training mode (single task
-  or all three, untimed, sample answer shown) and real mode (all three, per-task prep + recording limits
-  from a new `exam.config.json` `speaking` block, auto-stop recording); per-task recording capture +
-  submit; new `speaking_responses` table (audio path + transcript); the `/api/speaking/*` endpoints
-  incl. range-aware recording playback
+      or all three, untimed, sample answer shown) and real mode (all three, per-task prep + recording limits
+      from a new `exam.config.json` `speaking` block, auto-stop recording); per-task recording capture +
+      submit; new `speaking_responses` table (audio path + transcript); the `/api/speaking/*` endpoints
+      incl. range-aware recording playback
 - [x] Speaking evaluation: request-time `server/services/` wrapper reusing `scripts/lib/whisper.ts`
-  (transcription, `--language fr`) and `scripts/lib/claude.ts` (scoring + correction) — score + feedback
-  on submit (both modes), on-request correction on the transcript (training only, ephemeral); graceful
-  `TRANSCRIPTION_FAILED` / `EVALUATION_FAILED` / `CORRECTION_FAILED`; new `speaking_evaluations` table
+      (transcription, `--language fr`) and `scripts/lib/claude.ts` (scoring + correction) — score + feedback
+      on submit (both modes), on-request correction on the transcript (training only, ephemeral); graceful
+      `TRANSCRIPTION_FAILED` / `EVALUATION_FAILED` / `CORRECTION_FAILED`; new `speaking_evaluations` table
 - [x] Speaking UI: section entry + mode/task selector, in-browser MediaRecorder (mic permission,
-  record/stop/playback/re-record), per-task prep→record countdowns in real mode, training sample-answer
-  + transcript + "Get correction", per-task + overall results with audio playback (score/20 + NCLC +
-  feedback), read-only review
+      record/stop/playback/re-record), per-task prep→record countdowns in real mode, training sample-answer
+  - transcript + "Get correction", per-task + overall results with audio playback (score/20 + NCLC +
+    feedback), read-only review
 - [x] History: completed speaking attempts retained (recordings + transcripts + per-task scores +
-  feedback persisted) and listed in the unified session history with an overall /20 average, for future
-  review/analysis (shared progress-tracking revision with Milestone 10)
+      feedback persisted) and listed in the unified session history with an overall /20 average, for future
+      review/analysis (shared progress-tracking revision with Milestone 10)
 - [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass
 
 **Specs:**
+
 - `docs/specs/speaking-import.md` (implemented)
 - `docs/specs/speaking-session.md` (implemented)
 - `docs/specs/speaking-evaluation.md` (implemented)
@@ -302,6 +322,7 @@ Apple-Silicon/macOS-only; the Claude scoring step is platform-agnostic.
 ---
 
 ## Milestone 12 — UI polish: on-screen French keyboard + unified section navigation
+
 **Status:** implemented
 
 Two frontend-only UI improvements (no backend, data-model, or scoring change):
@@ -317,20 +338,21 @@ selectable from both the landing screen and a persistent top menu (quick navigat
 current Reading/Listening-only picker plus ad-hoc Writing/Speaking nav links.
 
 - [x] Reusable on-screen accent keyboard component matching the real TCF software: the exact 16-key 4×4
-  grid (`é è ê ë / à â ù û / ô î ï ç / œ æ « »`) + a `⇧ abc` shift toggle to uppercase, inserted at the
-  caret of the focused input (`client/src/features/writing/VirtualKeyboard.tsx`)
+      grid (`é è ê ë / à â ù û / ô î ï ç / œ æ « »`) + a `⇧ abc` shift toggle to uppercase, inserted at the
+      caret of the focused input (`client/src/features/writing/VirtualKeyboard.tsx`)
 - [x] Integrated into the Writing editor next to each task's textarea, in both training and real modes
-  (the real TCF software provides it during the timed exam)
+      (the real TCF software provides it during the timed exam)
 - [x] Inserted characters behave like typed input: caret-aware insertion, native undo, and the same
-  word-count + autosave paths (via `execCommand('insertText')`); toolbar interoperates with physical-keyboard typing
+      word-count + autosave paths (via `execCommand('insertText')`); toolbar interoperates with physical-keyboard typing
 - [x] Accessible buttons (keyboard-operable, labelled); inserted French text stays within the
-  `lang="fr"` textarea content
+      `lang="fr"` textarea content
 - [x] Unified navigation: all four sections selectable on the **landing screen** and in a **persistent
-  top menu** (`client/src/components/TopNav.tsx`, plus History + Question Bank), consistent order/labels,
-  active-section indication, and a graceful empty state for a section with no imported content
+      top menu** (`client/src/components/TopNav.tsx`, plus History + Question Bank), consistent order/labels,
+      active-section indication, and a graceful empty state for a section with no imported content
 - [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass
 
 **Specs:**
+
 - `docs/specs/virtual-keyboard.md` (implemented)
 - `docs/specs/section-navigation.md` (implemented)
 - `docs/mockups.md` §19–20 (accent keyboard + unified navigation wireframes)
@@ -359,6 +381,7 @@ Local dev is unchanged: Vite proxies `/api` to Hono-on-Node.
 ---
 
 ## Milestone 13 — Database migration to SQLite (local)
+
 **Status:** complete
 
 Move persistence from PostgreSQL to SQLite with **no observable behaviour change**, as the foundation for
@@ -367,25 +390,25 @@ on **Windows**). Because all DB access is Drizzle, the change is confined to the
 client, config, generated migrations, and a few tooling scripts.
 
 - [x] Rewrite `server/db/schema.ts` from `drizzle-orm/pg-core` to `drizzle-orm/sqlite-core`, preserving
-  every table/column/constraint/index (`serial`→`integer autoincrement`, `boolean`→`integer {mode:
-  'boolean'}`, `timestamp`→`integer {mode: 'timestamp'}` to keep JS `Date` semantics)
+      every table/column/constraint/index (`serial`→`integer autoincrement`, `boolean`→`integer {mode:
+'boolean'}`, `timestamp`→`integer {mode: 'timestamp'}` to keep JS `Date` semantics)
 - [x] Swap the DB client in `server/db/index.ts` to libSQL (`@libsql/client` + `drizzle-orm/libsql`),
-  same exported `db` symbol, FK enforcement on; update `server/db/migrate.ts`
+      same exported `db` symbol, FK enforcement on; update `server/db/migrate.ts`
 - [x] `drizzle.config.ts` → `dialect: 'sqlite'`; delete the PostgreSQL migrations and regenerate one
-  clean SQLite baseline (`0000_living_chimera.sql` — every CHECK/UNIQUE/index/FK round-tripped)
+      clean SQLite baseline (`0000_living_chimera.sql` — every CHECK/UNIQUE/index/FK round-tripped)
 - [x] `server/config/env.ts` + `.env.example` → `file:` `DATABASE_URL`; remove `db:up`/`db:down` +
-  `docker-compose.yml`; add `@libsql/client`; move `pg`/`@types/pg` to devDependencies (kept only for
-  the migration script below)
+      `docker-compose.yml`; add `@libsql/client`; move `pg`/`@types/pg` to devDependencies (kept only for
+      the migration script below)
 - [x] One-time data-migration script `npm run db:migrate-from-postgres -- --from <PG_DATABASE_URL>`:
-  copy every table from an existing PostgreSQL dev DB into SQLite, preserving primary-key ids and
-  foreign-key links (FK dependency order), converting `boolean`/`timestamptz`; `--dry-run` + per-table
-  row-count summary
+      copy every table from an existing PostgreSQL dev DB into SQLite, preserving primary-key ids and
+      foreign-key links (FK dependency order), converting `boolean`/`timestamptz`; `--dry-run` + per-table
+      row-count summary
 - [x] Verify seeds + `npm test` (136) + `npm run test:e2e` (15) pass on SQLite; app + DB run on Windows
-  with no Docker
+      with no Docker
 
 **Implementation notes (SDD Rule 4):** (1) **cwd-relative `file:` paths.** libSQL resolves a relative
 `file:` URL against `process.cwd()`, which differs between the server workspace (`server/`) and the
-root-run tooling (migrate/seed/e2e) — they would otherwise open *different* DB files. `getDatabaseUrl()`
+root-run tooling (migrate/seed/e2e) — they would otherwise open _different_ DB files. `getDatabaseUrl()`
 now anchors a relative `file:` path to the repo root so all entry points agree; a new
 `server/db/sqlite-path.ts` `ensureSqliteDir()` creates the parent dir libSQL won't. Not anticipated by
 the spec (Postgres URLs are host-based, cwd-independent). (2) **`pool` → `client`.** `pg.Pool.end()` has
@@ -394,16 +417,18 @@ call `client.close()` (within the spec's "adjust seed/CLI scripts if required").
 best-effort.** On Windows the previous run's server / an AV scan can hold the e2e `.db` handle for
 seconds; the delete is best-effort and falls back to idempotent migrate + seeds — matching the old
 Postgres flow, which never dropped the DB either. (4) **Not exercised live:** the source Postgres dev DB
-was empty (0 rows in every table), so the data-copy *write* path had nothing to copy; the dry-run
+was empty (0 rows in every table), so the data-copy _write_ path had nothing to copy; the dry-run
 confirmed all 14 tables are read in FK order, and the verbatim type conversion is straightforward.
 
 **Specs:**
+
 - `docs/specs/database-sqlite.md` (implemented)
 
 ---
 
 ## Milestone 14 — Portable server runtime (Express → Hono)
-**Status:** approved (ready to implement)
+
+**Status:** complete
 
 Replace Express with **Hono** so one backend codebase runs on Node locally (via `@hono/node-server`) and
 on Cloudflare Workers later, with no API/behaviour change locally. Introduces three small abstractions
@@ -411,26 +436,42 @@ that let the same route code bind to Node resources or Worker resources: a **DB 
 **`MediaStore` interface** (range read / put / exists), and a **capabilities flag**
 (`GET /api/health` → `{ aiScoring, transcription, imports }`, all `true` on Node).
 
-- [ ] Translate `server/index.ts` + the five route modules to Hono; services in `server/services/`
-  unchanged; envelope (`server/lib/envelope.ts`) reused; replace `multer` with Hono `formData`
-- [ ] DB factory (`createDb(env)`): libSQL on Node, D1 on Workers (M15); services receive the DB instead
-  of importing a singleton
-- [ ] `MediaStore` interface with a Node/filesystem implementation wrapping today's range-aware streaming
-  (R2 implementation in M15)
-- [ ] Structure the app as a **portable core** + a **Node-only extension** for the CLI-backed routes
-  (imports, enrichment, AI scoring submit, correction, transcription), so `node:child_process`/`node:fs`
-  never enter the future Worker bundle
-- [ ] **PostgreSQL cleanup** (data already migrated in M13): delete `scripts/migrate-pg-to-sqlite.ts` +
-  the `db:migrate-from-postgres` script, drop `pg`/`@types/pg`, and strip residual Postgres references
-  from code/config — only historical mentions in `docs/` remain
-- [ ] Dev DX unchanged (`npm run dev`, Vite proxy, e2e); all checks pass
+- [x] Translate `server/index.ts` + the five route modules to Hono; services in `server/services/`
+      DB-injected; envelope (`server/lib/envelope.ts`) reused; replace `multer` with Hono `parseBody`
+- [x] DB factory (`createDb()`): libSQL on Node (D1 on Workers in M15); services receive the DB instead
+      of importing a singleton (`server/db/index.ts` singleton kept only for Node-only `scripts/`)
+- [x] `MediaStore` interface with a Node/filesystem implementation (`NodeMediaStore`) wrapping today's
+      range-aware streaming (R2 implementation in M15)
+- [x] Structure the app as a **portable core** (`server/app.ts`) + a **Node-only extension**
+      (`server/routes/node-routes.ts` + `services/{writing,speaking}-node.ts`) for the CLI-backed routes
+      (imports, AI scoring submit, correction, transcription, recording upload), so
+      `node:child_process` / `node:fs` never enter the future Worker bundle
+- [x] **PostgreSQL cleanup** (data already migrated in M13): deleted `scripts/migrate-pg-to-sqlite.ts` +
+      the `db:migrate-from-postgres` script, dropped `pg`/`@types/pg`, and stripped residual Postgres
+      references from code/config (the only remaining `pg` is `drizzle-orm`'s optional peer — see the
+      spec's Rule-4 note)
+- [x] Dev DX unchanged (`npm run dev`, Vite proxy); typecheck / lint / test / build pass (e2e run by the
+      orchestrator)
+
+**Implementation notes:**
+
+- New files: `server/runtime/{capabilities,media-store,node-media-store}.ts`, `server/db/factory.ts`,
+  `server/app.ts`, `server/lib/range.ts`, `server/routes/{app-vars,node-routes}.ts`,
+  `server/services/{writing-node,speaking-node}.ts`, `server/app.test.ts`.
+- The speaking recording-upload route stays in the Node-only extension (not the core) because
+  byte-identical behaviour needs upload-time Whisper transcription (Rule-4 note in the spec).
+- Speaking recordings now persist a **relative** MediaStore key (was absolute) — portable + R2-ready.
+- 137 unit/render tests pass (incl. `parseRange` from its new `server/lib/range.ts` home + a new
+  portable-core construction smoke test).
 
 **Specs:**
-- `docs/specs/server-runtime.md` (draft)
+
+- `docs/specs/server-runtime.md` (implemented)
 
 ---
 
 ## Milestone 15 — Cloudflare deployment (Worker + Assets + D1 + R2 + Access)
+
 **Status:** planned (spec drafted, pending approval)
 
 Establish the running, access-gated cloud runtime: a single Worker serving the SPA (Workers Static
@@ -439,20 +480,22 @@ user, no app auth code). Online capabilities are all-`false` (practice-only); th
 never mounted.
 
 - [ ] `wrangler.toml`: one Worker (`main: server/worker.ts`), `[assets]` = `client/dist` (SPA fallback),
-  `DB` D1 binding, `MEDIA` R2 binding
+      `DB` D1 binding, `MEDIA` R2 binding
 - [ ] `server/worker.ts`: import the portable core, build DB from the `DB` binding, wire the **R2
-  `MediaStore`**, set capabilities all-`false`
+      `MediaStore`**, set capabilities all-`false`
 - [ ] Apply the M13 SQLite baseline to D1 (`wrangler d1 migrations apply`); range/206 media streaming
-  from R2; `/api/*` routing takes precedence over static assets
+      from R2; `/api/*` routing takes precedence over static assets
 - [ ] Cloudflare Access in front of the Worker (documented shared-secret middleware fallback)
 - [ ] Build + `wrangler deploy` scripts; optional `wrangler dev` parity; CLAUDE.md deployment runbook
 
 **Specs:**
+
 - `docs/specs/cloud-deployment.md` (draft)
 
 ---
 
 ## Milestone 16 — Content seeding + online practice mode + client gating
+
 **Status:** planned (spec drafted, pending approval)
 
 Make the deployed instance usable: push locally-imported content to D1/R2 (**import locally → push to
@@ -461,18 +504,19 @@ buttons. Defines the online behaviour of Writing/Speaking when AI scoring is una
 no score).
 
 - [ ] `npm run deploy:content` (local): reuse the **export** service to load D1 (via the portable import
-  endpoint, idempotent on the natural keys) and upload referenced media (MP3s, passage images) to R2
-  keyed to `file_path`/`source_file`
+      endpoint, idempotent on the natural keys) and upload referenced media (MP3s, passage images) to R2
+      keyed to `file_path`/`source_file`
 - [ ] Online practice-mode behaviour (gated by `aiScoring=false`/`transcription=false`): Writing submit
-  locks the response without scoring and shows the sample answer/template; Speaking = record + playback +
-  sample answer, no transcript/score; correction unavailable online
+      locks the response without scoring and shows the sample answer/template; Speaking = record + playback +
+      sample answer, no transcript/score; correction unavailable online
 - [ ] Client capability-gating: `client/src/lib/api.ts` `fetchCapabilities()`; hide AI-score/feedback,
-  "Get correction", and import affordances when off (fail safe to most-restrictive on fetch error)
+      "Get correction", and import affordances when off (fail safe to most-restrictive on fetch error)
 - [ ] Local runtime (all capabilities `true`) behaves exactly as before — no regression in the existing
-  suites
+      suites
 - [ ] History shows online-completed sessions without a fabricated /20 (missing evaluation = unscored)
 
 **Specs:**
+
 - `docs/specs/content-deploy.md` (draft)
 - `docs/specs/writing-evaluation.md` / `docs/specs/speaking-evaluation.md` / `docs/specs/progress-tracking.md`
   (to be annotated: AI scoring is a local/full-runtime capability; online sessions are unscored practice)

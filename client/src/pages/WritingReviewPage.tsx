@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { type WritingSessionDetail, fetchWritingSession } from '../lib/api';
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { type WritingSessionDetail, fetchWritingSession } from "../lib/api";
 
 // spec: docs/specs/writing-ui.md §Results / review (Behaviour.16–17) — read-only review of a past
 // writing session, reached from the history list.
@@ -14,12 +14,14 @@ export function WritingReviewPage(): JSX.Element {
   useEffect(() => {
     const sessionId = Number(id);
     if (!Number.isInteger(sessionId)) {
-      setError('Invalid session id.');
+      setError("Invalid session id.");
       return;
     }
     fetchWritingSession(sessionId)
       .then(setDetail)
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed to load session.'));
+      .catch((e: unknown) =>
+        setError(e instanceof Error ? e.message : "Failed to load session."),
+      );
   }, [id]);
 
   return (
@@ -27,7 +29,7 @@ export function WritingReviewPage(): JSX.Element {
       <header className="flex items-center gap-4 border-b border-slate-200 bg-white px-6 py-3">
         <button
           type="button"
-          onClick={() => navigate('/history')}
+          onClick={() => navigate("/history")}
           className="text-sm text-slate-500 transition hover:text-slate-900"
         >
           ← Back
@@ -42,30 +44,43 @@ export function WritingReviewPage(): JSX.Element {
           <>
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-2xl font-extrabold text-slate-900 tabular-nums">
-                {detail.session.overallScore ?? 0} <span className="text-base text-slate-400">/ 20 avg</span>
+                {detail.session.overallScore ?? 0}{" "}
+                <span className="text-base text-slate-400">/ 20 avg</span>
               </p>
               <p className="mt-1 text-sm text-slate-500">
-                {detail.session.submitted} / {detail.tasks.length} tasks submitted
+                {detail.session.submitted} / {detail.tasks.length} tasks
+                submitted
               </p>
             </div>
 
             {detail.tasks.map((t) => (
-              <div key={t.taskNumber} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div
+                key={t.taskNumber}
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+              >
                 <div className="flex items-center justify-between">
                   <h2 className="font-semibold text-slate-900">
                     Task {t.taskNumber}
-                    {t.title ? ` · ${t.title}` : ''}
+                    {t.title ? ` · ${t.title}` : ""}
                   </h2>
                   <span className="text-sm font-bold tabular-nums text-slate-900">
-                    {t.score == null ? 'not submitted' : `${t.score} / 20 · ${t.level}`}
+                    {t.score == null
+                      ? "not submitted"
+                      : `${t.score} / 20 · ${t.level}`}
                   </span>
                 </div>
-                <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600" lang="fr">
+                <p
+                  className="mt-2 whitespace-pre-wrap text-sm text-slate-600"
+                  lang="fr"
+                >
                   {t.prompt}
                 </p>
                 <div className="mt-3 rounded-xl bg-slate-50 p-3">
-                  <p className="whitespace-pre-wrap text-sm text-slate-800" lang="fr">
-                    {t.responseText || '(no response)'}
+                  <p
+                    className="whitespace-pre-wrap text-sm text-slate-800"
+                    lang="fr"
+                  >
+                    {t.responseText || "(no response)"}
                   </p>
                 </div>
                 {t.feedback && (

@@ -1,8 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
-import { ApiError, type TranscriptSegment, audioUrl, fetchTranscript } from '../../lib/api';
-import { formatClock } from '../../lib/format';
-import { SubtitleList } from './SubtitleList';
-import { useListeningPlayer } from './useListeningPlayer';
+import { useEffect, useRef, useState } from "react";
+import {
+  ApiError,
+  type TranscriptSegment,
+  audioUrl,
+  fetchTranscript,
+} from "../../lib/api";
+import { formatClock } from "../../lib/format";
+import { SubtitleList } from "./SubtitleList";
+import { useListeningPlayer } from "./useListeningPlayer";
 
 // spec: docs/specs/listening-player.md §Behaviour
 // The listening player: audio controls (play/pause, scrubber, volume) above a phrase-level
@@ -38,7 +43,9 @@ export function ListeningPlayer({
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setTranscriptError(err instanceof ApiError ? err.message : 'Failed to load subtitles.');
+          setTranscriptError(
+            err instanceof ApiError ? err.message : "Failed to load subtitles.",
+          );
         }
       });
     return () => {
@@ -54,17 +61,22 @@ export function ListeningPlayer({
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-card">
       {/* preload metadata so the scrubber has a duration and `canplay` fires early */}
-      <audio ref={audioRef} src={audioUrl(questionId)} preload="auto" className="hidden" />
+      <audio
+        ref={audioRef}
+        src={audioUrl(questionId)}
+        preload="auto"
+        className="hidden"
+      />
 
       <div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50/60 px-4 py-3">
         <button
           type="button"
           onClick={player.toggle}
           disabled={!player.ready}
-          aria-label={player.isPlaying ? 'Pause' : 'Play'}
+          aria-label={player.isPlaying ? "Pause" : "Play"}
           className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-brand-600 text-white shadow-brand-glow transition enabled:hover:bg-brand-700 enabled:active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
         >
-          {player.isPlaying ? '❚❚' : '▶'}
+          {player.isPlaying ? "❚❚" : "▶"}
         </button>
 
         <input
@@ -82,7 +94,10 @@ export function ListeningPlayer({
           {formatClock(player.currentMs)} / {formatClock(player.durationMs)}
         </span>
 
-        <label className="flex flex-none items-center gap-1.5 text-slate-400" title="Volume">
+        <label
+          className="flex flex-none items-center gap-1.5 text-slate-400"
+          title="Volume"
+        >
           <span aria-hidden>🔊</span>
           <input
             type="range"
@@ -118,7 +133,10 @@ export function ListeningPlayer({
         </p>
       ) : !player.ready ? (
         <p className="flex items-center gap-2 border-t border-slate-100 px-4 py-2 text-xs font-medium text-slate-400">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-brand-400" aria-hidden />
+          <span
+            className="h-2 w-2 animate-pulse rounded-full bg-brand-400"
+            aria-hidden
+          />
           Loading audio…
         </p>
       ) : null}

@@ -1,19 +1,22 @@
 # Spec: Speaking Task Import
 
 ## Status
+
 implemented
 
 > Milestone 11. First of the four Speaking-section specs (import → session → evaluation → ui).
 > Mirrors writing-import, but the source is a single JSON file rather than a directory of markdown.
 
 ## Goal
-Provide a CLI command that ingests authored **Speaking tasks** (TCF *Expression orale*) into a task
+
+Provide a CLI command that ingests authored **Speaking tasks** (TCF _Expression orale_) into a task
 bank so the Speaking section has content to present. Like writing tasks, speaking tasks are authored
 study material with **no correct answer** — each is a spoken prompt plus a sample answer. The import
 source is a **single JSON file**: an array of `{ task, question, answer }` objects. The command is
 platform-agnostic (no audio/Whisper at import time) and idempotent.
 
 ## Scope
+
 - In scope:
   - CLI command `npm run import:speaking -- --file <path.json>` that reads a JSON array and persists
     each element as a `speaking_tasks` row.
@@ -21,7 +24,7 @@ platform-agnostic (no audio/Whisper at import time) and idempotent.
     sample answer).
   - Idempotent upsert on the natural key `(source_file, sequence)`, where `sequence` is the element's
     0-based (or 1-based — see Open questions) index in the array, mirroring `questions(source_file,
-    sequence)`.
+sequence)`.
   - Per-element validation with skip-and-continue on malformed entries, and a `--dry-run` flag.
 - Out of scope:
   - Audio recording, Whisper transcription, or Claude scoring (those are request-time — see
@@ -31,6 +34,7 @@ platform-agnostic (no audio/Whisper at import time) and idempotent.
   - Any session or scoring behaviour (separate specs).
 
 ## Behaviour
+
 1. The user runs `npm run import:speaking -- --file <path.json>`.
 2. The command reads the file and parses it as a JSON array. If the file is missing, unreadable, or
    not a JSON array, it exits non-zero with a descriptive error.
@@ -39,8 +43,8 @@ platform-agnostic (no audio/Whisper at import time) and idempotent.
      `task_number`).
    - `question` (required, non-empty string) — the spoken prompt shown to the user in both modes.
    - `answer` (optional string) — a model spoken answer shown in **training mode only**.
-   The element's array index becomes its `sequence` (the within-file ordinal that, with
-   `source_file`, forms the natural key).
+     The element's array index becomes its `sequence` (the within-file ordinal that, with
+     `source_file`, forms the natural key).
 4. The command validates each element: `task` in 1–3 and a non-empty `question`. An element failing
    validation is **skipped** with a logged reason (including its index); the command continues with
    the rest and reports the skipped count in its summary.
@@ -48,9 +52,9 @@ platform-agnostic (no audio/Whisper at import time) and idempotent.
    - `source_file` is the JSON file's basename (e.g. `oral-tasks.json`).
    - Insert when absent; **overwrite in place** when the same `(source_file, sequence)` already
      exists (same `speaking_tasks.id`, preserving any references).
-5b. Because the natural key is `(source_file, sequence)`, **multiple elements may share a `task`
-   number** — they form the candidate pool the real-mode/training draw selects from (see
-   speaking-session), exactly as multiple imports can share a `sequence` position in reading/listening.
+     5b. Because the natural key is `(source_file, sequence)`, **multiple elements may share a `task`
+     number** — they form the candidate pool the real-mode/training draw selects from (see
+     speaking-session), exactly as multiple imports can share a `sequence` position in reading/listening.
 6. The command prints per-element progress ("element 0 → task 3: inserted" / "overwritten" /
    "skipped (<reason>)") and a final summary `{ inserted, overwritten, skipped, total }`.
 7. With `--dry-run`, the command parses and prints the same summary and parsed fields but performs
@@ -59,6 +63,7 @@ platform-agnostic (no audio/Whisper at import time) and idempotent.
    otherwise it exits zero (a partial import with some skips is a success with warnings).
 
 ## Data model changes
+
 ```
 -- spec: docs/specs/speaking-import.md §Data model changes
 speaking_tasks
@@ -73,14 +78,17 @@ speaking_tasks
   unique (source_file, sequence)         -- idempotency / override key, mirrors questions(source_file, sequence)
   check (task_number between 1 and 3)
 ```
+
 No change to existing tables. The session/response/evaluation tables are defined in their own specs
 (speaking-session, speaking-evaluation).
 
 ## API contract
+
 None. This is a CLI command with no HTTP surface. Imported tasks are consumed by the Speaking session
 endpoints (speaking-session spec).
 
 ## Example import file
+
 ```json
 [
   {
@@ -97,6 +105,7 @@ endpoints (speaking-session spec).
 ```
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [ ] `npm run import:speaking -- --file <path.json>` reads a JSON array and exits non-zero with a clear message when the file is missing or not a JSON array. (Behaviour.1, 2, 8)
@@ -109,12 +118,14 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] A `speaking_tasks` row carries `source_file`, `sequence`, `task_number` (1–3), `question`, and the optional `sample_answer`. (Data model)
 
 ## Open questions
+
 - **`sequence` base (0 vs 1).** The element index is stored as `sequence`; 0-based is the natural
   array index, 1-based aligns with the reading/listening 1-indexed `sequence`. Pick one before
   implementation (does not affect behaviour, only the stored value).
 - **`question`/`answer` length.** No upper bound is enforced; very long sample answers import as-is.
 
 ## Revision history
+
 - 2026-06-17: Initial draft (Milestone 11).
 - 2026-06-18: Approved (Milestone 11).
 - 2026-06-18: Implemented — `scripts/import-speaking.ts` + pure parser `scripts/lib/speaking-tasks.ts`; `sequence` is the 0-based array index. Sample bank at `samples/speaking-tasks/sample-bank.json`.

@@ -9,6 +9,7 @@ Legend: `(•)` selected radio · `( )` unselected · `[ Button ]` · `▸` acti
 ---
 
 ## 1. Session Setup — mode selection
+
 > spec: quiz-session.md §Mode selection.1–2 · reading-quiz-ui.md §Session setup.1–2 ·
 > section-navigation.md §Behaviour.1, 3, 6 (all four sections — Milestone 12)
 
@@ -52,6 +53,7 @@ Training/Real setup (the Mode + Difficulty block above is Reading/Listening-spec
 ---
 
 ## 2. Session Setup — difficulty picker (Learning mode)
+
 > spec: quiz-session.md §Mode selection.3 · reading-quiz-ui.md §Session setup.1
 
 Shown only when **Learning** is selected. Each band maps to a scoring tier; the label
@@ -77,6 +79,7 @@ Real mode has no difficulty step — it always runs the full 39-question section
 ---
 
 ## 3. Reading Quiz — Learning mode (before confirming)
+
 > spec: reading-quiz-ui.md §Layout.3–6, §Answering.7–10
 
 Counter reflects the **filtered band size** (Intermediate = 9 questions). No timer.
@@ -102,6 +105,7 @@ Counter reflects the **filtered band size** (Intermediate = 9 questions). No tim
 ---
 
 ## 4. Reading Quiz — Learning mode (after confirming, with explanation)
+
 > spec: reading-quiz-ui.md §Learning mode feedback.11–13 · llm-enrichment.md (bundled response)
 
 Correct option marked green `✓`, the user's wrong pick marked red `✗`. LLM explanation
@@ -132,6 +136,7 @@ appears below if it exists; otherwise the explanation block is omitted.
 ---
 
 ## 5. Reading Quiz — Real mode
+
 > spec: reading-quiz-ui.md §Layout.6, §Real mode.14–17 · quiz-session.md §Real mode.8–12
 
 Header shows a countdown timer. Counter is `of 39`. No feedback; confirming auto-advances.
@@ -158,6 +163,7 @@ Header shows a countdown timer. Counter is `of 39`. No feedback; confirming auto
 ---
 
 ## 6. Listening Quiz — Learning mode
+
 > spec: listening-quiz-ui.md §Layout.3–6, §Answering.7–10 · listening-player.md
 
 Player with subtitle overlay sits above the question. Counter reflects band size.
@@ -186,6 +192,7 @@ Player with subtitle overlay sits above the question. Counter reflects band size
 ---
 
 ## 7. Results Summary — Learning mode
+
 > spec: quiz-session.md §Results.13 (learning) · progress-tracking.md §Results summary.2
 
 Learning shows **correct / total only** (no points) plus the band practised. No time taken.
@@ -206,6 +213,7 @@ Learning shows **correct / total only** (no points) plus the band practised. No 
 ---
 
 ## 8. Results Summary — Real mode
+
 > spec: quiz-session.md §Results.13 (real), §Scoring.15–17 · progress-tracking.md §2
 
 Real shows **points scored / 699**, correct count, and time taken.
@@ -227,6 +235,7 @@ Real shows **points scored / 699**, correct count, and time taken.
 ---
 
 ## 9. Session History
+
 > spec: progress-tracking.md §Session history.4–8
 
 Most recent first. Learning rows show difficulty + correct/total, time as `—`.
@@ -252,6 +261,7 @@ Real rows show points + correct/total + time. Abandoned sessions are hidden.
 ---
 
 ## 10. Review Mode
+
 > spec: review-mode.md §Question review list.3–6, §Retry.7–10
 
 Read-only. Each question shows the user's pick and the correct answer; learning sessions
@@ -287,6 +297,7 @@ When wrong answers span multiple bands, one retry button per band is shown
 ---
 
 ## 11. Writing — Setup (mode + task selection)
+
 > spec: writing-ui.md §Entry & mode selection.1–3
 
 Training exposes a single-task / all-three picker; Real always runs all three.
@@ -315,6 +326,7 @@ Training exposes a single-task / all-three picker; Real always runs all three.
 ---
 
 ## 12. Writing — Training editor
+
 > spec: writing-ui.md §Editor.5–8, §Training mode.9–11 · virtual-keyboard.md §Behaviour.1 (M12)
 
 Per-task tabs (✓ = scored). Live word counter `current / target` (target = `minWords`).
@@ -349,6 +361,7 @@ Sample-answer / template panels and the accent keyboard (Milestone 12) appear he
 ---
 
 ## 13. Writing — Real mode
+
 > spec: writing-ui.md §Real mode.13–15
 
 Single 60-minute countdown across all three tasks. No sample answer / template /
@@ -374,6 +387,7 @@ correction. The accent keyboard stays (the real TCF software provides it).
 ---
 
 ## 14. Writing — Results
+
 > spec: writing-ui.md §Results.16–17 · progress-tracking.md §Writing & speaking sessions
 
 Overall average /20 + tasks submitted; per-task score + NCLC. An unanswered task
@@ -397,6 +411,7 @@ shows `—` / not submitted. Reachable read-only via `GET /api/writing/sessions/
 ---
 
 ## 15. Speaking — Setup (mode + task selection)
+
 > spec: speaking-ui.md §Entry & mode selection.1–4
 
 Same shape as Writing setup. Real mode uses per-task TCF prep + recording limits.
@@ -425,6 +440,7 @@ Same shape as Writing setup. Real mode uses per-task TCF prep + recording limits
 ---
 
 ## 16. Speaking — Training recorder
+
 > spec: speaking-ui.md §Recorder.5–7, §Training mode.8–11
 
 Record / stop / local playback / re-record; the take uploads and a transcript
@@ -459,6 +475,7 @@ only). A `TRANSCRIPTION_FAILED` upload keeps the local take and offers a retry.
 ---
 
 ## 17. Speaking — Real mode (prep → record, auto-advance)
+
 > spec: speaking-ui.md §Real mode.12–14 · speaking-session.md §Configuration.18
 
 One task at a time. A prep countdown (recording disabled) is followed by a recording
@@ -496,6 +513,7 @@ and advances. No sample answer / correction. (Task 1 has prepSeconds = 0.)
 ---
 
 ## 18. Speaking — Results (read-only review with playback)
+
 > spec: speaking-ui.md §Results.15–16 · progress-tracking.md §Writing & speaking sessions
 
 Overall average /20 + tasks submitted; per task: streamed audio playback, transcript,
@@ -520,7 +538,8 @@ score /20 + NCLC + feedback. Training review also shows the sample answer; real 
 
 ---
 
-## 19. On-screen virtual keyboard (French accents)  ·  Milestone 12
+## 19. On-screen virtual keyboard (French accents) · Milestone 12
+
 > spec: virtual-keyboard.md §Behaviour.4–5
 
 The exact 16-key 4×4 grid of the real TCF software plus a `⇧ abc` shift toggle,
@@ -543,7 +562,8 @@ autosaves exactly like typed input.
 
 ---
 
-## 20. Unified section navigation  ·  Milestone 12
+## 20. Unified section navigation · Milestone 12
+
 > spec: section-navigation.md §Behaviour.1–6
 
 All four sections selectable from the landing screen and a persistent top menu
@@ -571,6 +591,7 @@ section-select chrome and the per-section "Home" affordance returns to it.
 ---
 
 ## Revision history
+
 - 2026-06-07: Initial mockups for setup, reading/listening quiz, results, history, review
 - 2026-06-18: Added Writing (Milestone 10) and Speaking (Milestone 11) mockups — setup, training
   editor/recorder, real mode, results — and Milestone 12 mockups for the on-screen French-accent

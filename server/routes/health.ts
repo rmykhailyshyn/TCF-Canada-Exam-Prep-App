@@ -1,9 +1,14 @@
-import { Router } from 'express';
-import { ok } from '../lib/envelope';
+import { Hono } from "hono";
+import { ok } from "../lib/envelope";
+import { type AppVars, errorResponse } from "./app-vars";
 
-export const healthRouter = Router();
+// spec: docs/specs/server-runtime.md §Behaviour.4; API contract — liveness probe + capability flags.
+// Returns { status: 'ok', capabilities } so the client (Milestone 16) can gate CLI-backed features by
+// runtime. On Node all flags are true; the Worker (M15) reports all false.
+export const healthRouter = new Hono<{ Variables: AppVars }>();
 
-// Liveness probe used by the client scaffold to confirm the backend is reachable.
-healthRouter.get('/', (_req, res) => {
-  res.json(ok({ status: 'ok' }));
-});
+healthRouter.onError(errorResponse);
+
+healthRouter.get("/", (c) =>
+  c.json(ok({ status: "ok", capabilities: c.get("capabilities") })),
+);

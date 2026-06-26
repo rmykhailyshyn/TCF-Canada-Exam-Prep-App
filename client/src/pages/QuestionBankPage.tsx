@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { TopNav } from '../components/TopNav';
+import { useState } from "react";
+import { TopNav } from "../components/TopNav";
 import {
   ApiError,
   type DifficultyFilter,
@@ -9,16 +9,16 @@ import {
   type SectionFilter,
   fetchExport,
   importQuestions,
-} from '../lib/api';
-import { DIFFICULTY_BANDS } from '../lib/bands';
+} from "../lib/api";
+import { DIFFICULTY_BANDS } from "../lib/bands";
 
 // spec: docs/specs/question-export-import.md §Behaviour — the Question Bank page hosts an Export
 // panel (section + complexity filters → downloaded JSON) and an Import panel (upload + override).
 
 function todayStamp(): string {
   const d = new Date();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}${mm}${dd}`;
 }
 
@@ -26,14 +26,18 @@ function todayStamp(): string {
 function exportFilename(doc: ExportDocument): string {
   const section = doc.filter.section;
   const complexity =
-    doc.filter.difficulties === 'all' ? 'all' : doc.filter.difficulties.join('-');
+    doc.filter.difficulties === "all"
+      ? "all"
+      : doc.filter.difficulties.join("-");
   return `tcf-export-${section}-${complexity}-${todayStamp()}.json`;
 }
 
 function triggerDownload(doc: ExportDocument): void {
-  const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(doc, null, 2)], {
+    type: "application/json",
+  });
   const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
+  const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = exportFilename(doc);
   document.body.appendChild(anchor);
@@ -50,7 +54,9 @@ export function QuestionBankPage(): JSX.Element {
       <TopNav active="questionBank" />
       <main className="min-h-screen bg-slate-50">
         <div className="mx-auto max-w-2xl space-y-6 p-6">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Question Bank</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Question Bank
+          </h1>
           <ExportPanel />
           <ImportPanel />
         </div>
@@ -61,7 +67,7 @@ export function QuestionBankPage(): JSX.Element {
 
 // spec: docs/specs/question-export-import.md §Behaviour.1–6
 function ExportPanel(): JSX.Element {
-  const [section, setSection] = useState<SectionFilter>('all');
+  const [section, setSection] = useState<SectionFilter>("all");
   // `null` = "All levels"; otherwise the explicit subset of selected band slugs.
   const [bands, setBands] = useState<DifficultySlug[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -72,7 +78,9 @@ function ExportPanel(): JSX.Element {
     setNotice(null);
     setBands((current) => {
       const base = current ?? [];
-      const next = base.includes(slug) ? base.filter((s) => s !== slug) : [...base, slug];
+      const next = base.includes(slug)
+        ? base.filter((s) => s !== slug)
+        : [...base, slug];
       return next.length === 0 ? null : next;
     });
   }
@@ -81,26 +89,28 @@ function ExportPanel(): JSX.Element {
     setBusy(true);
     setError(null);
     setNotice(null);
-    const difficulties: DifficultyFilter = bands ?? 'all';
+    const difficulties: DifficultyFilter = bands ?? "all";
     try {
       const doc = await fetchExport(section, difficulties);
       if (doc.questions.length === 0) {
-        setNotice('No questions match this filter — nothing to export.');
+        setNotice("No questions match this filter — nothing to export.");
         return;
       }
       triggerDownload(doc);
       setNotice(`Exported ${doc.questions.length} question(s).`);
     } catch (e) {
-      setError(e instanceof ApiError ? `${e.code}: ${e.message}` : 'Export failed.');
+      setError(
+        e instanceof ApiError ? `${e.code}: ${e.message}` : "Export failed.",
+      );
     } finally {
       setBusy(false);
     }
   }
 
   const sections: { value: SectionFilter; label: string }[] = [
-    { value: 'reading', label: 'Reading' },
-    { value: 'listening', label: 'Listening' },
-    { value: 'all', label: 'Both' },
+    { value: "reading", label: "Reading" },
+    { value: "listening", label: "Listening" },
+    { value: "all", label: "Both" },
   ];
 
   return (
@@ -113,7 +123,11 @@ function ExportPanel(): JSX.Element {
       <Label>Section</Label>
       <div className="mt-2 grid grid-cols-3 gap-2">
         {sections.map((s) => (
-          <Chip key={s.value} selected={section === s.value} onClick={() => setSection(s.value)}>
+          <Chip
+            key={s.value}
+            selected={section === s.value}
+            onClick={() => setSection(s.value)}
+          >
             {s.label}
           </Chip>
         ))}
@@ -147,7 +161,7 @@ function ExportPanel(): JSX.Element {
           onClick={runExport}
           className="rounded-xl bg-brand-600 px-6 py-2.5 font-semibold text-white shadow-brand-glow transition enabled:hover:bg-brand-700 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
         >
-          {busy ? 'Exporting…' : 'Export'}
+          {busy ? "Exporting…" : "Export"}
         </button>
       </div>
     </section>
@@ -173,13 +187,15 @@ function ImportPanel(): JSX.Element {
       try {
         document = JSON.parse(text) as ExportDocument;
       } catch {
-        setError('Selected file is not valid JSON.');
+        setError("Selected file is not valid JSON.");
         return;
       }
       const result = await importQuestions(document, override);
       setSummary(result);
     } catch (e) {
-      setError(e instanceof ApiError ? `${e.code}: ${e.message}` : 'Import failed.');
+      setError(
+        e instanceof ApiError ? `${e.code}: ${e.message}` : "Import failed.",
+      );
     } finally {
       setBusy(false);
     }
@@ -189,7 +205,8 @@ function ImportPanel(): JSX.Element {
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <h2 className="text-lg font-semibold text-slate-900">Import</h2>
       <p className="mt-1 text-sm text-slate-500">
-        Upload a previously exported JSON file. Matching is by source file + sequence.
+        Upload a previously exported JSON file. Matching is by source file +
+        sequence.
       </p>
 
       <Label>File</Label>
@@ -218,8 +235,8 @@ function ImportPanel(): JSX.Element {
       {summary && (
         <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
           <p className="font-medium text-slate-900">
-            Processed {summary.total}: {summary.inserted} inserted · {summary.overridden} overridden
-            · {summary.skipped} skipped
+            Processed {summary.total}: {summary.inserted} inserted ·{" "}
+            {summary.overridden} overridden · {summary.skipped} skipped
           </p>
           {summary.warnings.length > 0 && (
             <ul className="mt-2 list-disc space-y-1 pl-5 text-amber-700">
@@ -238,7 +255,7 @@ function ImportPanel(): JSX.Element {
           onClick={runImport}
           className="rounded-xl bg-brand-600 px-6 py-2.5 font-semibold text-white shadow-brand-glow transition enabled:hover:bg-brand-700 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
         >
-          {busy ? 'Importing…' : 'Import'}
+          {busy ? "Importing…" : "Import"}
         </button>
       </div>
     </section>
@@ -268,10 +285,10 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${full ? 'w-full text-left' : 'text-center'} ${
+      className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${full ? "w-full text-left" : "text-center"} ${
         selected
-          ? 'border-brand-500 bg-brand-50 text-brand-900 ring-1 ring-brand-500'
-          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+          ? "border-brand-500 bg-brand-50 text-brand-900 ring-1 ring-brand-500"
+          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
       }`}
     >
       {children}

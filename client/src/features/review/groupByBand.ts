@@ -1,5 +1,5 @@
-import type { DifficultySlug, QuestionResultRow } from '../../lib/api';
-import { DIFFICULTY_BANDS } from '../../lib/bands';
+import type { DifficultySlug, QuestionResultRow } from "../../lib/api";
+import { DIFFICULTY_BANDS } from "../../lib/bands";
 
 // spec: docs/specs/review-mode.md §Behaviour.8–9
 // Groups a session's incorrectly-answered questions by their difficulty band so retry can issue
@@ -12,7 +12,9 @@ export type RetryBand = {
   count: number;
 };
 
-export function groupIncorrectByBand(results: QuestionResultRow[]): RetryBand[] {
+export function groupIncorrectByBand(
+  results: QuestionResultRow[],
+): RetryBand[] {
   const idsByBand = new Map<DifficultySlug, number[]>();
   for (const r of results) {
     if (r.isCorrect || r.difficulty == null) continue;

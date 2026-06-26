@@ -8,6 +8,6 @@ export class ApiError extends Error {
     public readonly status = 400,
   ) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
   }
 }

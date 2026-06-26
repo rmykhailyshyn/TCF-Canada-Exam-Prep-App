@@ -1,15 +1,18 @@
 # Spec: Listening Player
 
 ## Status
+
 implemented
 
 ## Goal
+
 Provide an audio player component for the listening quiz that plays an MP3 question clip
 while displaying a phrase-level subtitle overlay. A visual marker moves through the
 subtitle text in sync with audio playback. The user can click any subtitle segment to
 seek the audio to that point.
 
 ## Scope
+
 - In scope:
   - Audio playback controls: play, pause, seek via progress bar
   - Phrase-level subtitle display synced to playback position
@@ -25,6 +28,7 @@ seek the audio to that point.
 ## Behaviour
 
 ### Playback
+
 1. The player loads the audio for the current question before the user can interact with
    the question options.
 2. Play and Pause buttons are always visible. The player starts in a paused state.
@@ -34,6 +38,7 @@ seek the audio to that point.
    duration of the session (not across sessions).
 
 ### Subtitle overlay
+
 5. All transcript segments are displayed as a list of subtitle phrases below (or beside)
    the player controls.
 6. The currently playing segment is highlighted (e.g. bold text, accent background).
@@ -42,37 +47,45 @@ seek the audio to that point.
 8. The subtitle list scrolls automatically to keep the active segment in view.
 
 ### Click-to-seek
+
 9. Clicking any subtitle segment seeks the audio to the start time of that segment and
    begins playback from that point.
 10. The highlight immediately updates to reflect the newly active segment.
 
 ### End of clip
+
 11. When audio reaches the end, playback stops and the player returns to a paused state
     at position 0.
 12. The user can replay the clip as many times as needed before confirming an answer.
     (Real mode does not restrict replays — confirmed as out of scope for now.)
 
 ## Data model changes
+
 None — audio_files and transcript_segments are defined in the listening-import spec.
 
 ## API contract
 
 ### GET /api/questions/:id/audio
+
 Stream or redirect to the MP3 file for a question. The stored `audio_files.file_path` is normally a
 path relative to `MEDIA_DIR` (e.g. `listening/q07.mp3`); the service resolves it against `MEDIA_DIR`
 (default `<repo-root>/data/media`) before streaming (legacy absolute paths pass through unchanged).
+
 ```
 Response: audio/mpeg stream, or 302 redirect to a local static file URL
 Error:    { "data": null, "error": { "code": "NOT_FOUND", "message": "..." } }
 ```
 
 ### GET /api/questions/:id/transcript
+
 Return phrase-level segments for a question.
+
 ```
 Response: { "data": { "segments": [{ "sequence": number, "text": string, "startMs": number, "endMs": number }] }, "error": null }
 ```
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [ ] The audio for the current question finishes loading before the question options become interactive. (Behaviour.1)
@@ -88,6 +101,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] `GET /api/questions/:id/transcript` returns segments with `sequence`, `text`, `startMs`, `endMs` in the documented envelope. (API contract)
 
 ## Open questions
+
 - ~~Should the MP3 be served as a static file (Express `static` middleware) or streamed
   through a dedicated route?~~ Resolved 2026-06-09: a **dedicated streaming route**
   (`GET /api/questions/:id/audio`) that honours the `Range` header (206 + `Content-Range`,
@@ -96,6 +110,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   `NOT_FOUND` envelope for an unknown question id. Range parsing is unit-tested (`parseRange`).
 
 ## Revision history
+
 - 2026-06-04: Initial draft
 - 2026-06-08: Added Acceptance criteria section (testable pass/fail conditions derived from Behaviour).
 - 2026-06-08: Status moved draft → approved.

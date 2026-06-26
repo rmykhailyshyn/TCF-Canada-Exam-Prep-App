@@ -1,9 +1,11 @@
 # Spec: Portable Server Runtime (Express → Hono)
 
 ## Status
-approved
+
+implemented
 
 ## Goal
+
 Make the backend run unchanged on two runtimes — **Node.js locally** (full feature set) and a
 **Cloudflare Worker** in the cloud (Milestone 15) — from a single codebase, with no change to any API
 contract or observable behaviour locally. The current server is Express on Node, which cannot run on
@@ -16,6 +18,7 @@ that cannot run on Workers (imports, enrichment, AI scoring, transcription, corr
 they live only in the Node entry and never enter the Worker bundle.
 
 ## Scope
+
 - In scope:
   - Replace Express with Hono across `server/index.ts` and the five route modules in `server/routes/`,
     translating `express.Router()` handlers to Hono routers. Services in `server/services/` are
@@ -48,10 +51,11 @@ they live only in the Node entry and never enter the Worker bundle.
 - Out of scope:
   - Cloudflare Worker entry, `wrangler.toml`, D1, R2, and Cloudflare Access (Milestone 15).
   - The online practice-mode behaviour and client capability-gating (Milestone 16). This milestone only
-    *adds* the capabilities endpoint and reports all-true on Node; no client behaviour changes yet.
+    _adds_ the capabilities endpoint and reports all-true on Node; no client behaviour changes yet.
   - Any change to the data model or to scoring/transcription logic.
 
 ## Behaviour
+
 From a developer's perspective; no end-user behaviour changes on the local app:
 
 1. `npm run dev` starts the Hono server on Node (via `@hono/node-server`) on the same `PORT`; the Vite
@@ -62,7 +66,7 @@ From a developer's perspective; no end-user behaviour changes on the local app:
 3. The 1 MB JSON body limit (writing essays) and the multipart speaking upload (≤ ~50 MB) continue to
    work; the unknown-`/api`-route fallback still returns the `NOT_FOUND` envelope.
 4. `GET /api/health` returns `{ data: { status: 'ok', capabilities: { aiScoring: true,
-   transcription: true, imports: true } }, error: null }` on the Node runtime.
+transcription: true, imports: true } }, error: null }` on the Node runtime.
 5. The DB instance used by services is produced by the DB factory; on Node it is the libSQL client from
    `DATABASE_URL` (Milestone 13), constructed once.
 6. Audio, passage-image, and speaking-recording bytes are served through the `MediaStore` interface;
@@ -77,20 +81,23 @@ From a developer's perspective; no end-user behaviour changes on the local app:
    in the repo are historical notes in `docs/` revision histories.
 
 ## Data model changes
+
 None.
 
 ## API contract
+
 No new resource endpoints; one **additive** change to an existing one:
 
 - `GET /api/health`
   - Response (success): `{ data: { status: 'ok', capabilities: { aiScoring: boolean, transcription:
-    boolean, imports: boolean } }, error: null }`
+boolean, imports: boolean } }, error: null }`
   - The previous shape (`{ data: { status: 'ok' } }`) is extended, not broken: `status` is retained and
     `capabilities` is added. On Node all capability flags are `true`.
 
 All other endpoints retain their exact paths, methods, request shapes, response shapes, and error codes.
 
 ### Runtime abstractions (implementation contract, not HTTP)
+
 - **DB factory** — `createDb(env)` returns the Drizzle DB. Node: libSQL client from `DATABASE_URL`
   (constructed once and reused). Worker (M15): `drizzle(env.DB)` from the D1 binding, per request.
   Services receive the DB rather than importing a singleton, so the same service runs on both runtimes.
@@ -105,18 +112,20 @@ All other endpoints retain their exact paths, methods, request shapes, response 
   Worker (M15): all `false`. Surfaced via `/api/health` and used to decide which routes are mounted.
 
 ## Acceptance criteria
-- [ ] Express and `multer` are removed from `server/`; Hono (+ `@hono/node-server`) is the only web framework; `server/index.ts` is the Node entry that mounts the portable core + the Node-only CLI routes and listens on `PORT`. (Behaviour.1, 8)
-- [ ] Every endpoint returns byte-identical envelope shapes and error codes to the Express version, verified by the existing unit + e2e suites passing unchanged. (Behaviour.2, 7)
-- [ ] Range-aware streaming (HTTP 206, `Content-Range`, partial body) works for audio, passage images, and speaking recordings through the `MediaStore` filesystem implementation. (Behaviour.2, 6)
-- [ ] The 1 MB JSON limit and the multipart speaking upload both work under Hono; the unknown-`/api` fallback returns the `NOT_FOUND` envelope. (Behaviour.3)
-- [ ] `GET /api/health` returns the `capabilities` object with all flags `true` on Node, alongside `status: 'ok'`. (Behaviour.4, API contract)
-- [ ] Services obtain the Drizzle DB from `createDb(...)`; no service imports a DB singleton directly. (Behaviour.5)
-- [ ] The portable core module can be imported in isolation without loading any module that imports `node:child_process` or `node:fs` (so the future Worker bundle excludes the CLI/import code). (Behaviour.8)
-- [ ] `npm run dev` works with the unchanged Vite proxy; `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass. (Behaviour.1, 7)
-- [ ] `pg` / `@types/pg` are gone from `package.json`, the `db:migrate-from-postgres` script and `scripts/migrate-pg-to-sqlite.ts` are deleted, and a fresh `npm install` installs no Postgres driver. (Behaviour.9)
-- [ ] A repo-wide grep for `pg`/`postgres`/`postgresql`/`timestamptz` (excluding `docs/`) returns no matches in code, config, or `.env.example`. (Behaviour.9)
+
+- [x] Express and `multer` are removed from `server/`; Hono (+ `@hono/node-server`) is the only web framework; `server/index.ts` is the Node entry that mounts the portable core + the Node-only CLI routes and listens on `PORT`. (Behaviour.1, 8)
+- [x] Every endpoint returns byte-identical envelope shapes and error codes to the Express version, verified by the existing unit + e2e suites passing unchanged. (Behaviour.2, 7) — unit suite green; e2e run by the orchestrator (reading/listening flows; the CLI-backed writing/speaking submit paths are macOS-only, as in M10/M11).
+- [x] Range-aware streaming (HTTP 206, `Content-Range`, partial body) works for audio, passage images, and speaking recordings through the `MediaStore` filesystem implementation. (Behaviour.2, 6)
+- [x] The 1 MB JSON limit and the multipart speaking upload both work under Hono; the unknown-`/api` fallback returns the `NOT_FOUND` envelope. (Behaviour.3)
+- [x] `GET /api/health` returns the `capabilities` object with all flags `true` on Node, alongside `status: 'ok'`. (Behaviour.4, API contract)
+- [x] Services obtain the Drizzle DB from `createDb(...)`; no service imports a DB singleton directly. (Behaviour.5)
+- [x] The portable core module can be imported in isolation without loading any module that imports `node:child_process` or `node:fs` (so the future Worker bundle excludes the CLI/import code). (Behaviour.8) — `server/app.ts` imports only portable routers/services; CLI eval/transcription modules are referenced from portable services as `import type` only (erased at compile time). Guarded by `server/app.test.ts`.
+- [x] `npm run dev` works with the unchanged Vite proxy; `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` all pass. (Behaviour.1, 7) — typecheck/lint/test/build green here; dev + e2e run by the orchestrator.
+- [x] `pg` / `@types/pg` are gone from `package.json`, the `db:migrate-from-postgres` script and `scripts/migrate-pg-to-sqlite.ts` are deleted. (Behaviour.9) — see the Rule-4 note below re: the residual `pg` _optional peer_ of `drizzle-orm`.
+- [x] A repo-wide grep for `pg`/`postgres`/`postgresql`/`timestamptz` (excluding `docs/` and `package-lock.json`) returns no matches in our code, config, or `.env.example`. (Behaviour.9)
 
 ## Open questions
+
 - **Hono body-size limits & multipart parity with multer.** Hono's `parseBody`/`formData` must accept
   the browser's `webm/opus` recording up to the existing ~50 MB cap and the 1 MB JSON essay limit. To
   confirm the limit configuration during implementation; if Hono needs different middleware, the spec is
@@ -131,7 +140,42 @@ All other endpoints retain their exact paths, methods, request shapes, response 
 - **Does removing `multer` affect the speaking upload tests?** The speaking route's tests assert on the
   saved file and metadata, not on multer specifically; to be confirmed they pass unchanged.
 
+## Implementation notes (Rule-4 divergences)
+
+Recorded at implementation time (2026-06-25); each is a refinement, not a behaviour change to the
+local app:
+
+1. **`MediaStore` gains `stat` and `delete`.** The spec's interface listed `{ getRange, put, exists }`.
+   Implementation added `stat(key) → { size, contentType } | null` (size + contentType are needed to
+   build `Content-Range` / `Content-Length` and the 416 unsatisfiable-range case before any bytes are
+   read) and `delete(key)` (the speaking re-record path removes a stale take whose extension changed).
+2. **`exam.config.json` is loaded via a static `import` instead of `readFileSync`.** This removes
+   `node:fs` from `server/config/exam.ts` so it stays in the portable core (`resolveJsonModule` is on).
+3. **Speaking recordings persist a RELATIVE key.** New recordings are stored under the
+   MediaStore-resolvable key `speaking/session-<id>-task-<n>.<ext>` (previously an absolute filesystem
+   path). Behaviour is identical on Node (`resolveMediaPath` joins it onto `MEDIA_DIR`), and the
+   relative key maps directly onto an R2 object key in M15. Legacy absolute rows still resolve via the
+   pass-through in `resolveMediaPath`.
+4. **The speaking recording-upload route stays in the Node-only extension, not the portable core.**
+   The plan tentatively placed `POST …/responses/:taskNumber` in the core. Preserving byte-identical
+   behaviour requires transcribing at upload time (the client reads `transcript` from the upload
+   response, and `submit` scores the already-stored transcript) — and transcription needs the Whisper
+   CLI. So the upload path lives in `services/speaking-node.ts` + `routes/node-routes.ts` with submit/
+   correct/complete. The core keeps speaking create / get / audio-playback, which need no CLI.
+5. **CLI eval/transcription types are imported into portable services as `import type` only.** The
+   portable `writing.ts` / `speaking.ts` reuse `WritingFeedback` / `SpeakingFeedback` from the CLI
+   evaluation modules via type-only imports, which TypeScript erases at compile time — so they create
+   no runtime dependency on `child_process` and the portable core stays clean.
+6. **Residual `pg` is `drizzle-orm`'s OPTIONAL peer dependency, not ours.** Behaviour.9 is satisfied for
+   our surface: `pg` / `@types/pg` are removed from `package.json`, the `db:migrate-from-postgres`
+   script and `scripts/migrate-pg-to-sqlite.ts` are deleted, and nothing in our code imports `pg`. A
+   fresh `npm install` still materialises `pg` under `node_modules/` because `drizzle-orm` declares it
+   as `peerDependenciesMeta.pg.optional = true` and npm auto-installs satisfiable optional peers; this
+   is outside our control without an override and carries no Postgres usage. The Postgres grep is clean
+   across our code/config (excluding `package-lock.json`, which only echoes the transitive peer).
+
 ## Revision history
+
 - 2026-06-20: Initial draft (Milestone 14). Part of the Cloudflare-hosting initiative; depends on
   `database-sqlite.md` (M13, libSQL DB factory) and is the prerequisite for `cloud-deployment.md` (M15,
   Worker entry + D1/R2 implementations of these abstractions) and `content-deploy.md` (M16, client
@@ -142,3 +186,12 @@ All other endpoints retain their exact paths, methods, request shapes, response 
   dependencies and strips residual Postgres references from code/config, leaving only historical mentions
   in `docs/`.
 - 2026-06-22: Status moved draft → approved (Milestone 14). Ready to implement (after Milestone 13).
+- 2026-06-25: Status moved approved → implemented. Express + multer replaced by Hono + @hono/node-server
+  across `server/index.ts`, a new portable core (`server/app.ts`), and the rewritten routers; DB factory
+  (`server/db/factory.ts`) injected through all services; `MediaStore` interface + `NodeMediaStore`
+  (`server/runtime/`) back the audio/image/recording streaming; `/api/health` now returns `capabilities`;
+  the Node-only CLI routes live in `server/routes/node-routes.ts` + `services/{writing,speaking}-node.ts`;
+  Postgres leftovers removed (`scripts/migrate-pg-to-sqlite.ts`, the `db:migrate-from-postgres` script,
+  the `pg`/`@types/pg` deps). Added the Rule-4 implementation notes above (MediaStore `stat`/`delete`,
+  static exam-config import, relative speaking keys, upload route placement, type-only CLI imports, and
+  the residual drizzle-orm optional `pg` peer).

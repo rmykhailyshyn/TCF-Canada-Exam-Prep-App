@@ -7,7 +7,13 @@ type Props = {
   onCancel: () => void;
 };
 
-export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCancel }: Props): JSX.Element {
+export function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+}: Props): JSX.Element {
   return (
     <div className="fixed inset-0 z-20 flex animate-fade-in items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-sm animate-scale-in rounded-2xl border border-slate-200/60 bg-white p-6 shadow-card-hover">

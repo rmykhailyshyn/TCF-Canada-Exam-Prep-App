@@ -3,7 +3,7 @@ import {
   type RunClaudeOptions,
   extractJsonObject,
   runClaude,
-} from '../lib/claude-cli';
+} from "../lib/claude-cli";
 
 // spec: docs/specs/writing-evaluation.md
 // Request-time local-Claude-CLI layer for the Writing section: scoring + feedback on submit (both
@@ -43,58 +43,62 @@ export type CorrectInput = {
   responseText: string;
 };
 
-function wordGuidance(minWords: number | null, maxWords: number | null): string {
-  if (minWords != null && maxWords != null) return `${minWords}–${maxWords} words`;
+function wordGuidance(
+  minWords: number | null,
+  maxWords: number | null,
+): string {
+  if (minWords != null && maxWords != null)
+    return `${minWords}–${maxWords} words`;
   if (minWords != null) return `at least ${minWords} words`;
   if (maxWords != null) return `at most ${maxWords} words`;
-  return 'no specific length requirement';
+  return "no specific length requirement";
 }
 
 // spec: docs/specs/writing-evaluation.md §Behaviour.3 — scoring prompt (score 0–20 + feedback only).
 export function buildScorePrompt(input: EvaluateInput): string {
   return [
-    'You are an examiner for the TCF Canada French exam, Expression écrite (writing) section.',
+    "You are an examiner for the TCF Canada French exam, Expression écrite (writing) section.",
     `You are grading the response to writing task ${input.taskNumber}.`,
     `Expected length: ${wordGuidance(input.minWords, input.maxWords)}.`,
-    '',
-    'TASK PROMPT (in French):',
+    "",
+    "TASK PROMPT (in French):",
     '"""',
     input.prompt.trim(),
     '"""',
-    '',
+    "",
     "CANDIDATE'S RESPONSE (in French):",
     '"""',
-    input.responseText.trim() || '(empty response)',
+    input.responseText.trim() || "(empty response)",
     '"""',
-    '',
-    'Assess it against the official TCF criteria (task achievement, coherence/cohesion, lexical',
-    'range, grammatical range and accuracy, register). Give a single integer score from 0 to 20.',
-    'Write the feedback IN ENGLISH (the response is in French).',
-    '',
-    'Respond with ONLY a JSON object (no surrounding prose, no markdown code fence) of this shape:',
-    '{',
+    "",
+    "Assess it against the official TCF criteria (task achievement, coherence/cohesion, lexical",
+    "range, grammatical range and accuracy, register). Give a single integer score from 0 to 20.",
+    "Write the feedback IN ENGLISH (the response is in French).",
+    "",
+    "Respond with ONLY a JSON object (no surrounding prose, no markdown code fence) of this shape:",
+    "{",
     '  "score": 0,',
     '  "strengths": "what the response does well",',
     '  "errors": "notable grammar / vocabulary / register / coherence errors",',
     '  "improvements": "concrete suggestions to raise the score"',
-    '}',
-  ].join('\n');
+    "}",
+  ].join("\n");
 }
 
 // spec: docs/specs/writing-evaluation.md §Behaviour.3–4 — parse + validate the score reply.
 export function parseScoreResponse(raw: string): WritingScore {
   const obj = parseObject(raw);
   const score = obj.score;
-  if (typeof score !== 'number' || !Number.isFinite(score)) {
+  if (typeof score !== "number" || !Number.isFinite(score)) {
     throw new ClaudeError('Model output is missing a numeric "score".');
   }
   const clamped = Math.max(0, Math.min(20, Math.round(score)));
   return {
     score: clamped,
     feedback: {
-      strengths: requireString(obj.strengths, 'strengths'),
-      errors: requireString(obj.errors, 'errors'),
-      improvements: requireString(obj.improvements, 'improvements'),
+      strengths: requireString(obj.strengths, "strengths"),
+      errors: requireString(obj.errors, "errors"),
+      improvements: requireString(obj.improvements, "improvements"),
     },
   };
 }
@@ -102,50 +106,56 @@ export function parseScoreResponse(raw: string): WritingScore {
 // spec: docs/specs/writing-evaluation.md §Behaviour.7 — correction prompt (training only).
 export function buildCorrectionPrompt(input: CorrectInput): string {
   return [
-    'You are a French writing tutor helping a TCF Canada candidate improve a draft.',
-    '',
-    'TASK PROMPT (in French):',
+    "You are a French writing tutor helping a TCF Canada candidate improve a draft.",
+    "",
+    "TASK PROMPT (in French):",
     '"""',
     input.prompt.trim(),
     '"""',
-    '',
+    "",
     "CANDIDATE'S CURRENT DRAFT (in French):",
     '"""',
-    input.responseText.trim() || '(empty draft)',
+    input.responseText.trim() || "(empty draft)",
     '"""',
-    '',
-    'Rewrite the draft in correct, natural French, keeping the candidate\'s intent and meaning.',
-    'Then list specific suggestions (in English) explaining what you changed and what to try next.',
-    '',
-    'Respond with ONLY a JSON object (no surrounding prose, no markdown code fence) of this shape:',
-    '{',
+    "",
+    "Rewrite the draft in correct, natural French, keeping the candidate's intent and meaning.",
+    "Then list specific suggestions (in English) explaining what you changed and what to try next.",
+    "",
+    "Respond with ONLY a JSON object (no surrounding prose, no markdown code fence) of this shape:",
+    "{",
     '  "correctedText": "the draft rewritten in correct French",',
     '  "suggestions": ["specific note 1", "specific note 2"]',
-    '}',
-  ].join('\n');
+    "}",
+  ].join("\n");
 }
 
 // spec: docs/specs/writing-evaluation.md §Behaviour.7–8 — parse + validate the correction reply.
 export function parseCorrectionResponse(raw: string): WritingCorrection {
   const obj = parseObject(raw);
-  const correctedText = requireString(obj.correctedText, 'correctedText');
+  const correctedText = requireString(obj.correctedText, "correctedText");
   const rawSuggestions = obj.suggestions;
   if (!Array.isArray(rawSuggestions)) {
     throw new ClaudeError('Model output is missing a "suggestions" array.');
   }
   const suggestions = rawSuggestions
-    .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+    .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
     .map((s) => s.trim());
   return { correctedText, suggestions };
 }
 
 // spec: docs/specs/writing-evaluation.md §Behaviour.3 — score a submitted response via the CLI.
-export function scoreWithClaude(input: EvaluateInput, opts: RunClaudeOptions = {}): WritingScore {
+export function scoreWithClaude(
+  input: EvaluateInput,
+  opts: RunClaudeOptions = {},
+): WritingScore {
   return parseScoreResponse(runClaude(buildScorePrompt(input), opts));
 }
 
 // spec: docs/specs/writing-evaluation.md §Behaviour.7 — correct a draft via the CLI.
-export function correctWithClaude(input: CorrectInput, opts: RunClaudeOptions = {}): WritingCorrection {
+export function correctWithClaude(
+  input: CorrectInput,
+  opts: RunClaudeOptions = {},
+): WritingCorrection {
   return parseCorrectionResponse(runClaude(buildCorrectionPrompt(input), opts));
 }
 
@@ -161,7 +171,7 @@ function parseObject(raw: string): Record<string, unknown> {
 }
 
 function requireString(value: unknown, field: string): string {
-  if (typeof value !== 'string' || value.trim().length === 0) {
+  if (typeof value !== "string" || value.trim().length === 0) {
     throw new ClaudeError(`Model output is missing a non-empty "${field}".`);
   }
   return value.trim();

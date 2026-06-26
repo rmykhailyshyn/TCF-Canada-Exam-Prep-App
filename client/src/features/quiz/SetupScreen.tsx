@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import type { DifficultySlug, Mode, Section } from '../../lib/api';
-import { DIFFICULTY_BANDS } from '../../lib/bands';
-import type { SessionConfig } from './types';
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import type { DifficultySlug, Mode, Section } from "../../lib/api";
+import { DIFFICULTY_BANDS } from "../../lib/bands";
+import type { SessionConfig } from "./types";
 
 // spec: docs/specs/reading-quiz-ui.md §Session setup.1–2 + docs/specs/listening-quiz-ui.md §1–2 +
 // docs/specs/section-navigation.md §Behaviour.1,3,6
@@ -15,16 +15,17 @@ type Props = { onStart: (config: SessionConfig) => void };
 
 // Real-mode timing differs per section (reading 60 min, listening 35 min) — exam.config.json.
 const REAL_SUBTITLE: Record<Section, string> = {
-  reading: '60 min · 39 questions · no feedback',
-  listening: '35 min · 39 questions · no feedback',
+  reading: "60 min · 39 questions · no feedback",
+  listening: "35 min · 39 questions · no feedback",
 };
 
 export function SetupScreen({ onStart }: Props): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   // The top menu may pre-select Reading/Listening via router state (section-navigation §Behaviour.3).
-  const presetSection = (location.state as { section?: Section } | null)?.section;
-  const [section, setSection] = useState<Section>(presetSection ?? 'reading');
+  const presetSection = (location.state as { section?: Section } | null)
+    ?.section;
+  const [section, setSection] = useState<Section>(presetSection ?? "reading");
   const [mode, setMode] = useState<Mode | null>(null);
   const [difficulty, setDifficulty] = useState<DifficultySlug | null>(null);
 
@@ -34,46 +35,54 @@ export function SetupScreen({ onStart }: Props): JSX.Element {
     if (presetSection) setSection(presetSection);
   }, [presetSection]);
 
-  const canStart = mode === 'real' || (mode === 'learning' && difficulty !== null);
+  const canStart =
+    mode === "real" || (mode === "learning" && difficulty !== null);
 
   function start(): void {
     if (!mode) return;
-    onStart({ section, mode, difficulty: mode === 'learning' ? difficulty! : undefined });
+    onStart({
+      section,
+      mode,
+      difficulty: mode === "learning" ? difficulty! : undefined,
+    });
   }
 
   return (
     <div className="mx-auto max-w-2xl animate-fade-in-up px-6 py-10 sm:py-14">
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900">Start a session</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+        Start a session
+      </h1>
       <p className="mt-2 text-slate-500">
-        Pick a section and a mode, then practise at your own pace or under exam conditions.
+        Pick a section and a mode, then practise at your own pace or under exam
+        conditions.
       </p>
 
       <section className="mt-9">
         <SectionLabel>Section</SectionLabel>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Card
-            selected={section === 'reading'}
-            onClick={() => setSection('reading')}
+            selected={section === "reading"}
+            onClick={() => setSection("reading")}
             icon="📖"
             title="Reading"
             subtitle="Compréhension écrite"
           />
           <Card
-            selected={section === 'listening'}
-            onClick={() => setSection('listening')}
+            selected={section === "listening"}
+            onClick={() => setSection("listening")}
             icon="🎧"
             title="Listening"
             subtitle="Compréhension orale"
           />
           {/* spec: section-navigation §Behaviour.1,3 — Writing/Speaking hand off to their own setup. */}
           <Card
-            onClick={() => navigate('/writing')}
+            onClick={() => navigate("/writing")}
             icon="📝"
             title="Writing"
             subtitle="Expression écrite"
           />
           <Card
-            onClick={() => navigate('/speaking')}
+            onClick={() => navigate("/speaking")}
             icon="🎤"
             title="Speaking"
             subtitle="Expression orale"
@@ -85,16 +94,16 @@ export function SetupScreen({ onStart }: Props): JSX.Element {
         <SectionLabel>Mode</SectionLabel>
         <div className="mt-3 grid grid-cols-2 gap-3">
           <Card
-            selected={mode === 'learning'}
-            onClick={() => setMode('learning')}
+            selected={mode === "learning"}
+            onClick={() => setMode("learning")}
             icon="🧠"
             title="Learning"
             subtitle="No timer · feedback after each question"
           />
           <Card
-            selected={mode === 'real'}
+            selected={mode === "real"}
             onClick={() => {
-              setMode('real');
+              setMode("real");
               setDifficulty(null);
             }}
             icon="⏱️"
@@ -104,7 +113,7 @@ export function SetupScreen({ onStart }: Props): JSX.Element {
         </div>
       </section>
 
-      {mode === 'learning' && (
+      {mode === "learning" && (
         <section className="mt-7 animate-fade-in">
           <SectionLabel>Difficulty</SectionLabel>
           <div className="mt-3 space-y-2">
@@ -117,22 +126,24 @@ export function SetupScreen({ onStart }: Props): JSX.Element {
                   onClick={() => setDifficulty(band.slug)}
                   className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition ${
                     selected
-                      ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500'
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                      ? "border-brand-500 bg-brand-50 ring-1 ring-brand-500"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                   }`}
                 >
                   <span className="flex items-center gap-3">
                     <span
                       className={`flex h-6 w-6 flex-none items-center justify-center rounded-full border text-[11px] font-bold transition ${
                         selected
-                          ? 'border-brand-500 bg-brand-500 text-white'
-                          : 'border-slate-300 text-transparent'
+                          ? "border-brand-500 bg-brand-500 text-white"
+                          : "border-slate-300 text-transparent"
                       }`}
                       aria-hidden
                     >
                       ✓
                     </span>
-                    <span className="font-medium text-slate-900">{band.name}</span>
+                    <span className="font-medium text-slate-900">
+                      {band.name}
+                    </span>
                   </span>
                   <span className="text-sm tabular-nums text-slate-500">
                     {band.range} · {band.points} pts
@@ -160,7 +171,9 @@ export function SetupScreen({ onStart }: Props): JSX.Element {
 
 function SectionLabel({ children }: { children: ReactNode }): JSX.Element {
   return (
-    <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">{children}</h2>
+    <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+      {children}
+    </h2>
   );
 }
 
@@ -173,7 +186,14 @@ type CardProps = {
   onClick?: () => void;
 };
 
-function Card({ title, subtitle, icon, selected, disabled, onClick }: CardProps): JSX.Element {
+function Card({
+  title,
+  subtitle,
+  icon,
+  selected,
+  disabled,
+  onClick,
+}: CardProps): JSX.Element {
   return (
     <button
       type="button"
@@ -181,19 +201,25 @@ function Card({ title, subtitle, icon, selected, disabled, onClick }: CardProps)
       onClick={onClick}
       className={`group relative overflow-hidden rounded-2xl border px-4 py-4 text-left transition ${
         selected
-          ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500'
-          : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-card'
-      } ${disabled ? 'cursor-not-allowed opacity-50 hover:translate-y-0 hover:border-slate-200 hover:shadow-none' : ''}`}
+          ? "border-brand-500 bg-brand-50 ring-1 ring-brand-500"
+          : "border-slate-200 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-card"
+      } ${disabled ? "cursor-not-allowed opacity-50 hover:translate-y-0 hover:border-slate-200 hover:shadow-none" : ""}`}
     >
       <div className="flex items-center gap-2">
-        {icon && <span aria-hidden className="text-lg">{icon}</span>}
+        {icon && (
+          <span aria-hidden className="text-lg">
+            {icon}
+          </span>
+        )}
         <span
-          className={`font-semibold ${selected ? 'text-brand-900' : 'text-slate-900'}`}
+          className={`font-semibold ${selected ? "text-brand-900" : "text-slate-900"}`}
         >
           {title}
         </span>
       </div>
-      <div className={`mt-1 text-sm ${selected ? 'text-brand-700/80' : 'text-slate-500'}`}>
+      <div
+        className={`mt-1 text-sm ${selected ? "text-brand-700/80" : "text-slate-500"}`}
+      >
         {subtitle}
       </div>
     </button>

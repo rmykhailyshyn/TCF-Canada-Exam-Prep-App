@@ -1,9 +1,12 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { basename, resolve } from 'node:path';
-import { and, eq } from 'drizzle-orm';
-import { db, client } from '../server/db';
-import { speakingTasks } from '../server/db/schema';
-import { SpeakingTaskParseError, parseSpeakingTasks } from './lib/speaking-tasks';
+import { existsSync, readFileSync } from "node:fs";
+import { basename, resolve } from "node:path";
+import { and, eq } from "drizzle-orm";
+import { db, client } from "../server/db";
+import { speakingTasks } from "../server/db/schema";
+import {
+  SpeakingTaskParseError,
+  parseSpeakingTasks,
+} from "./lib/speaking-tasks";
 
 // spec: docs/specs/speaking-import.md
 // Speaking task import CLI: `npm run import:speaking -- --file <path.json>`. The source is a single
@@ -20,23 +23,24 @@ function parseArgs(argv: string[]): Args {
   const args: Args = { file: null, dryRun: false };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
-    if (a === '--dry-run') args.dryRun = true;
-    else if (a === '--file') args.file = argv[(i += 1)] ?? null;
-    else if (a.startsWith('--file=')) args.file = a.slice('--file='.length);
+    if (a === "--dry-run") args.dryRun = true;
+    else if (a === "--file") args.file = argv[(i += 1)] ?? null;
+    else if (a.startsWith("--file=")) args.file = a.slice("--file=".length);
   }
   return args;
 }
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  if (!args.file) throw new Error('Usage: npm run import:speaking -- --file <path.json>');
+  if (!args.file)
+    throw new Error("Usage: npm run import:speaking -- --file <path.json>");
 
   const path = resolve(args.file);
   if (!existsSync(path)) throw new Error(`File not found: ${path}`);
 
   const sourceFile = basename(path);
   // Throws SpeakingTaskParseError if the document is not a JSON array (Behaviour.2).
-  const results = parseSpeakingTasks(readFileSync(path, 'utf8'));
+  const results = parseSpeakingTasks(readFileSync(path, "utf8"));
 
   let inserted = 0;
   let overwritten = 0;
@@ -52,7 +56,10 @@ async function main(): Promise<void> {
 
     const { task } = result;
     if (args.dryRun) {
-      console.log(`element ${task.sequence} → task ${task.taskNumber}: would import`, task);
+      console.log(
+        `element ${task.sequence} → task ${task.taskNumber}: would import`,
+        task,
+      );
       continue;
     }
 
@@ -69,15 +76,27 @@ async function main(): Promise<void> {
     const [existing] = await db
       .select({ id: speakingTasks.id })
       .from(speakingTasks)
-      .where(and(eq(speakingTasks.sourceFile, sourceFile), eq(speakingTasks.sequence, task.sequence)));
+      .where(
+        and(
+          eq(speakingTasks.sourceFile, sourceFile),
+          eq(speakingTasks.sequence, task.sequence),
+        ),
+      );
 
     if (existing) {
-      await db.update(speakingTasks).set(values).where(eq(speakingTasks.id, existing.id));
-      console.log(`element ${task.sequence} → task ${task.taskNumber}: overwritten`);
+      await db
+        .update(speakingTasks)
+        .set(values)
+        .where(eq(speakingTasks.id, existing.id));
+      console.log(
+        `element ${task.sequence} → task ${task.taskNumber}: overwritten`,
+      );
       overwritten += 1;
     } else {
       await db.insert(speakingTasks).values(values);
-      console.log(`element ${task.sequence} → task ${task.taskNumber}: inserted`);
+      console.log(
+        `element ${task.sequence} → task ${task.taskNumber}: inserted`,
+      );
       inserted += 1;
     }
   }
@@ -89,7 +108,7 @@ async function main(): Promise<void> {
 
   // spec: docs/specs/speaking-import.md §Behaviour.8 — non-zero exit if every element was skipped.
   if (!args.dryRun && total > 0 && inserted + overwritten === 0) {
-    throw new Error('No tasks were imported (every element was skipped).');
+    throw new Error("No tasks were imported (every element was skipped).");
   }
 }
 
@@ -99,7 +118,7 @@ main()
       error instanceof SpeakingTaskParseError || error instanceof Error
         ? error.message
         : String(error);
-    console.error('Import failed:', message);
+    console.error("Import failed:", message);
     process.exitCode = 1;
   })
   .finally(() => client.close());

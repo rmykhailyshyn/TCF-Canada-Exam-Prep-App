@@ -1,5 +1,5 @@
-import type { OptionLabel, QuestionResultRow } from '../../lib/api';
-import { OptionRow, type OptionState } from '../quiz/OptionRow';
+import type { OptionLabel, QuestionResultRow } from "../../lib/api";
+import { OptionRow, type OptionState } from "../quiz/OptionRow";
 
 // spec: docs/specs/review-mode.md §Behaviour.4–6
 // One reviewed question: text (+ passage excerpt for reading), all four options with the correct
@@ -14,13 +14,20 @@ type Props = {
 
 // spec: docs/specs/review-mode.md §Behaviour.4 — correct option always green; the user's choice red
 // when wrong (a correct choice is already green); every other option de-emphasised.
-function optionState(label: OptionLabel, result: QuestionResultRow): OptionState {
-  if (label === result.correctLabel) return 'correct';
-  if (label === result.chosenLabel) return 'wrong';
-  return 'dimmed';
+function optionState(
+  label: OptionLabel,
+  result: QuestionResultRow,
+): OptionState {
+  if (label === result.correctLabel) return "correct";
+  if (label === result.chosenLabel) return "wrong";
+  return "dimmed";
 }
 
-export function ReviewQuestionCard({ index, result, showExplanation }: Props): JSX.Element {
+export function ReviewQuestionCard({
+  index,
+  result,
+  showExplanation,
+}: Props): JSX.Element {
   const explanation = result.explanation;
   const reasonByLabel: Record<OptionLabel, string> | null = explanation
     ? {
@@ -39,10 +46,12 @@ export function ReviewQuestionCard({ index, result, showExplanation }: Props): J
         </h2>
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-            result.isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+            result.isCorrect
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
           }`}
         >
-          {result.isCorrect ? 'Correct' : 'Incorrect'}
+          {result.isCorrect ? "Correct" : "Incorrect"}
         </span>
       </div>
 
@@ -69,12 +78,16 @@ export function ReviewQuestionCard({ index, result, showExplanation }: Props): J
 
       {showExplanation && explanation && reasonByLabel && (
         <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50/60 p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-sky-700">Explanation</h3>
-          <p className="mt-2 text-sm text-slate-700">{explanation.correctReason}</p>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+            Explanation
+          </h3>
+          <p className="mt-2 text-sm text-slate-700">
+            {explanation.correctReason}
+          </p>
           <ul className="mt-3 space-y-1.5 text-sm text-slate-600">
             {result.options.map((o) => (
               <li key={o.label}>
-                <span className="font-semibold text-slate-800">{o.label}.</span>{' '}
+                <span className="font-semibold text-slate-800">{o.label}.</span>{" "}
                 {reasonByLabel[o.label]}
               </li>
             ))}

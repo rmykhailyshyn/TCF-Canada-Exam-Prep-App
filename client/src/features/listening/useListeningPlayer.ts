@@ -1,5 +1,11 @@
-import { type RefObject, useCallback, useEffect, useMemo, useState } from 'react';
-import type { TranscriptSegment } from '../../lib/api';
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import type { TranscriptSegment } from "../../lib/api";
 
 // spec: docs/specs/listening-player.md §Behaviour
 // Drives one MP3 clip: play/pause/seek, a moving active-segment marker synced to playback, and
@@ -24,7 +30,10 @@ export type ListeningPlayer = {
 // spec: docs/specs/listening-player.md §Behaviour.7 — the active segment satisfies
 // `start_ms <= currentTime*1000 < next start_ms`. Pure + exported for unit testing. Segments are
 // ordered by startMs; returns -1 before the first segment begins.
-export function activeSegmentIndex(segments: TranscriptSegment[], currentMs: number): number {
+export function activeSegmentIndex(
+  segments: TranscriptSegment[],
+  currentMs: number,
+): number {
   let active = -1;
   for (let i = 0; i < segments.length; i += 1) {
     if (segments[i].startMs <= currentMs) active = i;
@@ -66,21 +75,21 @@ export function useListeningPlayer(
       setIsPlaying(false);
     };
 
-    el.addEventListener('canplay', onCanPlay);
-    el.addEventListener('error', onError);
-    el.addEventListener('loadedmetadata', onLoaded);
-    el.addEventListener('timeupdate', onTimeUpdate);
-    el.addEventListener('play', onPlay);
-    el.addEventListener('pause', onPause);
-    el.addEventListener('ended', onEnded);
+    el.addEventListener("canplay", onCanPlay);
+    el.addEventListener("error", onError);
+    el.addEventListener("loadedmetadata", onLoaded);
+    el.addEventListener("timeupdate", onTimeUpdate);
+    el.addEventListener("play", onPlay);
+    el.addEventListener("pause", onPause);
+    el.addEventListener("ended", onEnded);
     return () => {
-      el.removeEventListener('canplay', onCanPlay);
-      el.removeEventListener('error', onError);
-      el.removeEventListener('loadedmetadata', onLoaded);
-      el.removeEventListener('timeupdate', onTimeUpdate);
-      el.removeEventListener('play', onPlay);
-      el.removeEventListener('pause', onPause);
-      el.removeEventListener('ended', onEnded);
+      el.removeEventListener("canplay", onCanPlay);
+      el.removeEventListener("error", onError);
+      el.removeEventListener("loadedmetadata", onLoaded);
+      el.removeEventListener("timeupdate", onTimeUpdate);
+      el.removeEventListener("play", onPlay);
+      el.removeEventListener("pause", onPause);
+      el.removeEventListener("ended", onEnded);
     };
   }, [audioRef]);
 
@@ -126,7 +135,10 @@ export function useListeningPlayer(
     [segments, seekMs, audioRef],
   );
 
-  const activeIndex = useMemo(() => activeSegmentIndex(segments, currentMs), [segments, currentMs]);
+  const activeIndex = useMemo(
+    () => activeSegmentIndex(segments, currentMs),
+    [segments, currentMs],
+  );
 
   return {
     ready,

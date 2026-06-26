@@ -11,8 +11,28 @@ export type ListeningQuestion = {
 };
 
 export const LISTENING_QUESTIONS: ListeningQuestion[] = [
-  { correct: 'À la gare', wrong: 'Au restaurant', phrase2: 'Mon train part dans dix minutes', phrase2StartS: 2.0 },
-  { correct: 'Vendredi', wrong: 'Lundi', phrase2: 'Nous nous voyons vendredi matin', phrase2StartS: 2.0 },
-  { correct: 'Un thé', wrong: 'Un café', phrase2: 'Je voudrais un thé', phrase2StartS: 1.8 },
-  { correct: 'Il fera beau', wrong: 'Il pleuvra', phrase2: 'Le ciel sera dégagé toute la journée', phrase2StartS: 2.0 },
+  {
+    correct: "À la gare",
+    wrong: "Au restaurant",
+    phrase2: "Mon train part dans dix minutes",
+    phrase2StartS: 2.0,
+  },
+  {
+    correct: "Vendredi",
+    wrong: "Lundi",
+    phrase2: "Nous nous voyons vendredi matin",
+    phrase2StartS: 2.0,
+  },
+  {
+    correct: "Un thé",
+    wrong: "Un café",
+    phrase2: "Je voudrais un thé",
+    phrase2StartS: 1.8,
+  },
+  {
+    correct: "Il fera beau",
+    wrong: "Il pleuvra",
+    phrase2: "Le ciel sera dégagé toute la journée",
+    phrase2StartS: 2.0,
+  },
 ];

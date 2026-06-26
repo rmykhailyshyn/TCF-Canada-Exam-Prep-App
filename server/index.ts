@@ -1,28 +1,45 @@
-import express from 'express';
-import { getPort } from './config/env';
-import { fail } from './lib/envelope';
-import { healthRouter } from './routes/health';
-import { questionsRouter } from './routes/questions';
-import { sessionsRouter } from './routes/sessions';
-import { speakingRouter } from './routes/speaking';
-import { writingRouter } from './routes/writing';
+import { serve } from "@hono/node-server";
+import { Hono } from "hono";
+import { getPort } from "./config/env";
+import { createDb } from "./db/factory";
+import { fail } from "./lib/envelope";
+import { nodeCapabilities } from "./runtime/capabilities";
+import { NodeMediaStore } from "./runtime/node-media-store";
+import { createCoreApp } from "./app";
+import { type AppVars } from "./routes/app-vars";
+import { registerNodeRoutes } from "./routes/node-routes";
 
-const app = express();
-// Writing responses are short essays; allow a generous JSON body.
-app.use(express.json({ limit: '1mb' }));
+// spec: docs/specs/server-runtime.md §Behaviour.1, 5, 6, 8 — the Node entry.
+// Builds the runtime dependencies (libSQL DB via the factory, the filesystem MediaStore, the Node
+// capability flags), injects them into every request via context Variables, mounts the portable core
+// (createCoreApp), then layers the Node-only CLI routes (registerNodeRoutes) and the unknown-/api
+// fallback. Finally serves over HTTP with @hono/node-server on the same PORT the client proxies to.
+async function main(): Promise<void> {
+  const db = await createDb();
+  const mediaStore = new NodeMediaStore();
 
-app.use('/api/health', healthRouter);
-app.use('/api/sessions', sessionsRouter);
-app.use('/api/questions', questionsRouter);
-app.use('/api/writing', writingRouter);
-app.use('/api/speaking', speakingRouter);
+  const app = new Hono<{ Variables: AppVars }>();
 
-// Fallback 404 in the standard envelope shape for unknown API routes.
-app.use('/api', (_req, res) => {
-  res.status(404).json(fail('NOT_FOUND', 'Route not found'));
-});
+  // Inject the per-runtime dependencies into the request context. spec: §Runtime abstractions.
+  app.use("*", (c, next) => {
+    c.set("db", db);
+    c.set("mediaStore", mediaStore);
+    c.set("capabilities", nodeCapabilities);
+    return next();
+  });
 
-const port = getPort();
-app.listen(port, () => {
-  console.log(`Server listening on http://localhost:${port}`);
-});
+  // Portable core first, then the Node-only CLI-backed routes.
+  app.route("/", createCoreApp());
+  registerNodeRoutes(app);
+
+  // Fallback 404 in the standard envelope shape for unknown API routes — registered LAST so it only
+  // catches paths no router matched. spec: docs/specs/server-runtime.md §Behaviour.3
+  app.all("/api/*", (c) => c.json(fail("NOT_FOUND", "Route not found"), 404));
+
+  const port = getPort();
+  serve({ fetch: app.fetch, port }, () => {
+    console.log(`Server listening on http://localhost:${port}`);
+  });
+}
+
+void main();

@@ -1,4 +1,4 @@
-import { deflateSync } from 'node:zlib';
+import { deflateSync } from "node:zlib";
 
 // Minimal, dependency-free PNG encoder for a solid-colour image. Used only by the dev seed to
 // produce real, browser-renderable passage images on disk (so the reading UI's image-above-text
@@ -27,15 +27,21 @@ function crc32(buf: Buffer): number {
 function chunk(type: string, data: Buffer): Buffer {
   const length = Buffer.alloc(4);
   length.writeUInt32BE(data.length, 0);
-  const typeAndData = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+  const typeAndData = Buffer.concat([Buffer.from(type, "ascii"), data]);
   const crc = Buffer.alloc(4);
   crc.writeUInt32BE(crc32(typeAndData), 0);
   return Buffer.concat([length, typeAndData, crc]);
 }
 
 // Returns the bytes of a width×height PNG filled with a single RGB colour.
-export function solidColorPng(width: number, height: number, rgb: [number, number, number]): Buffer {
-  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+export function solidColorPng(
+  width: number,
+  height: number,
+  rgb: [number, number, number],
+): Buffer {
+  const signature = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  ]);
 
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(width, 0);
@@ -62,8 +68,8 @@ export function solidColorPng(width: number, height: number, rgb: [number, numbe
 
   return Buffer.concat([
     signature,
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw)),
-    chunk('IEND', Buffer.alloc(0)),
+    chunk("IHDR", ihdr),
+    chunk("IDAT", deflateSync(raw)),
+    chunk("IEND", Buffer.alloc(0)),
   ]);
 }

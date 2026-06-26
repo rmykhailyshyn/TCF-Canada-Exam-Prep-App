@@ -1,9 +1,11 @@
 # Spec: Listening Question Import
 
 ## Status
+
 implemented
 
 ## Goal
+
 Allow a developer to import listening comprehension questions from a source directory into the
 local database via a CLI script. The source directory contains exactly one **results
 PDF** (the "Afficher les questions" review page exported from the Réussir TCF Canada site after
@@ -18,6 +20,7 @@ answers; the results PDF includes them, so the PDF is the authoritative source f
 options, and the answer key. Media files are matched to questions by position, not by URL.
 
 ## Scope
+
 - In scope:
   - CLI script `npm run transcribe -- --dir <path>`
   - Directory discovery: locate the single PDF file and all MP3 files (up to 39) in the directory
@@ -58,6 +61,7 @@ Per question (repeated 1..39):
 
 **Answer detection (the key mechanism).** Each option row may sit on a coloured background
 rectangle:
+
 - **Green fill → the correct answer.** This holds whether or not the original test-taker
   answered correctly: on a correct attempt their (correct) pick is green; on an incorrect
   attempt the correct option is still green and their wrong pick is red.
@@ -88,6 +92,7 @@ The list of timestamp pairs near the bottom of each page (e.g. `00:21 00:22`) is
 audio play range per question; it is ignored — transcript timing comes from Whisper.
 
 ## Behaviour
+
 1. The user runs the import script with a path to a source directory.
 2. The script scans the directory, locates the single PDF file and all MP3 files; it exits
    with an error if no PDF file is found, more than one PDF file is found, or no MP3 files
@@ -125,6 +130,7 @@ audio play range per question; it is ignored — transcript timing comes from Wh
     and whether the recomputed score matched the PDF.
 
 ## Data model changes
+
 ```
 -- questions table already defined in reading-import spec.
 -- section = 'listening'; passage_id is null; sequence = question number from the PDF;
@@ -148,9 +154,11 @@ transcript_segments
 ```
 
 ## API contract
+
 None — CLI script only.
 
 ## Acceptance criteria
+
 Testable pass/fail conditions. Each maps back to the behaviours above.
 
 - [ ] Running `npm run transcribe -- --dir <path>` on a directory holding exactly one PDF and at least one MP3 completes and prints a final summary line. (Behaviour.1, 15)
@@ -167,6 +175,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] The success summary reports the number of questions imported, transcript segments stored, questions skipped, and whether the score cross-check matched. (Behaviour.15)
 
 ## Open questions
+
 - ~~Which Whisper CLI variant takes priority: `mlx-whisper` or `whisper.cpp`? Should the
   script auto-detect or read from an env var (`WHISPER_CMD`)?~~ Resolved 2026-06-09 at
   implementation: the importer targets **`mlx_whisper`** (the Apple-Silicon, pip-installable
@@ -199,6 +208,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   a non-fatal warning?~~ Resolved: a **non-fatal warning**, matching the reading importer.
 
 ## Revision history
+
 - 2026-06-04: Initial draft
 - 2026-06-05: Changed CLI from per-file flags to `--dir`; one HTML + multiple MP3s per directory
 - 2026-06-05: Documented wpProQuiz HTML parsing structure; resolved MP3 matching (filename
