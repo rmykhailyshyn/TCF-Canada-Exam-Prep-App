@@ -8,6 +8,13 @@ implemented
 > (both modes) and on-request correction (training only). Consumed by the writing-session endpoints
 > (`/submit`, `/correct`, `/complete`) and surfaced by the writing-ui spec.
 
+> **Milestone 16 annotation — AI scoring is a local/full-runtime capability.** Everything in this spec
+> applies to the **local** Node runtime (`capabilities.aiScoring = true`). On the deployed Cloudflare
+> Worker (`aiScoring = false`, practice-only) the scoring + correction paths are **not** mounted: the
+> Worker's practice route locks the submitted response **without** an evaluation and the session
+> completes **unscored** (no fabricated /20; `overallScore: null`). Correction is unavailable online.
+> See `docs/specs/content-deploy.md`.
+
 ## Goal
 
 Evaluate a user's free-text writing response with the **local Claude CLI** and return a **score

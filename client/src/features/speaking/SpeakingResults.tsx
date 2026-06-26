@@ -22,13 +22,21 @@ export function SpeakingResults({
           <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] ring-1 ring-white/20">
             ✓ Speaking complete
           </span>
-          <p className="mt-3 text-5xl font-extrabold tracking-tight">
-            {results.overallScore}
-            <span className="text-2xl font-bold text-brand-200"> / 20</span>
-          </p>
+          {/* spec: docs/specs/content-deploy.md §Behaviour.7 — online practice has no /20; render
+              an unscored state rather than "0 / 20". */}
+          {results.overallScore == null ? (
+            <p className="mt-3 text-3xl font-extrabold tracking-tight">
+              Practice — not scored
+            </p>
+          ) : (
+            <p className="mt-3 text-5xl font-extrabold tracking-tight">
+              {results.overallScore}
+              <span className="text-2xl font-bold text-brand-200"> / 20</span>
+            </p>
+          )}
           <p className="mt-1 text-sm font-medium text-brand-200">
-            average · {results.submitted} / {results.tasks.length} tasks
-            submitted
+            {results.overallScore == null ? "" : "average · "}
+            {results.submitted} / {results.tasks.length} tasks submitted
             {elapsedMs !== null && <> · {formatClock(elapsedMs)}</>}
           </p>
         </div>

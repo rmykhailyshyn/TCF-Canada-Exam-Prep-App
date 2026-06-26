@@ -515,30 +515,48 @@ account.
 
 ## Milestone 16 — Content seeding + online practice mode + client gating
 
-**Status:** ready for development (spec approved)
+**Status:** implemented
 
 Make the deployed instance usable: push locally-imported content to D1/R2 (**import locally → push to
 cloud**) and gate the client UI on `capabilities` so the practice-only online experience has no broken
 buttons. Defines the online behaviour of Writing/Speaking when AI scoring is unavailable (sample answers,
 no score).
 
-- [ ] `npm run deploy:content` (local): reuse the **export** service to load D1 (via the portable import
-      endpoint, idempotent on the natural keys) and upload referenced media (MP3s, passage images) to R2
-      keyed to `file_path`/`source_file`
-- [ ] Online practice-mode behaviour (gated by `aiScoring=false`/`transcription=false`): Writing submit
+- [x] `npm run deploy:content` (local): dump **all** content tables (questions + options + passages +
+      transcripts + audio_files + writing/speaking tasks) as idempotent `INSERT OR REPLACE` SQL and apply
+      to D1 via `wrangler d1 execute --file`; upload referenced media (MP3s, passage images) to R2 keyed to
+      `file_path`/`source_file`. `--dry-run` / `--local` flags
+- [x] Online practice-mode behaviour (gated by `aiScoring=false`/`transcription=false`): Writing submit
       locks the response without scoring and shows the sample answer/template; Speaking = record + playback +
-      sample answer, no transcript/score; correction unavailable online
-- [ ] Client capability-gating: `client/src/lib/api.ts` `fetchCapabilities()`; hide AI-score/feedback,
-      "Get correction", and import affordances when off (fail safe to most-restrictive on fetch error)
-- [ ] Local runtime (all capabilities `true`) behaves exactly as before — no regression in the existing
+      sample answer, no transcript/score; correction unavailable online — implemented as **Worker-only
+      practice routes** (`server/routes/practice-routes.ts` + portable `lock`/`store`/`complete-unscored`
+      service fns), so the Node entry stays byte-identical
+- [x] Client capability-gating: `client/src/lib/api.ts` `fetchCapabilities()` + a `CapabilitiesProvider`/
+      `useCapabilities()` context; hide AI-score/feedback, "Get correction", transcript, and import
+      affordances when off (fail safe to most-restrictive on fetch error)
+- [x] Local runtime (all capabilities `true`) behaves exactly as before — no regression in the existing
       suites
-- [ ] History shows online-completed sessions without a fabricated /20 (missing evaluation = unscored)
+- [x] History shows online-completed sessions without a fabricated /20 (missing evaluation = unscored;
+      `overallScore: null` in the session aggregates + review/history views)
+- [x] `npm run typecheck`, `npm run lint`, `npm test` (165), `npm run build`, `npm run test:e2e` (15) all pass
+
+**Implementation notes (SDD Rule 4):** (1) **Uniform `wrangler d1 execute`, not the import endpoint** —
+the export/import service covers reading/listening _questions_ only (no Writing/Speaking _tasks_) and its
+import endpoint is Node-only, so `deploy:content` generates idempotent `INSERT OR REPLACE` SQL for all
+content tables (`server/lib/deploy-sql.ts`, pure + unit-tested) keyed on the PK id; the import endpoint
+stays Node-only and `imports=false` stays coherent. (2) **Online submit/complete/recording were Node-only**
+→ new portable CLI-free service fns + `registerPracticeRoutes()` mounted only on the Worker entry (zero
+Node regression); correction/speaking-submit deliberately unmounted online (404, hidden client-side).
+(3) **No fabricated /20** — `getWriting/SpeakingSession` + `listSessions` aggregates now return
+`overallScore: null` when nothing is scored. (4) **Not run live** — `wrangler` D1/R2 push needs the user's
+Cloudflare account (as in M15); verified via `deploy:content --dry-run` + a DB-backed practice-route smoke
+test. See `docs/specs/content-deploy.md` §Implementation notes.
 
 **Specs:**
 
-- `docs/specs/content-deploy.md` (approved)
+- `docs/specs/content-deploy.md` (implemented)
 - `docs/specs/writing-evaluation.md` / `docs/specs/speaking-evaluation.md` / `docs/specs/progress-tracking.md`
-  (to be annotated: AI scoring is a local/full-runtime capability; online sessions are unscored practice)
+  (annotated: AI scoring/transcription is a local/full-runtime capability; online sessions are unscored practice)
 
 ---
 

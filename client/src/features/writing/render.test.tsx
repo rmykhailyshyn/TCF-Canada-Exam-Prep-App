@@ -1,7 +1,12 @@
 import { createRef } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { WritingCompleteResult, WritingTask } from "../../lib/api";
+import type {
+  Capabilities,
+  WritingCompleteResult,
+  WritingTask,
+} from "../../lib/api";
+import { CapabilitiesContext } from "../../lib/capabilities-context";
 import { VirtualKeyboard } from "./VirtualKeyboard";
 import { VK_KEYS, computeInsertion, glyphFor } from "./vkKeys";
 import { WordCounter } from "./WordCounter";
@@ -24,6 +29,21 @@ const tasks: WritingTask[] = [
     template: "- Salutation",
   },
 ];
+
+const FULL_CAPS: Capabilities = {
+  aiScoring: true,
+  transcription: true,
+  imports: true,
+};
+
+// Render a tree with a fixed capability context (the async provider effect doesn't run under SSR).
+function renderWithCaps(node: JSX.Element, caps: Capabilities): string {
+  return renderToStaticMarkup(
+    <CapabilitiesContext.Provider value={caps}>
+      {node}
+    </CapabilitiesContext.Provider>,
+  );
+}
 
 function fakeSession(overrides: Partial<WritingSession> = {}): WritingSession {
   return {
@@ -88,8 +108,9 @@ describe("WritingSetup", () => {
 
 describe("WritingEditor", () => {
   it("renders the prompt, the draft, and training actions in training mode", () => {
-    const html = renderToStaticMarkup(
+    const html = renderWithCaps(
       <WritingEditor session={fakeSession()} />,
+      FULL_CAPS,
     );
     expect(html).toContain("Écrivez un message à un ami.");
     expect(html).toContain("Bonjour mon ami");
@@ -99,14 +120,28 @@ describe("WritingEditor", () => {
   });
 
   it("shows the countdown and hides guidance in real mode", () => {
-    const html = renderToStaticMarkup(
+    const html = renderWithCaps(
       <WritingEditor
         session={fakeSession({ mode: "real", remainingMs: 3_600_000 })}
       />,
+      FULL_CAPS,
     );
     expect(html).toContain("Submit exam");
     expect(html).not.toContain("Get correction");
     expect(html).toContain("⏱");
+  });
+
+  // spec: docs/specs/content-deploy.md §Behaviour.4 — online (aiScoring=false) there is no
+  // "Get correction" and the submit action is relabelled "Save & lock".
+  it("hides Get correction and relabels submit when aiScoring is off", () => {
+    const html = renderWithCaps(<WritingEditor session={fakeSession()} />, {
+      aiScoring: false,
+      transcription: false,
+      imports: false,
+    });
+    expect(html).not.toContain("Get correction");
+    expect(html).not.toContain("Submit for score");
+    expect(html).toContain("Save &amp; lock");
   });
 });
 
@@ -188,5 +223,26 @@ describe("WritingResults", () => {
     expect(html).toContain("14 / 20");
     expect(html).toContain("NCLC 8");
     expect(html).toContain("2 / 3 tasks submitted");
+  });
+
+  // spec: docs/specs/content-deploy.md §Behaviour.7 — a null overall score (online practice) renders
+  // an unscored state rather than "0 / 20".
+  it("renders an unscored practice state when overallScore is null", () => {
+    const results: WritingCompleteResult = {
+      tasks: [{ taskNumber: 1, score: null, level: null }],
+      overallScore: null,
+      submitted: 0,
+    };
+    const html = renderToStaticMarkup(
+      <WritingResults
+        results={results}
+        tasks={tasks}
+        elapsedMs={null}
+        onHome={vi.fn()}
+      />,
+    );
+    expect(html).toContain("Practice");
+    expect(html).not.toContain("0 / 20");
+    expect(html).toContain("—");
   });
 });

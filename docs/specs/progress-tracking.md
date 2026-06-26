@@ -9,6 +9,13 @@ revised
 > analysable together**, writing and speaking sessions (with their per-task scores + feedback) appear
 > in the same unified history.
 
+> **Milestone 16 annotation — unscored online sessions.** AI scoring/transcription are
+> local/full-runtime capabilities. A writing/speaking session completed on the deployed Worker
+> (practice-only) has **no evaluation rows**, so its history `overallScore` is **`null`**, not `0` — it
+> lists and renders as _unscored_ (no fabricated /20). `listSessions` and `getWriting/SpeakingSession`
+> return `overallScore: null` whenever no task in the session is scored. See
+> `docs/specs/content-deploy.md`.
+
 ## Goal
 
 Give the user visibility into their past quiz sessions and overall progress. After
