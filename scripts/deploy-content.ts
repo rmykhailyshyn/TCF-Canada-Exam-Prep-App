@@ -117,7 +117,7 @@ async function main(): Promise<void> {
     writeFileSync(sqlPath, sql, "utf8");
     console.log(`\nApplying D1 content (${target})…`);
     execSync(
-      `npx wrangler d1 execute ${D1_DATABASE} ${target} --file "${sqlPath}"`,
+      `npx wrangler d1 execute "${D1_DATABASE}" ${target} --file "${sqlPath}"`,
       { stdio: "inherit" },
     );
   } else {
