@@ -4,6 +4,13 @@
 
 implemented
 
+> **2026-06-27 revision (Rule 4).** The **Claude scoring + correction** steps now go through the
+> **grounded, schema-constrained, retried** CLI path shared with enrichment (`server/lib/claude-cli.ts`):
+> a JSON-only system prompt (`--append-system-prompt`), a strict `--json-schema` for the result object, a
+> bounded retry with a corrective re-prompt on parse failure, and a truncated raw-output dump on final
+> failure. Prompts and JSON contracts unchanged. **Whisper transcription is unaffected.** See
+> `llm-enrichment.md` §Grounding & reliability.
+
 > Milestone 11. The request-time CLI layer for the Speaking section: **Whisper transcription** of a
 > recording, **Claude scoring + feedback** on submit (both modes), and **on-request correction**
 > (training only). Consumed by the speaking-session endpoints (`…/responses`, `…/submit`,
@@ -71,8 +78,12 @@ platform-agnostic. Configuration follows the existing conventions (`.env`: `CLAU
      No API key is read.
 2. Claude is invoked non-interactively (`claude -p <prompt>`, plus `--model` when set), capturing
    stdout and parsing the **first JSON object** (tolerating prose/code-fence wrapping), reusing the
-   `scripts/lib/claude.ts` helpers (`runClaude`, `extractJsonObject`, `parseCliEnvelope`). Whisper is
-   invoked via `scripts/lib/whisper.ts` (`runWhisper`) on the saved file path.
+   `scripts/lib/claude.ts` helpers (`runClaude`, `extractJsonObject`, `parseCliEnvelope`). The Claude
+   call is **grounded and retried** via the shared primitive — a JSON-only system prompt
+   (`--append-system-prompt`), a strict `--json-schema` for the scoring/correction result object, and a
+   bounded retry with a corrective re-prompt on parse failure, with the raw output logged (truncated) on
+   final failure — see `llm-enrichment.md` §Grounding & reliability (3e–3g). Whisper is invoked via
+   `scripts/lib/whisper.ts` (`runWhisper`) on the saved file path and is **not** affected by this change.
 
 ### Transcription (on recording upload)
 
@@ -187,6 +198,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] A Claude failure or unparseable output on submit writes no row and returns `EVALUATION_FAILED`; the session continues and the user can resubmit. (Behaviour.8)
 - [ ] A training-mode correction request returns `correctedText` + `suggestions` live and persists nothing; a real-mode request returns `MODE_NOT_ALLOWED`; a CLI/parse failure returns `CORRECTION_FAILED`. (Behaviour.9, 10)
 - [ ] The Claude and Whisper invocations reuse the existing `scripts/lib/claude.ts` and `scripts/lib/whisper.ts` helpers (no duplicated parser); the pure parse/prompt helpers are unit-tested. (Scope)
+- [ ] Claude scoring + correction go through the shared grounded path (JSON-only system prompt + `--json-schema` + bounded retry); a parse failure retries before returning `EVALUATION_FAILED` / `CORRECTION_FAILED`, with the raw output logged (truncated) on final failure; Whisper is unchanged. (Behaviour.2; `llm-enrichment.md` §3e–3g, 7)
 
 ## Open questions
 
@@ -215,3 +227,11 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   stored `level` column. Resolved the NCLC-fidelity open question.
 - 2026-06-18: Approved (Milestone 11).
 - 2026-06-18: Implemented — `server/services/speakingTranscription.ts` (reuses `scripts/lib/whisper.ts`) + `server/services/speakingEvaluation.ts` (reuses `server/lib/claude-cli.ts`; NCLC derived via `server/lib/nclc.ts`). Recording saved as-is (browser webm/opus); mlx_whisper ingests it via its bundled ffmpeg — no separate transcode step.
+- 2026-06-27: **Revised (Rule 4), status implemented → revised pending re-approval.** The Claude
+  scoring + correction steps inherit the grounded/schema-constrained/retried shared CLI path
+  (`--append-system-prompt`, `--json-schema`, bounded retry + raw-output diagnostics) introduced for
+  enrichment; prompts and JSON contracts unchanged; Whisper transcription unaffected. See
+  `llm-enrichment.md` §Grounding & reliability.
+- 2026-06-27: Re-approved and **implemented.** `scoreWithClaude` / `correctWithClaude` route through
+  `runClaudeJson` with module-local `SCORE_SCHEMA` / `CORRECTION_SCHEMA`; Whisper path and the pure
+  prompt/parse helpers + tests are unchanged. Status approved → implemented.

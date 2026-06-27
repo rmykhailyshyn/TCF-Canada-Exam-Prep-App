@@ -5,14 +5,22 @@
 // are re-exported here for backward compatibility with existing importers/tests.
 import {
   ClaudeError,
+  type JsonSchema,
   type RunClaudeOptions,
   extractJsonObject,
   parseCliEnvelope,
   runClaude,
+  runClaudeJson,
 } from "../../server/lib/claude-cli";
 
-export { ClaudeError, extractJsonObject, parseCliEnvelope, runClaude };
-export type { RunClaudeOptions };
+export {
+  ClaudeError,
+  extractJsonObject,
+  parseCliEnvelope,
+  runClaude,
+  runClaudeJson,
+};
+export type { JsonSchema, RunClaudeOptions };
 
 export type OptionLabel = "A" | "B" | "C" | "D";
 
@@ -41,6 +49,17 @@ const REASON_FIELDS = [
   "optionCReason",
   "optionDReason",
 ] as const;
+
+// spec: docs/specs/llm-enrichment.md §Behaviour.3f — the strict JSON Schema passed to the CLI via
+// --json-schema so the model's content is constrained to the five non-empty reason strings.
+export const EXPLANATION_SCHEMA: JsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: [...REASON_FIELDS],
+  properties: Object.fromEntries(
+    REASON_FIELDS.map((field) => [field, { type: "string", minLength: 1 }]),
+  ),
+};
 
 // spec: docs/specs/llm-enrichment.md §Behaviour.3c — English, clue-citing, JSON-only prompt. The
 // source is the passage (reading) or the transcript (listening); the model must quote the clue.
@@ -111,13 +130,16 @@ export function parseExplanationResponse(raw: string): Explanation {
   };
 }
 
-// spec: docs/specs/llm-enrichment.md §Behaviour.3–4 — build the prompt, call the CLI, parse the
-// explanation. The `model` label (for `generated_by`) is whatever was configured, or "default".
+// spec: docs/specs/llm-enrichment.md §Behaviour.3–4, 3g — build the prompt, call the CLI grounded by
+// the EXPLANATION_SCHEMA, and parse the explanation (retrying on a parse failure via runClaudeJson).
 export function generateExplanation(
   input: EnrichInput,
   opts: RunClaudeOptions = {},
-): { explanation: Explanation; raw: string } {
-  const prompt = buildEnrichPrompt(input);
-  const raw = runClaude(prompt, opts);
-  return { explanation: parseExplanationResponse(raw), raw };
+): { explanation: Explanation } {
+  const explanation = runClaudeJson(
+    buildEnrichPrompt(input),
+    parseExplanationResponse,
+    { ...opts, jsonSchema: EXPLANATION_SCHEMA },
+  );
+  return { explanation };
 }

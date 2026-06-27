@@ -4,6 +4,12 @@
 
 implemented
 
+> **2026-06-27 revision (Rule 4).** Scoring + correction now go through the **grounded, schema-constrained,
+> retried** CLI path shared with enrichment (`server/lib/claude-cli.ts`): a JSON-only system prompt
+> (`--append-system-prompt`), a strict `--json-schema` for the result object, a bounded retry with a
+> corrective re-prompt on parse failure, and a truncated raw-output dump on final failure. Prompt-builder
+> text and the JSON output contracts are unchanged. See `llm-enrichment.md` §Grounding & reliability.
+
 > Milestone 10. The local-Claude-CLI layer for the Writing section: scoring + feedback on submit
 > (both modes) and on-request correction (training only). Consumed by the writing-session endpoints
 > (`/submit`, `/correct`, `/complete`) and surfaced by the writing-ui spec.
@@ -64,7 +70,12 @@ prompt-build/JSON-parse helper pattern established in `scripts/lib/claude.ts`.
 2. The service invokes the CLI non-interactively (`claude -p <prompt>`, plus `--model` when
    configured), captures stdout, and parses the **first JSON object** out of the response (tolerating
    surrounding prose or a code fence), mirroring the enrichment parser. Invocation happens
-   **per request**, on the server, within the HTTP request lifecycle.
+   **per request**, on the server, within the HTTP request lifecycle. The call is **grounded and
+   retried** via the shared CLI primitive — a JSON-only system prompt (`--append-system-prompt`), a
+   strict `--json-schema` for the scoring/correction result object, and a bounded retry with a
+   corrective re-prompt on parse failure — see `llm-enrichment.md` §Grounding & reliability (3e–3g).
+   A failure surfaced to the endpoint after the retries still maps to `EVALUATION_FAILED` /
+   `CORRECTION_FAILED` (§Behaviour.6, 10), with the raw model output logged (truncated) for diagnosis.
 
 ### Scoring (on submit, both modes)
 
@@ -184,6 +195,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [ ] A training-mode correction request returns `correctedText` + `suggestions` live and persists nothing. (Behaviour.7, 8; API contract)
 - [ ] A correction requested on a real-mode session returns `MODE_NOT_ALLOWED`; a CLI/parse failure returns `CORRECTION_FAILED` with no state change. (Behaviour.9, 10)
 - [ ] The CLI wrapper reuses the shared prompt-build/JSON-parse helpers (no duplicated parser); helper logic is pure and unit-tested. (Scope)
+- [ ] Scoring and correction go through the shared grounded path (JSON-only system prompt + `--json-schema` + bounded retry); a parse failure retries before returning `EVALUATION_FAILED` / `CORRECTION_FAILED`, and the raw model output is logged (truncated) on final failure. (Behaviour.2; `llm-enrichment.md` §3e–3g, 7)
 
 ## Open questions
 
@@ -211,3 +223,10 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   `level` column (derived on read, echoing the M8 "don't persist derived data" decision). Resolved the
   NCLC-fidelity open question.
 - 2026-06-17: Status moved draft → approved.
+- 2026-06-27: **Revised (Rule 4), status implemented → revised pending re-approval.** Scoring +
+  correction inherit the grounded/schema-constrained/retried shared CLI path (`--append-system-prompt`,
+  `--json-schema`, bounded retry + raw-output diagnostics) introduced for enrichment; prompts and JSON
+  contracts unchanged. See `llm-enrichment.md` §Grounding & reliability.
+- 2026-06-27: Re-approved and **implemented.** `scoreWithClaude` / `correctWithClaude` route through
+  `runClaudeJson` with module-local `SCORE_SCHEMA` / `CORRECTION_SCHEMA`; the pure prompt/parse helpers
+  and their tests are unchanged. Status approved → implemented.

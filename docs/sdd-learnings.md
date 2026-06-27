@@ -501,3 +501,30 @@ is what let an orthogonal engine swap pass through one seam instead of smearing 
   computed a mean-over-all-tasks that yielded `0` for a fully-unscored session. Making `overallScore` return
   `null` when nothing is scored is the difference between "scored 0/20" and "not scored" — a correctness fix
   the spec's Behaviour.7 pinned down precisely. Behavioural acceptance criteria earned their keep here.
+
+## Grounding the local Claude CLI for JSON (an `implemented` spec re-opened by a field failure)
+
+- **A spec can be "implemented" and still be wrong about reliability.** llm-enrichment.md §Behaviour.3d
+  treated "extract the first `{…}`, tolerate prose/fence" as sufficient, with an unparseable reply mapped to
+  a per-question skip. In practice `npm run enrich` failed intermittently with "No JSON object found" because
+  the model occasionally answered in prose. The contract (five-field object) was right; the spec just never
+  said how to make the model *honour* it. Rule 4 re-opened the `implemented` spec to add §Grounding &
+  reliability (system prompt + `--json-schema` + bounded retry + raw-output diagnostics) rather than quietly
+  patching the parser.
+
+- **The fix lived one layer below the spec that surfaced the bug.** The failure showed up in enrichment, but
+  the cause and the fix were in the *shared* `runClaude` primitive that writing/speaking scoring also use.
+  Concentrating the new behaviour in llm-enrichment.md (which owns the CLI-invocation detail) and leaving the
+  two eval specs as one-line cross-references kept a single source of truth instead of three drifting copies —
+  the same "describe the shared mechanism once" instinct the M16 portable-routes split rewarded.
+
+- **Grounding can erase an accidental data-quality signal.** Pre-fix, a question whose seed passage didn't
+  match made the model emit prose, which the parser surfaced as a skip — an unintended "this data is bad"
+  alarm. `--json-schema` now coaxes a (possibly fabricated) object out of that same bad data. The spec had to
+  name this trade-off explicitly (open question + the §7 raw-output dump as the replacement signal); the
+  capability that "fixes" the bug also silences a check, and only writing it down keeps that visible.
+
+- **A draft downstream spec is a real constraint, not a someday.** The grounding opts (`jsonSchema`,
+  `systemPrompt`) intersect the draft M17 provider seam (`complete(prompt, opts)`), which currently declares
+  prompt/output changes out of scope. Annotating llm-provider.md *now* — so its future API provider must
+  thread and translate these rather than regress them — was cheaper than letting M17 rediscover the gap.

@@ -4,6 +4,13 @@
 
 implemented
 
+> **2026-06-27 revision (Rule 4).** The CLI call is now **grounded and schema-constrained** to make the
+> model emit a parseable JSON object reliably: a JSON-only **system prompt** (`--append-system-prompt`),
+> a strict **JSON Schema** (`--json-schema`) describing the five-field object, a bounded **retry** with a
+> corrective re-prompt on parse failure, and **raw-output diagnostics** when all attempts fail. These are
+> shared CLI primitives, so writing/speaking scoring inherit them (see `writing-evaluation.md` §2,
+> `speaking-evaluation.md`). The prompt-builder text and the five-field output contract are unchanged.
+
 ## Goal
 
 Generate per-question explanations that tell the user, in **English**, why the correct answer is
@@ -54,15 +61,36 @@ question), and — for both learning and real sessions — in review mode after 
    `correctReason` and a reason for each of `A`–`D`, where every reason quotes or paraphrases the
    relevant clue from the supplied passage/transcript.
    d. Invokes the local CLI non-interactively (`claude -p <prompt>`, plus `--model` when configured),
-   captures stdout, and parses the JSON object out of the response.
+   captures stdout, and parses the JSON object out of the response. The invocation is **grounded** so
+   the model emits the object reliably (see §Grounding & reliability), but parsing stays tolerant
+   (extracts the first balanced `{…}`, ignoring any stray fence/prose).
+
+### Grounding & reliability (shared CLI primitive)
+
+3e. The CLI invocation passes a **JSON-only system prompt** (`--append-system-prompt`) instructing the
+model to reply with exactly one JSON object and nothing else — no prose, no markdown fence, no
+apologies, and never a clarifying question. This is the same constant for every call site.
+
+3f. The invocation passes a strict **JSON Schema** (`--json-schema`) describing the required object —
+for enrichment, the five non-empty string fields `correctReason`, `optionAReason`..`optionDReason`,
+`additionalProperties: false` — so the CLI constrains/validates the model's content to that shape.
+
+3g. On a **parse/validation failure** (no JSON object, malformed JSON, or a missing/empty required
+field) the command **retries** the same question up to a bounded number of total attempts (default 3),
+each retry appending a short corrective instruction ("your previous reply could not be parsed as JSON;
+output only the JSON object"). A **non-retryable** failure — the binary missing (`ENOENT`) or a
+non-zero CLI exit — fails fast without retrying. The retry/grounding is shared, so writing/speaking
+scoring and correction get the same treatment.
 4. The parsed response yields: one explanation of why the correct answer is right (citing its clue),
    and one explanation per option of why it is wrong (or, for the correct option, what confirms it).
 5. The explanation is persisted to the DB linked to the question, with `generated_by` recording the
    CLI + model (e.g. `claude-cli/claude-opus-4-8`, or `claude-cli` when no model was pinned).
 6. The command prints progress: "Question 12: generated" or "Question 12: skipped (exists)".
 7. On any CLI failure for a question — a non-zero exit, or output from which no valid JSON object can
-   be parsed — the command logs the error (including captured stderr), skips that question, and
-   continues with the remaining queue.
+   be parsed **after the bounded retries (§3g)** — the command logs the error (including captured
+   stderr) and, for a parse failure, **a truncated copy of the raw model output** so the cause is
+   diagnosable (e.g. the model returned prose because the seed passage did not match the question),
+   then skips that question and continues with the remaining queue.
 8. With `--dry-run`, the prompt and the raw model output are printed to stdout and no DB writes occur.
 
 ### Surfacing (consumption)
@@ -118,8 +146,11 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - [x] `--dry-run` prints the prompt and raw model output to stdout and writes nothing to the DB. (Behaviour.8)
 - [x] A question that already has an explanation is skipped and logged as "skipped (exists)". (Behaviour.6)
 - [x] A CLI failure (non-zero exit or unparseable output) on one question is logged with stderr and skipped, and the remaining queue continues. (Behaviour.7)
+- [ ] The invocation passes a JSON-only system prompt (`--append-system-prompt`) and a strict five-field `--json-schema`; both are shared CLI primitives reused by writing/speaking. (Behaviour.3e, 3f)
+- [ ] A parse/validation failure retries the same question up to the bounded total attempts with a corrective re-prompt before giving up; `ENOENT`/non-zero-exit fail fast without retry. (Behaviour.3g)
+- [ ] When all attempts fail to parse, the logged error includes a truncated copy of the raw model output for diagnosis; the question is still skipped and the queue continues. (Behaviour.7)
 - [x] Learning mode shows the explanation immediately after the answer is confirmed; real-mode sessions show every question's explanation in review after completion (and never during the exam). (Behaviour.9, 10)
-- [x] The JSON-parse step tolerates the model wrapping its object in prose or a code fence (extracts the first JSON object); a response with no JSON object is treated as a CLI failure. (Behaviour.3d, 7)
+- [x] The JSON-parse step tolerates the model wrapping its object in prose or a code fence (extracts the first JSON object); a response with no JSON object — **after the §3g retries** — is treated as a CLI failure. (Behaviour.3d, 3g, 7)
 
 ## Open questions
 
@@ -130,6 +161,13 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - **Clue fidelity.** The prompt asks the model to quote the source, but the command does not verify a
   quoted snippet actually appears in the passage/transcript. Light verification (substring check,
   warn on miss) could be added later; deferred.
+- **Grounding can mask bad seed data.** Pre-revision, a question whose seed passage did not match the
+  question made the model emit prose, which the parser surfaced as a skip — an accidental data-quality
+  signal (see Revision history 2026-06-10). With §3f schema-constraint the model is now pushed to emit
+  a (possibly fabricated) JSON explanation instead. The §7 raw-output diagnostics are the intended
+  replacement signal; a future substring/clue-fidelity check (above) would catch it more directly.
+- **Retry/grounding tunables.** The total attempt count and the raw-output truncation length are
+  fixed-in-code defaults (not `.env`-configurable) for now. Promote to config only if needed.
 - **Transcript size for listening.** Very long transcripts are sent whole; if a clip's transcript
   ever exceeds a comfortable prompt budget, truncation/summarisation would be needed. Not a concern
   at current clip lengths.
@@ -155,3 +193,20 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   a question with a mismatched seed passage triggered the graceful Behaviour.7 skip (model returned
   prose, not JSON); re-run skipped as "exists"; and a completed **real** session's review carried the
   explanation. Status approved → implemented.
+- 2026-06-27: **Revised (Rule 4), status implemented → revised pending re-approval.** `npm run enrich`
+  intermittently failed with "No JSON object found in model output." because the model occasionally
+  replied with prose. The CLI call is now **grounded**: a JSON-only system prompt (`--append-system-prompt`),
+  a strict `--json-schema` for the five-field object, a bounded retry with a corrective re-prompt on
+  parse failure (§3e–3g), and a truncated raw-output dump on final failure for diagnosis (§7). Shared
+  CLI primitives in `server/lib/claude-cli.ts`, so writing/speaking scoring + correction inherit them.
+  Prompt-builder text and the five-field output contract are unchanged. Added open questions on bad-seed
+  masking and retry tunables.
+- 2026-06-27: Re-approved and **implemented.** `server/lib/claude-cli.ts` gained `JSON_ONLY_SYSTEM_PROMPT`,
+  `RunClaudeOptions.{jsonSchema,systemPrompt,retries}`, and `runClaudeJson` (retry + truncated raw-output
+  diagnostics); `scripts/lib/claude.ts` exports `EXPLANATION_SCHEMA` and routes `generateExplanation`
+  through it. Confirmed the CLI `--json-schema` envelope: the constrained object arrives in `result` (a
+  JSON string the existing parser reads) with `stop_reason: tool_use`. Verified end-to-end — a dry-run
+  produced a clean five-field object and `npm run enrich --question-id 113` generated + persisted
+  (`claude-cli/claude-opus-4-8`). New unit tests in `server/lib/claude-cli.test.ts` (mocked spawn) cover
+  grounding args, retry-then-succeed, retry-exhaustion diagnostics, truncation, and fail-fast on exit.
+  Status approved → implemented.

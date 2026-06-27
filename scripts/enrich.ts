@@ -9,6 +9,7 @@ import {
 } from "../server/db/schema";
 import {
   ClaudeError,
+  EXPLANATION_SCHEMA,
   type EnrichInput,
   type OptionLabel,
   buildEnrichPrompt,
@@ -156,7 +157,13 @@ async function main(): Promise<void> {
       console.log(buildEnrichPrompt(input));
       try {
         console.log(`----- model output -----`);
-        console.log(runClaude(buildEnrichPrompt(input), { model }));
+        // Single grounded attempt (schema + JSON-only system prompt), no retry — a faithful preview.
+        console.log(
+          runClaude(buildEnrichPrompt(input), {
+            model,
+            jsonSchema: EXPLANATION_SCHEMA,
+          }),
+        );
       } catch (error) {
         console.error(error instanceof ClaudeError ? error.message : error);
       }

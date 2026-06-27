@@ -117,6 +117,11 @@ capabilities.
 type LlmProvider = {
   complete(
     prompt: string,
+    // NOTE (2026-06-27): the CLI path gained grounding opts — `jsonSchema?` (→ `--json-schema`),
+    // `systemPrompt?` (→ `--append-system-prompt`), and a bounded retry — see llm-enrichment.md
+    // §Grounding & reliability. The seam must thread these through `complete()` so the API provider
+    // can translate them (schema → tool/`response_format`-style structured output; systemPrompt → the
+    // Messages `system` param) and own its own retry. M17 design must absorb this, not regress it.
     opts?: { model?: string; timeoutMs?: number },
   ): Promise<string>;
 };
@@ -190,3 +195,6 @@ No new error codes; failures reuse `ClaudeError` → `EVALUATION_FAILED` / `CORR
 ## Revision history
 
 - 2026-06-26: Initial draft (Milestone 17).
+- 2026-06-27: Annotated the `complete()` seam — the CLI path gained grounding opts (`jsonSchema`,
+  `systemPrompt`) + a bounded retry (see `llm-enrichment.md` §Grounding & reliability). M17 must thread
+  these through the seam and translate them for the API provider rather than regressing them.

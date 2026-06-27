@@ -1,9 +1,34 @@
 import {
   ClaudeError,
+  type JsonSchema,
   type RunClaudeOptions,
   extractJsonObject,
-  runClaude,
+  runClaudeJson,
 } from "../lib/claude-cli";
+
+// spec: docs/specs/writing-evaluation.md §Behaviour.2 — strict JSON Schemas passed to the CLI via
+// --json-schema so the model's scoring/correction content is constrained to the expected shape.
+const SCORE_SCHEMA: JsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["score", "strengths", "errors", "improvements"],
+  properties: {
+    score: { type: "number", minimum: 0, maximum: 20 },
+    strengths: { type: "string", minLength: 1 },
+    errors: { type: "string", minLength: 1 },
+    improvements: { type: "string", minLength: 1 },
+  },
+};
+
+const CORRECTION_SCHEMA: JsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["correctedText", "suggestions"],
+  properties: {
+    correctedText: { type: "string", minLength: 1 },
+    suggestions: { type: "array", items: { type: "string" } },
+  },
+};
 
 // spec: docs/specs/writing-evaluation.md
 // Request-time local-Claude-CLI layer for the Writing section: scoring + feedback on submit (both
@@ -143,20 +168,27 @@ export function parseCorrectionResponse(raw: string): WritingCorrection {
   return { correctedText, suggestions };
 }
 
-// spec: docs/specs/writing-evaluation.md §Behaviour.3 — score a submitted response via the CLI.
+// spec: docs/specs/writing-evaluation.md §Behaviour.3, 2 — score a submitted response via the grounded
+// CLI path (schema-constrained, JSON-only system prompt, retried on parse failure).
 export function scoreWithClaude(
   input: EvaluateInput,
   opts: RunClaudeOptions = {},
 ): WritingScore {
-  return parseScoreResponse(runClaude(buildScorePrompt(input), opts));
+  return runClaudeJson(buildScorePrompt(input), parseScoreResponse, {
+    ...opts,
+    jsonSchema: SCORE_SCHEMA,
+  });
 }
 
-// spec: docs/specs/writing-evaluation.md §Behaviour.7 — correct a draft via the CLI.
+// spec: docs/specs/writing-evaluation.md §Behaviour.7, 2 — correct a draft via the grounded CLI path.
 export function correctWithClaude(
   input: CorrectInput,
   opts: RunClaudeOptions = {},
 ): WritingCorrection {
-  return parseCorrectionResponse(runClaude(buildCorrectionPrompt(input), opts));
+  return runClaudeJson(buildCorrectionPrompt(input), parseCorrectionResponse, {
+    ...opts,
+    jsonSchema: CORRECTION_SCHEMA,
+  });
 }
 
 function parseObject(raw: string): Record<string, unknown> {
