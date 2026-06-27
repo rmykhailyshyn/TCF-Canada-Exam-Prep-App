@@ -102,12 +102,18 @@ export type RunClaudeOptions = {
 export function runClaude(prompt: string, opts: RunClaudeOptions = {}): string {
   const bin = opts.bin ?? process.env.CLAUDE_CLI_BIN ?? "claude";
   const model = opts.model ?? process.env.CLAUDE_CLI_MODEL;
-  const args = ["-p", prompt, "--output-format", "json"];
+  // --safe-mode disables project customizations (CLAUDE.md, hooks, plugins, skills, MCP, output
+  // styles, …) so each one-shot call is clean and deterministic; auth, model selection, built-in
+  // tools, and the grounding flags below keep working. spec: docs/specs/llm-enrichment.md §Behaviour.3d
+  const args = ["-p", prompt, "--safe-mode", "--output-format", "json"];
   if (model) args.push("--model", model);
   const systemPrompt =
-    opts.systemPrompt === undefined ? JSON_ONLY_SYSTEM_PROMPT : opts.systemPrompt;
+    opts.systemPrompt === undefined
+      ? JSON_ONLY_SYSTEM_PROMPT
+      : opts.systemPrompt;
   if (systemPrompt) args.push("--append-system-prompt", systemPrompt);
-  if (opts.jsonSchema) args.push("--json-schema", JSON.stringify(opts.jsonSchema));
+  if (opts.jsonSchema)
+    args.push("--json-schema", JSON.stringify(opts.jsonSchema));
 
   const result = spawnSync(bin, args, {
     encoding: "utf8",

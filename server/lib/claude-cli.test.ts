@@ -54,6 +54,13 @@ describe("runClaude grounding args", () => {
     expect(args).toContain(JSON.stringify(schema));
   });
 
+  it("always passes --safe-mode so project customizations don't pollute the output", () => {
+    spawnSyncMock.mockReturnValue(envelope("{}"));
+    runClaude("hi");
+
+    expect(lastArgs(0)).toContain("--safe-mode");
+  });
+
   it("omits the system prompt when systemPrompt is null, and the schema when absent", () => {
     spawnSyncMock.mockReturnValue(envelope("{}"));
     runClaude("hi", { systemPrompt: null });

@@ -67,8 +67,10 @@ prompt-build/JSON-parse helper pattern established in `scripts/lib/claude.ts`.
    - `CLAUDE_CLI_BIN`: the Claude CLI binary name/path (default `claude`).
    - `CLAUDE_CLI_MODEL` (optional): passed as `--model`; when unset the CLI default model is used.
      No API key is read — the local CLI manages its own authentication.
-2. The service invokes the CLI non-interactively (`claude -p <prompt>`, plus `--model` when
-   configured), captures stdout, and parses the **first JSON object** out of the response (tolerating
+2. The service invokes the CLI non-interactively (`claude -p <prompt> --safe-mode`, plus `--model`
+   when configured — `--safe-mode` runs the binary without project customizations for a clean one-shot
+   call; see `llm-enrichment.md` §Behaviour.3d), captures stdout, and parses the **first JSON object**
+   out of the response (tolerating
    surrounding prose or a code fence), mirroring the enrichment parser. Invocation happens
    **per request**, on the server, within the HTTP request lifecycle. The call is **grounded and
    retried** via the shared CLI primitive — a JSON-only system prompt (`--append-system-prompt`), a
@@ -230,3 +232,6 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - 2026-06-27: Re-approved and **implemented.** `scoreWithClaude` / `correctWithClaude` route through
   `runClaudeJson` with module-local `SCORE_SCHEMA` / `CORRECTION_SCHEMA`; the pure prompt/parse helpers
   and their tests are unchanged. Status approved → implemented.
+- 2026-06-27: The shared CLI invocation now always passes `--safe-mode` (§Behaviour.2), so scoring +
+  correction run the local `claude` binary without project customizations; auth, model selection, and
+  the grounding flags are unaffected. See `llm-enrichment.md` §Behaviour.3d.

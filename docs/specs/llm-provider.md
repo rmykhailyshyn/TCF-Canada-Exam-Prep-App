@@ -54,6 +54,8 @@ which has no local binary.
    unrecognised value it resolves to `cli`, so an existing checkout behaves exactly as it does today.
 2. The **CLI provider** reads the existing keys unchanged: `CLAUDE_CLI_BIN` (default `claude`) and the
    optional `CLAUDE_CLI_MODEL` (passed as `--model`). No API key is read; the CLI manages its own auth.
+   The CLI path also passes `--safe-mode` on every call (see `llm-enrichment.md` §Behaviour.3d) to run
+   without project customizations; the M17 seam must preserve this when wrapping `runClaude`.
 3. The **API provider** reads: `ANTHROPIC_API_KEY` (required — its absence is a configuration error),
    `CLAUDE_API_MODEL` (the selected model, e.g. `claude-opus-4-8`), and the optional
    `CLAUDE_API_BASE_URL` (default `https://api.anthropic.com`) and `CLAUDE_API_MAX_TOKENS`

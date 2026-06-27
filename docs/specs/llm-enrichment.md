@@ -60,8 +60,11 @@ question), and — for both learning and real sessions — in review mode after 
    c. Builds an English prompt instructing the model to return a **JSON object only** with a
    `correctReason` and a reason for each of `A`–`D`, where every reason quotes or paraphrases the
    relevant clue from the supplied passage/transcript.
-   d. Invokes the local CLI non-interactively (`claude -p <prompt>`, plus `--model` when configured),
-   captures stdout, and parses the JSON object out of the response. The invocation is **grounded** so
+   d. Invokes the local CLI non-interactively (`claude -p <prompt> --safe-mode`, plus `--model` when
+   configured), captures stdout, and parses the JSON object out of the response. `--safe-mode` disables
+   project customizations (CLAUDE.md, hooks, plugins, skills, MCP servers, output styles, …) so each
+   one-shot call is clean and deterministic, while auth, model selection, and the grounding flags below
+   keep working. The invocation is **grounded** so
    the model emits the object reliably (see §Grounding & reliability), but parsing stays tolerant
    (extracts the first balanced `{…}`, ignoring any stray fence/prose).
 
@@ -210,3 +213,9 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   (`claude-cli/claude-opus-4-8`). New unit tests in `server/lib/claude-cli.test.ts` (mocked spawn) cover
   grounding args, retry-then-succeed, retry-exhaustion diagnostics, truncation, and fail-fast on exit.
   Status approved → implemented.
+- 2026-06-27: The shared CLI invocation (`runClaude`) now always passes `--safe-mode` (§Behaviour.3d),
+  so enrichment and writing/speaking scoring run the local `claude` binary without project
+  customizations (CLAUDE.md, hooks, plugins, skills, MCP, output styles) that could pollute the
+  one-shot JSON output. Auth, model selection, built-in tools, and the existing grounding flags
+  (`--append-system-prompt`, `--json-schema`) are unaffected; output format is unchanged. Covered by a
+  new argv assertion in `server/lib/claude-cli.test.ts`.

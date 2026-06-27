@@ -76,7 +76,9 @@ platform-agnostic. Configuration follows the existing conventions (`.env`: `CLAU
    - `CLAUDE_CLI_BIN` (default `claude`), `CLAUDE_CLI_MODEL` (optional `--model`).
    - `WHISPER_CMD` (default `mlx_whisper`), `WHISPER_MODEL` (default `mlx-community/whisper-large-v3-turbo`).
      No API key is read.
-2. Claude is invoked non-interactively (`claude -p <prompt>`, plus `--model` when set), capturing
+2. Claude is invoked non-interactively (`claude -p <prompt> --safe-mode`, plus `--model` when set —
+   `--safe-mode` runs the binary without project customizations for a clean one-shot call; see
+   `llm-enrichment.md` §Behaviour.3d), capturing
    stdout and parsing the **first JSON object** (tolerating prose/code-fence wrapping), reusing the
    `scripts/lib/claude.ts` helpers (`runClaude`, `extractJsonObject`, `parseCliEnvelope`). The Claude
    call is **grounded and retried** via the shared primitive — a JSON-only system prompt
@@ -235,3 +237,7 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - 2026-06-27: Re-approved and **implemented.** `scoreWithClaude` / `correctWithClaude` route through
   `runClaudeJson` with module-local `SCORE_SCHEMA` / `CORRECTION_SCHEMA`; Whisper path and the pure
   prompt/parse helpers + tests are unchanged. Status approved → implemented.
+- 2026-06-27: The shared CLI invocation now always passes `--safe-mode` (§Behaviour.2), so Claude
+  scoring + correction run the local binary without project customizations; auth, model selection, and
+  the grounding flags are unaffected, and Whisper transcription is untouched. See `llm-enrichment.md`
+  §Behaviour.3d.
