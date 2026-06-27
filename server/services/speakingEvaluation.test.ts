@@ -63,6 +63,25 @@ describe("parseScoreResponse", () => {
       ),
     ).toThrow(ClaudeError);
   });
+
+  it("substitutes a placeholder for an empty transcript", () => {
+    const prompt = buildScorePrompt({
+      taskNumber: 1,
+      question: "Tâche",
+      transcript: "   ",
+    });
+    expect(prompt).toContain("(empty response)");
+  });
+
+  it("throws when the extracted object is not valid JSON", () => {
+    expect(() => parseScoreResponse("sure {nope: not json}")).toThrow(
+      ClaudeError,
+    );
+  });
+
+  it("throws when there is no JSON object at all", () => {
+    expect(() => parseScoreResponse("no json here")).toThrow(ClaudeError);
+  });
 });
 
 describe("buildCorrectionPrompt + parseCorrectionResponse", () => {
@@ -88,6 +107,12 @@ describe("buildCorrectionPrompt + parseCorrectionResponse", () => {
       parseCorrectionResponse(
         JSON.stringify({ correctedText: "x", suggestions: "nope" }),
       ),
+    ).toThrow(ClaudeError);
+  });
+
+  it("throws when correctedText is missing", () => {
+    expect(() =>
+      parseCorrectionResponse(JSON.stringify({ suggestions: ["a"] })),
     ).toThrow(ClaudeError);
   });
 });

@@ -22,6 +22,50 @@ describe("buildScorePrompt", () => {
     expect(prompt).toContain("60–120 words");
     expect(prompt).toContain('"score"');
   });
+
+  it("phrases the word guidance for a min-only constraint", () => {
+    const prompt = buildScorePrompt({
+      taskNumber: 2,
+      prompt: "Tâche",
+      minWords: 120,
+      maxWords: null,
+      responseText: "x",
+    });
+    expect(prompt).toContain("at least 120 words");
+  });
+
+  it("phrases the word guidance for a max-only constraint", () => {
+    const prompt = buildScorePrompt({
+      taskNumber: 2,
+      prompt: "Tâche",
+      minWords: null,
+      maxWords: 200,
+      responseText: "x",
+    });
+    expect(prompt).toContain("at most 200 words");
+  });
+
+  it("phrases the word guidance when neither bound is set", () => {
+    const prompt = buildScorePrompt({
+      taskNumber: 3,
+      prompt: "Tâche",
+      minWords: null,
+      maxWords: null,
+      responseText: "x",
+    });
+    expect(prompt).toContain("no specific length requirement");
+  });
+
+  it("substitutes a placeholder for an empty response", () => {
+    const prompt = buildScorePrompt({
+      taskNumber: 1,
+      prompt: "Tâche",
+      minWords: null,
+      maxWords: null,
+      responseText: "   ",
+    });
+    expect(prompt).toContain("(empty response)");
+  });
 });
 
 describe("parseScoreResponse", () => {
@@ -64,6 +108,17 @@ describe("parseScoreResponse", () => {
       ),
     ).toThrow(ClaudeError);
   });
+
+  it("throws when the extracted object is not valid JSON", () => {
+    // A brace-balanced slice that JSON.parse rejects exercises the parseObject catch.
+    expect(() => parseScoreResponse("here you go {nope: not json}")).toThrow(
+      ClaudeError,
+    );
+  });
+
+  it("throws when there is no JSON object at all", () => {
+    expect(() => parseScoreResponse("the model refused")).toThrow(ClaudeError);
+  });
 });
 
 describe("buildCorrectionPrompt + parseCorrectionResponse", () => {
@@ -89,6 +144,12 @@ describe("buildCorrectionPrompt + parseCorrectionResponse", () => {
       parseCorrectionResponse(
         JSON.stringify({ correctedText: "x", suggestions: "nope" }),
       ),
+    ).toThrow(ClaudeError);
+  });
+
+  it("throws when correctedText is missing", () => {
+    expect(() =>
+      parseCorrectionResponse(JSON.stringify({ suggestions: ["a"] })),
     ).toThrow(ClaudeError);
   });
 });
