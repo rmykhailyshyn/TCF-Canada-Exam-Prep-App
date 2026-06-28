@@ -1,0 +1,56 @@
+name: Deploy (Cloudflare Worker)
+
+# Manual deploy + automatic deploy on a v* release tag. Deliberately NOT run on every
+# push to main: deploying is a conscious decision (see CLAUDE.md "Cloudflare deployment").
+#
+# Prerequisites before this workflow can succeed:
+#   1. Repo secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are set
+#      (Settings → Secrets and variables → Actions).
+#   2. The real D1 database_id is committed in wrangler.toml (replace the
+#      REPLACE_WITH_D1_DATABASE_ID placeholder after `wrangler d1 create tcf-prep`).
+# D1 migrations (npm run cf:d1:migrate) and content upload (npm run deploy:content)
+# remain manual, intentional steps — see the commented block below.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build and deploy the Worker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build client
+        run: npm run build
+
+      - name: Deploy to Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+
+      # Optional, intentional follow-ups — run manually rather than on every deploy:
+      #   - name: Apply D1 migrations
+      #     uses: cloudflare/wrangler-action@v3
+      #     with:
+      #       apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      #       accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      #       command: d1 migrations apply DB --remote
