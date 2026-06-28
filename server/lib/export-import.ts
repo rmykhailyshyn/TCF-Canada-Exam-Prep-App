@@ -273,8 +273,7 @@ export function validateQuestion(raw: unknown): ExportQuestion {
             ).trim(),
             durationMs:
               ((q.audio as Record<string, unknown>).durationMs as
-                | number
-                | null) ?? null,
+                number | null) ?? null,
           }
         : null,
     transcript:

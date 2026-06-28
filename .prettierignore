@@ -1,0 +1,27 @@
+# Prettier ignore. Note: Prettier does NOT read .gitignore, so generated/output
+# paths must be listed here explicitly even when they are git-ignored.
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+client/dist/
+*.tsbuildinfo
+
+# Local / generated data and artifacts
+data/
+media/
+coverage/
+.wrangler/
+test-results/
+playwright-report/
+blob-report/
+graphify-out/
+
+# Generated lockfile
+package-lock.json
+
+# Prose docs are authored by hand and not auto-formatted (re-wrapping fights the author).
+**/*.md

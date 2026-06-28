@@ -8,10 +8,7 @@ import { type APIRequestContext, expect } from "@playwright/test";
 export type Section = "reading" | "listening";
 export type Mode = "learning" | "real";
 export type Difficulty =
-  | "beginner"
-  | "intermediate"
-  | "upper-intermediate"
-  | "advanced";
+  "beginner" | "intermediate" | "upper-intermediate" | "advanced";
 
 export type SessionQuestion = { id: number; sequence: number };
 export type CreatedSession = {

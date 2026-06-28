@@ -6,12 +6,7 @@ import { BrandMark } from "./BrandMark";
 // section. Rendered on the landing/setup chrome (not over an in-session header).
 
 export type NavKey =
-  | "reading"
-  | "listening"
-  | "writing"
-  | "speaking"
-  | "history"
-  | "questionBank";
+  "reading" | "listening" | "writing" | "speaking" | "history" | "questionBank";
 
 // spec: §Behaviour.6 — the four sections always appear in this order, here and in the landing picker.
 const SECTIONS: { key: NavKey; label: string }[] = [
