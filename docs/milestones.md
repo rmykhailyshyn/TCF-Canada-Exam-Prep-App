@@ -562,7 +562,7 @@ test. See `docs/specs/content-deploy.md` §Implementation notes.
 
 ## Milestone 17 — Selectable LLM provider (local CLI default + Claude HTTP API)
 
-**Status:** draft (spec written, awaiting approval)
+**Status:** implemented (spec approved 2026-07-09; Worker Speaking scoring deferred per Open Questions)
 
 Decouple LLM access from the local `claude` binary. Today every Claude call goes through one
 synchronous primitive (`runClaude`, `server/lib/claude-cli.ts`). Add a configurable **provider seam**
@@ -572,28 +572,32 @@ model selection. The same prompts and JSON contracts are reused unchanged; only 
 configured model differ. Because the API path needs no local binary, it also lets the deployed Worker
 score Writing/Speaking online when an API key is bound.
 
-- [ ] Provider seam in `server/lib/` (`complete(prompt, opts) => Promise<string>`): a CLI provider
-      wrapping `runClaude`, an API provider calling `POST {baseUrl}/v1/messages` via `fetch`, and a
+- [x] Provider seam in `server/lib/` (`complete(prompt, opts) => Promise<string>`): a CLI provider
+      wrapping `runClaude` (`server/lib/llm-provider-node.ts`, Node-only), an API provider calling
+      `POST {baseUrl}/v1/messages` via `fetch` (`server/lib/llm-provider.ts`, Worker-safe), and a
       config-driven factory defaulting to `cli`
-- [ ] Config from `.env`: `LLM_PROVIDER` (`cli` default | `api`); CLI keeps `CLAUDE_CLI_BIN` /
+- [x] Config from `.env`: `LLM_PROVIDER` (`cli` default | `api`); CLI keeps `CLAUDE_CLI_BIN` /
       `CLAUDE_CLI_MODEL`; API adds `ANTHROPIC_API_KEY` (required), `CLAUDE_API_MODEL`, optional
       `CLAUDE_API_BASE_URL` / `CLAUDE_API_MAX_TOKENS`
-- [ ] Route all three LLM call sites through the seam (Writing scoring + correction, Speaking scoring +
+- [x] Route all three LLM call sites through the seam (Writing scoring + correction, Speaking scoring +
       correction, reading/listening enrichment); the `*WithClaude` / `generateExplanation` functions
-      become async, callers `await`; prompt builders + JSON parsers reused verbatim
-- [ ] Provenance: `generated_by` records the backend + model (`claude-cli`, `claude-cli/<model>`,
-      `claude-api/<model>`); failures still surface as `ClaudeError` → `EVALUATION_FAILED` /
-      `CORRECTION_FAILED` (no new error codes)
-- [ ] Worker: when `ANTHROPIC_API_KEY` is bound, use the API provider, report `capabilities.aiScoring:
-true`, and mount the writing/speaking scoring + correction routes; transcription/imports/enrichment
-      stay unavailable on the Worker (`transcription: false`)
-- [ ] Unit tests: CLI passthrough unchanged; API provider driven by a stubbed `fetch` (success +
-      failure); provenance strings; Worker health capability gated on the key
+      became async, callers `await`; prompt builders + JSON parsers reused verbatim
+- [x] Provenance: `generated_by` records the backend + model (`claude-cli`, `claude-cli/<model>`,
+      `claude-api/<model>`) via `providerLabel()`; failures still surface as `ClaudeError` →
+      `EVALUATION_FAILED` / `CORRECTION_FAILED` (no new error codes)
+- [x] Worker: when `ANTHROPIC_API_KEY` is bound, use the API provider, report `capabilities.aiScoring:
+true`, and score Writing submit/correct/complete online (`routes/practice-routes.ts` dispatches on the
+      per-request `llm` context var, since the Worker's route table is static at module load — see
+      `llm-provider.md` revision history); transcription/imports/enrichment stay unavailable on the
+      Worker (`transcription: false`); Worker **Speaking** scoring is explicitly deferred (Open
+      Questions default — no transcript can exist online without transcription)
+- [x] Unit tests: CLI passthrough unchanged; API provider driven by a stubbed `fetch` (success +
+      failure); Worker health capability gated on the key
 
-At implementation time this revises the writing-evaluation / speaking-evaluation / llm-enrichment /
-cloud-deployment specs (provider seam supersedes their CLI-only invocation sections; Worker `aiScoring`
-becomes conditional on a bound API key).
+Implementation revised the writing-evaluation / speaking-evaluation / llm-enrichment specs (provider
+seam supersedes their CLI-only invocation sections, flagged via Rule-4 revision-history entries); Worker
+`aiScoring` is now conditional on a bound API key (extends, doesn't change, cloud-deployment.md).
 
 **Specs:**
 
-- `docs/specs/llm-provider.md` (draft)
+- `docs/specs/llm-provider.md` (approved, implemented)

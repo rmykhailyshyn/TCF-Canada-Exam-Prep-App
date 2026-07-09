@@ -2,7 +2,12 @@ import { asc, eq } from "drizzle-orm";
 import type { DbClient } from "../db/factory";
 import { sessions, writingEvaluations, writingResponses } from "../db/schema";
 import { ApiError } from "../lib/errors";
-import { ClaudeError } from "../lib/claude-cli";
+import {
+  ClaudeError,
+  type LlmConfig,
+  type LlmProvider,
+  providerLabel,
+} from "../lib/llm-provider";
 import { scoreToNclc } from "../lib/nclc";
 import {
   type CompleteResult,
@@ -19,21 +24,20 @@ import {
   scoreWithClaude,
 } from "./writingEvaluation";
 
-// spec: docs/specs/writing-session.md; docs/specs/server-runtime.md §Behaviour.8
-// Node-only writing scoring path: submit, request a correction (training only), and complete all
-// invoke the LOCAL Claude CLI (via ./writingEvaluation → ../lib/claude-cli → child_process), so they
-// cannot run in the Worker bundle. They are registered only by the Node entry (routes/node-routes.ts)
-// and reuse the portable loaders from ./writing. The DB is injected (server-runtime §Behaviour.5).
+// spec: docs/specs/writing-session.md; docs/specs/llm-provider.md §Behaviour.6, 8
+// PORTABLE writing scoring path: submit, request a correction (training only), and complete — all
+// routed through an injected LlmProvider (server/lib/llm-provider) rather than the CLI directly. No
+// node:* imports, so this module runs on both the Node entry (registers it unconditionally via
+// routes/node-routes.ts) and the Worker (routes/practice-routes.ts mounts it only when an API key is
+// bound — Behaviour.8). Replaces the former services/writing-node.ts.
 
 async function persistEvaluation(
   db: DbClient,
   responseId: number,
   score: number,
   feedback: WritingFeedback,
+  generatedBy: string,
 ): Promise<void> {
-  const generatedBy = process.env.CLAUDE_CLI_MODEL
-    ? `claude-cli/${process.env.CLAUDE_CLI_MODEL}`
-    : "claude-cli";
   await db.transaction(async (tx) => {
     await tx
       .delete(writingEvaluations)
@@ -52,6 +56,8 @@ async function persistEvaluation(
 // spec: docs/specs/writing-session.md §Behaviour.10, 15; writing-evaluation §Behaviour.3–8 — submit.
 export async function submitResponse(
   db: DbClient,
+  provider: LlmProvider,
+  config: LlmConfig,
   sessionId: number,
   taskNumber: number,
   text: string,
@@ -71,13 +77,16 @@ export async function submitResponse(
   let score: number;
   let feedback: WritingFeedback;
   try {
-    const result = scoreWithClaude({
-      taskNumber: task.taskNumber,
-      prompt: task.prompt,
-      minWords: task.minWords,
-      maxWords: task.maxWords,
-      responseText: text,
-    });
+    const result = await scoreWithClaude(
+      {
+        taskNumber: task.taskNumber,
+        prompt: task.prompt,
+        minWords: task.minWords,
+        maxWords: task.maxWords,
+        responseText: text,
+      },
+      provider,
+    );
     score = result.score;
     feedback = result.feedback;
   } catch (error) {
@@ -91,7 +100,7 @@ export async function submitResponse(
     throw error;
   }
 
-  await persistEvaluation(db, row.id, score, feedback);
+  await persistEvaluation(db, row.id, score, feedback, providerLabel(config));
   return { score, level: scoreToNclc(score), feedback };
 }
 
@@ -99,6 +108,7 @@ export async function submitResponse(
 // (training only). The session's mode is checked here; the service itself is mode-agnostic.
 export async function requestCorrection(
   db: DbClient,
+  provider: LlmProvider,
   sessionId: number,
   taskNumber: number,
   text: string,
@@ -131,7 +141,10 @@ export async function requestCorrection(
     .where(eq(writingResponses.id, row.id));
 
   try {
-    return correctWithClaude({ prompt: task.prompt, responseText: text });
+    return await correctWithClaude(
+      { prompt: task.prompt, responseText: text },
+      provider,
+    );
   } catch (error) {
     if (error instanceof ClaudeError) {
       throw new ApiError(
@@ -147,6 +160,8 @@ export async function requestCorrection(
 // spec: docs/specs/writing-session.md §Behaviour.14, 15; API contract — finalise + aggregate.
 export async function completeWritingSession(
   db: DbClient,
+  provider: LlmProvider,
+  config: LlmConfig,
   sessionId: number,
   elapsedMs: number | null,
 ): Promise<CompleteResult> {
@@ -174,24 +189,33 @@ export async function completeWritingSession(
   );
 
   // spec: docs/specs/writing-session.md §Behaviour.14 — real mode submits/evaluates any draft still
-  // unscored (best-effort: a CLI failure leaves that task unscored rather than blocking completion).
+  // unscored (best-effort: a provider failure leaves that task unscored rather than blocking completion).
   if (session.mode === "real") {
     for (const row of responses) {
       if (evals.has(row.id)) continue;
       const task = await loadTaskForResponse(db, row);
       try {
-        const result = scoreWithClaude({
-          taskNumber: task.taskNumber,
-          prompt: task.prompt,
-          minWords: task.minWords,
-          maxWords: task.maxWords,
-          responseText: row.responseText,
-        });
+        const result = await scoreWithClaude(
+          {
+            taskNumber: task.taskNumber,
+            prompt: task.prompt,
+            minWords: task.minWords,
+            maxWords: task.maxWords,
+            responseText: row.responseText,
+          },
+          provider,
+        );
         await db
           .update(writingResponses)
           .set({ submittedAt: row.submittedAt ?? new Date() })
           .where(eq(writingResponses.id, row.id));
-        await persistEvaluation(db, row.id, result.score, result.feedback);
+        await persistEvaluation(
+          db,
+          row.id,
+          result.score,
+          result.feedback,
+          providerLabel(config),
+        );
       } catch (error) {
         if (!(error instanceof ClaudeError)) throw error;
         // leave unscored

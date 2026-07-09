@@ -219,3 +219,12 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   one-shot JSON output. Auth, model selection, built-in tools, and the existing grounding flags
   (`--append-system-prompt`, `--json-schema`) are unaffected; output format is unchanged. Covered by a
   new argv assertion in `server/lib/claude-cli.test.ts`.
+- 2026-07-09: **Divergence (Rule 4).** Milestone 17 (`llm-provider.md`) introduced a provider-agnostic
+  seam: `ClaudeError`, `JSON_ONLY_SYSTEM_PROMPT`, `JsonSchema`, and `extractJsonObject` moved from
+  `server/lib/claude-cli.ts` into the new `server/lib/llm-provider.ts` (re-exported unchanged from
+  `claude-cli.ts` for backward compatibility). `generateExplanation` (`scripts/lib/claude.ts`) is now
+  **async**, takes an injected `LlmProvider`, and routes through `completeJson` instead of calling
+  `runClaudeJson` directly; `scripts/enrich.ts` builds the provider once via
+  `createLlmProviderForNode()` and awaits every call. The CLI's grounding/retry/`--safe-mode` behaviour
+  and the `EXPLANATION_SCHEMA`/prompt/parse contracts are unchanged — with the default CLI provider this
+  is a no-observable-behaviour-change refactor. See `llm-provider.md` §Behaviour.1, 4, 6.

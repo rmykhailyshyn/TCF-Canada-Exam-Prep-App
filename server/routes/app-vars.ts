@@ -3,19 +3,25 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { DbClient } from "../db/factory";
 import type { Capabilities } from "../runtime/capabilities";
 import type { MediaStore } from "../runtime/media-store";
+import type { LlmConfig, LlmProvider } from "../lib/llm-provider";
 import { ApiError } from "../lib/errors";
 import { fail } from "../lib/envelope";
 import { parseRange } from "../lib/range";
 
-// spec: docs/specs/server-runtime.md §Runtime abstractions; §Behaviour.5, 6
+// spec: docs/specs/server-runtime.md §Runtime abstractions; §Behaviour.5, 6; docs/specs/llm-provider.md
+// §Behaviour.8
 // Per-request dependencies injected via Hono's context Variables. The same shape is set by the Node
-// entry (libSQL + filesystem MediaStore + nodeCapabilities) and, later, by the Worker entry (D1 + R2
-// + worker capabilities), so every router binds to whichever runtime mounted it. Each sub-router
-// must redeclare `new Hono<{ Variables: AppVars }>()` to see these typed accessors.
+// entry (libSQL + filesystem MediaStore + nodeCapabilities) and by the Worker entry (D1 + R2 + worker
+// capabilities), so every router binds to whichever runtime mounted it. `llm` is optional: the Node
+// entry always sets it (CLI or API provider, per config); the Worker sets it only when
+// ANTHROPIC_API_KEY is bound, so its absence is how a handler (e.g. routes/practice-routes.ts) tells
+// whether online scoring is available. Each sub-router must redeclare `new Hono<{ Variables: AppVars
+// }>()` to see these typed accessors.
 export type AppVars = {
   db: DbClient;
   mediaStore: MediaStore;
   capabilities: Capabilities;
+  llm?: { provider: LlmProvider; config: LlmConfig };
 };
 
 // spec: docs/specs/server-runtime.md §Behaviour.2 — render a thrown error into the standard failure

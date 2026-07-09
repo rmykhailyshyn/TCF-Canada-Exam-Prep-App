@@ -1,8 +1,9 @@
-// spec: docs/specs/llm-enrichment.md §Behaviour.3–7
+// spec: docs/specs/llm-enrichment.md §Behaviour.3–7; docs/specs/llm-provider.md §Behaviour.6
 // Builds the per-question enrichment prompt and parses the model's Explanation reply. The CLI
 // primitives (ClaudeError, runClaude, JSON extraction, envelope parsing) live in the shared
-// server/lib/claude-cli module so the request-time writing evaluation service can reuse them; they
-// are re-exported here for backward compatibility with existing importers/tests.
+// server/lib/claude-cli module; they are re-exported here for backward compatibility with existing
+// importers/tests. `generateExplanation` itself is routed through the provider-agnostic
+// server/lib/llm-provider seam (completeJson) so it works with either the CLI or the API provider.
 import {
   ClaudeError,
   type JsonSchema,
@@ -12,6 +13,11 @@ import {
   runClaude,
   runClaudeJson,
 } from "../../server/lib/claude-cli";
+import {
+  type CompleteOptions,
+  type LlmProvider,
+  completeJson,
+} from "../../server/lib/llm-provider";
 
 export {
   ClaudeError,
@@ -130,13 +136,16 @@ export function parseExplanationResponse(raw: string): Explanation {
   };
 }
 
-// spec: docs/specs/llm-enrichment.md §Behaviour.3–4, 3g — build the prompt, call the CLI grounded by
-// the EXPLANATION_SCHEMA, and parse the explanation (retrying on a parse failure via runClaudeJson).
-export function generateExplanation(
+// spec: docs/specs/llm-enrichment.md §Behaviour.3–4, 3g; docs/specs/llm-provider.md §Behaviour.6 — build
+// the prompt, call the injected provider grounded by the EXPLANATION_SCHEMA, and parse the explanation
+// (retrying on a parse failure via completeJson).
+export async function generateExplanation(
   input: EnrichInput,
-  opts: RunClaudeOptions = {},
-): { explanation: Explanation } {
-  const explanation = runClaudeJson(
+  provider: LlmProvider,
+  opts: CompleteOptions = {},
+): Promise<{ explanation: Explanation }> {
+  const explanation = await completeJson(
+    provider,
     buildEnrichPrompt(input),
     parseExplanationResponse,
     { ...opts, jsonSchema: EXPLANATION_SCHEMA },

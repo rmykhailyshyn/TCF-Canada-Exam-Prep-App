@@ -1,30 +1,25 @@
 import { spawnSync } from "node:child_process";
+import {
+  ClaudeError,
+  JSON_ONLY_SYSTEM_PROMPT,
+  type JsonSchema,
+  extractJsonObject,
+} from "./llm-provider";
 
 // spec: docs/specs/writing-evaluation.md §Behaviour.1–2 (and llm-enrichment §Behaviour.2, 3d, 7)
 // Shared local-Claude-CLI primitives, reused by the enrichment script (scripts/lib/claude.ts) and
-// the request-time writing evaluation service (server/services/writingEvaluation.ts). Following the
-// project's CLI-wrapper convention: the JSON-extraction and envelope parsers are pure exported
-// helpers (unit-tested without spawning the CLI); only `runClaude` touches the process. A missing
-// binary, a non-zero exit, and unparseable output are surfaced as ClaudeError so callers can map
-// them to a typed failure (skip-and-continue for the script; an error envelope for the server).
-
-export class ClaudeError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ClaudeError";
-  }
-}
-
-// spec: docs/specs/llm-enrichment.md §Behaviour.3e — grounding the model to emit JSON only. Passed to
-// the CLI via --append-system-prompt on every call (overridable per call). Shared by enrichment and
-// the writing/speaking scoring + correction services.
-export const JSON_ONLY_SYSTEM_PROMPT =
-  "You are a JSON-only API. Respond with exactly one JSON object matching the requested shape and " +
-  "nothing else — no prose, no markdown fences, no apologies, and never ask a clarifying question.";
-
-// A JSON Schema object passed to the CLI via --json-schema (Behaviour.3f). Free-form by design — the
-// caller owns the exact shape; we only stringify it onto the args.
-export type JsonSchema = Record<string, unknown>;
+// (historically) the request-time writing evaluation service. Following the project's CLI-wrapper
+// convention: the JSON-extraction and envelope parsers are pure exported helpers (unit-tested without
+// spawning the CLI); only `runClaude` touches the process. A missing binary, a non-zero exit, and
+// unparseable output are surfaced as ClaudeError so callers can map them to a typed failure
+// (skip-and-continue for the script; an error envelope for the server).
+//
+// spec: docs/specs/llm-provider.md §Behaviour.2, 4 — ClaudeError / JSON_ONLY_SYSTEM_PROMPT / JsonSchema
+// / extractJsonObject now live in the portable seam (../lib/llm-provider) so Worker-safe modules
+// (writingEvaluation.ts, speakingEvaluation.ts) can use them without pulling in node:child_process.
+// Re-exported here unchanged so every existing import from "./claude-cli" keeps working.
+export { ClaudeError, JSON_ONLY_SYSTEM_PROMPT, extractJsonObject };
+export type { JsonSchema };
 
 // Bounded retries owned by runClaudeJson (Behaviour.3g): DEFAULT_RETRIES additional attempts after the
 // first, so 3 total by default. Only parse/validation failures retry; spawn/exit failures fail fast.
@@ -32,33 +27,6 @@ const DEFAULT_RETRIES = 2;
 
 // How much of the raw model output to surface in the final-failure error for diagnosis (Behaviour.7).
 const RAW_OUTPUT_DIAGNOSTIC_CHARS = 500;
-
-// Extract the first balanced JSON object so a stray code fence or surrounding prose doesn't break
-// parsing. Respects string literals/escapes.
-export function extractJsonObject(text: string): string {
-  const start = text.indexOf("{");
-  if (start === -1)
-    throw new ClaudeError("No JSON object found in model output.");
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  for (let i = start; i < text.length; i += 1) {
-    const ch = text[i];
-    if (inString) {
-      if (escaped) escaped = false;
-      else if (ch === "\\") escaped = true;
-      else if (ch === '"') inString = false;
-    } else if (ch === '"') {
-      inString = true;
-    } else if (ch === "{") {
-      depth += 1;
-    } else if (ch === "}") {
-      depth -= 1;
-      if (depth === 0) return text.slice(start, i + 1);
-    }
-  }
-  throw new ClaudeError("Unterminated JSON object in model output.");
-}
 
 // `claude -p --output-format json` wraps the model's reply in an envelope; pull out the `result`
 // string (or surface a reported error).

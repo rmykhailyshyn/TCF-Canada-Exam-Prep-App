@@ -2,7 +2,12 @@ import { asc, eq } from "drizzle-orm";
 import type { DbClient } from "../db/factory";
 import { sessions, speakingEvaluations, speakingResponses } from "../db/schema";
 import { ApiError } from "../lib/errors";
-import { ClaudeError } from "../lib/claude-cli";
+import {
+  ClaudeError,
+  type LlmConfig,
+  type LlmProvider,
+  providerLabel,
+} from "../lib/llm-provider";
 import { scoreToNclc } from "../lib/nclc";
 import { resolveMediaPath } from "../config/env";
 import type { MediaStore } from "../runtime/media-store";
@@ -26,27 +31,27 @@ import {
 } from "./speakingEvaluation";
 import { WhisperError, transcribeFile } from "./speakingTranscription";
 
-// spec: docs/specs/speaking-session.md; docs/specs/server-runtime.md §Behaviour.8
-// Node-only speaking path: saving a recording transcribes it via the LOCAL Whisper CLI, and submit /
-// complete score it via the LOCAL Claude CLI — both reach `child_process`, so this module is
-// registered only by the Node entry (routes/node-routes.ts) and never enters the portable core.
-// Audio bytes are persisted through the injected MediaStore (relative key); the DB is injected.
+// spec: docs/specs/speaking-session.md; docs/specs/server-runtime.md §Behaviour.8; llm-provider.md
+// Node-only speaking path: saving a recording transcribes it via the LOCAL Whisper CLI
+// (`child_process`), so this module is registered only by the Node entry (routes/node-routes.ts) and
+// never enters the portable core. Submit / correct / complete score through an injected LlmProvider
+// (server/lib/llm-provider) — CLI or API, per Node's resolved config — but stay Node-only alongside
+// the upload path rather than moving to the portable writing-scoring.ts pattern: per
+// docs/specs/llm-provider.md Open Questions, Worker Speaking scoring is deferred (no transcript can
+// ever exist online without transcription, which the Worker doesn't have). Audio bytes are persisted
+// through the injected MediaStore (relative key); the DB is injected.
 //
 // Rule-4 note: the approved plan listed the recording-upload route in the portable core. Because
 // preserving byte-identical behaviour requires transcribing at upload time (the client reads the
 // transcript from the upload response and `submit` scores the already-stored transcript), the
 // upload path stays here with Whisper. The core keeps create / get / audio-playback only.
 
-const generatedBy = (): string =>
-  process.env.CLAUDE_CLI_MODEL
-    ? `claude-cli/${process.env.CLAUDE_CLI_MODEL}`
-    : "claude-cli";
-
 async function persistEvaluation(
   db: DbClient,
   responseId: number,
   score: number,
   feedback: SpeakingFeedback,
+  generatedBy: string,
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await tx
@@ -58,7 +63,7 @@ async function persistEvaluation(
       strengths: feedback.strengths,
       errors: feedback.errors,
       improvements: feedback.improvements,
-      generatedBy: generatedBy(),
+      generatedBy,
     });
   });
 }
@@ -130,6 +135,8 @@ export async function saveRecording(
 // spec: docs/specs/speaking-session.md §Behaviour.10, 16; speaking-evaluation §Behaviour.6–8 — submit.
 export async function submitResponse(
   db: DbClient,
+  provider: LlmProvider,
+  config: LlmConfig,
   sessionId: number,
   taskNumber: number,
 ): Promise<SubmitResult> {
@@ -146,11 +153,14 @@ export async function submitResponse(
   let score: number;
   let feedback: SpeakingFeedback;
   try {
-    const result = scoreWithClaude({
-      taskNumber: task.taskNumber,
-      question: task.question,
-      transcript: row.transcript,
-    });
+    const result = await scoreWithClaude(
+      {
+        taskNumber: task.taskNumber,
+        question: task.question,
+        transcript: row.transcript,
+      },
+      provider,
+    );
     score = result.score;
     feedback = result.feedback;
   } catch (error) {
@@ -168,7 +178,7 @@ export async function submitResponse(
     .update(speakingResponses)
     .set({ submittedAt: new Date() })
     .where(eq(speakingResponses.id, row.id));
-  await persistEvaluation(db, row.id, score, feedback);
+  await persistEvaluation(db, row.id, score, feedback, providerLabel(config));
   return { score, level: scoreToNclc(score), feedback };
 }
 
@@ -176,6 +186,7 @@ export async function submitResponse(
 // (training only). The session's mode is checked here; the service itself is mode-agnostic.
 export async function requestCorrection(
   db: DbClient,
+  provider: LlmProvider,
   sessionId: number,
   taskNumber: number,
 ): Promise<SpeakingCorrection> {
@@ -197,10 +208,13 @@ export async function requestCorrection(
   const task = await loadTaskForResponse(db, row);
 
   try {
-    return correctWithClaude({
-      question: task.question,
-      transcript: row.transcript,
-    });
+    return await correctWithClaude(
+      {
+        question: task.question,
+        transcript: row.transcript,
+      },
+      provider,
+    );
   } catch (error) {
     if (error instanceof ClaudeError) {
       throw new ApiError(
@@ -216,6 +230,8 @@ export async function requestCorrection(
 // spec: docs/specs/speaking-session.md §Behaviour.14, 16, 17a; API contract — finalise + aggregate.
 export async function completeSpeakingSession(
   db: DbClient,
+  provider: LlmProvider,
+  config: LlmConfig,
   sessionId: number,
   elapsedMs: number | null,
 ): Promise<CompleteResult> {
@@ -243,16 +259,25 @@ export async function completeSpeakingSession(
         if (!row.transcript || row.transcript.trim().length === 0) continue;
         const task = await loadTaskForResponse(db, row);
         try {
-          const result = scoreWithClaude({
-            taskNumber: task.taskNumber,
-            question: task.question,
-            transcript: row.transcript,
-          });
+          const result = await scoreWithClaude(
+            {
+              taskNumber: task.taskNumber,
+              question: task.question,
+              transcript: row.transcript,
+            },
+            provider,
+          );
           await db
             .update(speakingResponses)
             .set({ submittedAt: row.submittedAt ?? new Date() })
             .where(eq(speakingResponses.id, row.id));
-          await persistEvaluation(db, row.id, result.score, result.feedback);
+          await persistEvaluation(
+            db,
+            row.id,
+            result.score,
+            result.feedback,
+            providerLabel(config),
+          );
         } catch (error) {
           if (!(error instanceof ClaudeError)) throw error;
           // leave unscored

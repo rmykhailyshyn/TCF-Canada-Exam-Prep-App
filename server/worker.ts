@@ -3,19 +3,28 @@ import { Hono } from "hono";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./db/schema";
 import { fail } from "./lib/envelope";
+import {
+  ClaudeError,
+  type LlmConfig,
+  type LlmProvider,
+  createApiProvider,
+  resolveLlmConfig,
+} from "./lib/llm-provider";
 import { workerCapabilities } from "./runtime/capabilities";
 import { R2MediaStore } from "./runtime/r2-media-store";
 import { createCoreApp } from "./app";
 import { registerPracticeRoutes } from "./routes/practice-routes";
 import { type AppVars } from "./routes/app-vars";
 
-// spec: docs/specs/cloud-deployment.md §Behaviour.1–7; §Scope (server/worker.ts entry)
+// spec: docs/specs/cloud-deployment.md §Behaviour.1–7; §Scope (server/worker.ts entry);
+// docs/specs/llm-provider.md §Behaviour.8–9
 // The Cloudflare Worker entry. It imports ONLY the portable Hono core (createCoreApp) — never
 // registerNodeRoutes, the *-node services, the libSQL factory, or NodeMediaStore — so the bundle
 // contains no `node:child_process` / `node:fs` and no CLI-backed route is mounted. Per request it
-// builds the Drizzle DB from the D1 binding, wires the R2 MediaStore, and reports all-false
-// capabilities (practice-only). Static assets + SPA fallback are handled by Workers Static Assets
-// (wrangler.toml `[assets]` with `run_worker_first = ["/api/*"]`), so this Worker only serves /api/*.
+// builds the Drizzle DB from the D1 binding, wires the R2 MediaStore, and reports capabilities
+// (practice-only, except `aiScoring` which turns on when ANTHROPIC_API_KEY is bound — Behaviour.8).
+// Static assets + SPA fallback are handled by Workers Static Assets (wrangler.toml `[assets]` with
+// `run_worker_first = ["/api/*"]`), so this Worker only serves /api/*.
 
 // Operational binding contract (wrangler.toml). spec: §API contract (Bindings).
 export type Env = {
@@ -23,7 +32,39 @@ export type Env = {
   MEDIA: R2Bucket;
   // Optional shared-secret fallback when Cloudflare Access is not used. spec: §Scope (Access fallback).
   ACCESS_SHARED_SECRET?: string;
+  // spec: docs/specs/llm-provider.md §Behaviour.3, 8 — Worker secrets/vars for online AI scoring. No
+  // LLM_PROVIDER binding is needed here: the API provider activates purely on ANTHROPIC_API_KEY being
+  // bound (`wrangler secret put ANTHROPIC_API_KEY`); CLAUDE_API_MODEL is required alongside it.
+  ANTHROPIC_API_KEY?: string;
+  CLAUDE_API_MODEL?: string;
+  CLAUDE_API_BASE_URL?: string;
+  CLAUDE_API_MAX_TOKENS?: string;
 };
+
+// spec: docs/specs/llm-provider.md §Behaviour.8 — build the API provider from Worker bindings when
+// ANTHROPIC_API_KEY is bound; undefined (no scoring) when it is not. Reuses resolveLlmConfig by
+// forcing LLM_PROVIDER=api since the Worker never reads a CLI config (no local binary to shell out to).
+// A misconfiguration (key bound without CLAUDE_API_MODEL) fails safe to "no scoring" rather than
+// throwing out of request middleware — a config error must never 500 every request on the Worker.
+function resolveWorkerLlm(
+  env: Env,
+): { provider: LlmProvider; config: LlmConfig } | undefined {
+  if (!env.ANTHROPIC_API_KEY) return undefined;
+  try {
+    const config = resolveLlmConfig({
+      LLM_PROVIDER: "api",
+      ANTHROPIC_API_KEY: env.ANTHROPIC_API_KEY,
+      CLAUDE_API_MODEL: env.CLAUDE_API_MODEL,
+      CLAUDE_API_BASE_URL: env.CLAUDE_API_BASE_URL,
+      CLAUDE_API_MAX_TOKENS: env.CLAUDE_API_MAX_TOKENS,
+    });
+    if (config.provider !== "api") return undefined;
+    return { provider: createApiProvider(config), config };
+  } catch (error) {
+    if (error instanceof ClaudeError) return undefined;
+    throw error;
+  }
+}
 
 const app = new Hono<{ Bindings: Env; Variables: AppVars }>();
 
@@ -54,11 +95,17 @@ app.use("*", async (c, next) => {
 });
 
 // Inject the per-runtime dependencies into the request context (D1 Drizzle + R2 MediaStore +
-// all-false capabilities), mirroring the Node entry's middleware. spec: §Behaviour.3, 6, 7.
+// capabilities), mirroring the Node entry's middleware. spec: §Behaviour.3, 6, 7;
+// docs/specs/llm-provider.md §Behaviour.8 — `aiScoring` flips true only when an API key is bound.
 app.use("*", (c, next) => {
   c.set("db", drizzle(c.env.DB, { schema }));
   c.set("mediaStore", new R2MediaStore(c.env.MEDIA));
-  c.set("capabilities", workerCapabilities);
+  const llm = resolveWorkerLlm(c.env);
+  c.set("llm", llm);
+  c.set(
+    "capabilities",
+    llm ? { ...workerCapabilities, aiScoring: true } : workerCapabilities,
+  );
   return next();
 });
 

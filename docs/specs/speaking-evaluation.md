@@ -241,3 +241,12 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
   scoring + correction run the local binary without project customizations; auth, model selection, and
   the grounding flags are unaffected, and Whisper transcription is untouched. See `llm-enrichment.md`
   §Behaviour.3d.
+- 2026-07-09: **Divergence (Rule 4).** Milestone 17 (`llm-provider.md`) replaced the direct
+  `runClaudeJson` call with the provider-agnostic seam: `scoreWithClaude` / `correctWithClaude` are now
+  async, take an injected `LlmProvider`, and route through `completeJson` (`server/lib/llm-provider.ts`).
+  Whisper transcription (`speakingTranscription.ts`) is untouched and stays Node-only. Per
+  `llm-provider.md`'s Open Questions default, Worker Speaking scoring is explicitly **deferred** — the
+  Cloudflare Worker has no transcription capability, so no transcript can ever exist online to score;
+  `submitResponse` / `requestCorrection` / `completeSpeakingSession` stay registered only by the Node
+  entry (`routes/node-routes.ts`), unlike the Writing equivalents. See `llm-provider.md` §Behaviour.4, 6,
+  9; Open Questions ("Worker Speaking scoring").
