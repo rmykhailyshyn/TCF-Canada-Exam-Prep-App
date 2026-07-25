@@ -2,7 +2,7 @@
 
 ## Status
 
-draft
+implemented
 
 > Milestone 17. A single configurable seam for every Claude call in the app. Today all LLM access
 > goes through one synchronous primitive (`runClaude` in `server/lib/claude-cli.ts`) that shells out
@@ -159,24 +159,29 @@ No new error codes; failures reuse `ClaudeError` → `EVALUATION_FAILED` / `CORR
 
 ## Acceptance criteria
 
-- [ ] With no new config, every call site uses the CLI provider and persists `claude-cli` /
+- [x] With no new config, every call site uses the CLI provider and persists `claude-cli` /
       `claude-cli/<model>` exactly as before — no observable change. (Behaviour.1, 2, 7)
-- [ ] `LLM_PROVIDER=api` with `ANTHROPIC_API_KEY` + `CLAUDE_API_MODEL` routes calls through `fetch` to
+- [x] `LLM_PROVIDER=api` with `ANTHROPIC_API_KEY` + `CLAUDE_API_MODEL` routes calls through `fetch` to
       `{baseUrl}/v1/messages` and persists `claude-api/<model>`. (Behaviour.3, 4, 7)
-- [ ] `LLM_PROVIDER=api` with no `ANTHROPIC_API_KEY` raises `ClaudeError`, which the server maps to
+- [x] `LLM_PROVIDER=api` with no `ANTHROPIC_API_KEY` raises `ClaudeError`, which the server maps to
       `EVALUATION_FAILED` and the enrichment script treats as skip-and-continue. (Behaviour.5)
-- [ ] An API non-2xx / network error / content-less response each surface as `ClaudeError`; no new
+- [x] An API non-2xx / network error / content-less response each surface as `ClaudeError`; no new
       error code is added. (Behaviour.5)
-- [ ] The pure prompt builders and `parse*Response` helpers are unchanged and still unit-tested with
+- [x] The pure prompt builders and `parse*Response` helpers are unchanged and still unit-tested with
       no process spawn and no network. (Scope: out of scope — prompts/contracts)
-- [ ] The API provider has a unit test driven by a stubbed `fetch` (success + failure shapes) that
-      never makes a real network call. (Behaviour.4, 5)
-- [ ] The three call sites are async and their server callers `await` them with the same error
+- [x] The API provider has a unit test driven by a stubbed `fetch` (success + failure shapes) that
+      never makes a real network call. (Behaviour.4, 5) — `server/lib/llm-provider.test.ts`
+- [x] The three call sites are async and their server callers `await` them with the same error
       mapping; the enrichment loop awaits per question. (Behaviour.6)
-- [ ] On the Worker, `GET /api/health` reports `aiScoring: true` and the scoring/correction routes are
-      mounted **only** when `ANTHROPIC_API_KEY` is bound; otherwise both stay as M15. (Behaviour.8)
-- [ ] `capabilities.transcription` stays `false` on the Worker; online Speaking scoring works only
-      from an existing transcript. (Behaviour.9)
+- [x] On the Worker, `GET /api/health` reports `aiScoring: true` and Writing scoring/correction are
+      effectively enabled **only** when `ANTHROPIC_API_KEY` (+ `CLAUDE_API_MODEL`) is bound; otherwise
+      both stay as M15. (Behaviour.8) — realised as request-time dispatch on `c.get('llm')` inside the
+      always-registered `practice-routes.ts` handlers, not static route (un)mounting: Workers build
+      their route table once at module load, before any request's `c.env` (hence any secret) exists,
+      so "mount only when a key is bound" cannot be literal static (un)registration on this runtime.
+      Speaking scoring is NOT enabled on the Worker in this milestone — see the Open Questions default.
+- [x] `capabilities.transcription` stays `false` on the Worker; online Speaking scoring is deferred
+      entirely (not just gated) in this milestone, so there is no transcript to score from. (Behaviour.9)
 
 ## Open questions
 
@@ -200,3 +205,32 @@ No new error codes; failures reuse `ClaudeError` → `EVALUATION_FAILED` / `CORR
 - 2026-06-27: Annotated the `complete()` seam — the CLI path gained grounding opts (`jsonSchema`,
   `systemPrompt`) + a bounded retry (see `llm-enrichment.md` §Grounding & reliability). M17 must thread
   these through the seam and translate them for the API provider rather than regressing them.
+- 2026-07-09: Approved with all documented Open Question defaults (`ANTHROPIC_API_KEY`; separate
+  `CLAUDE_CLI_MODEL` / `CLAUDE_API_MODEL`; single-attempt API calls with a ~180s timeout, no
+  cross-provider fallback; Worker Speaking scoring deferred). Implementation begins.
+- 2026-07-09: **Implemented.** `server/lib/llm-provider.ts` (Worker-safe: `ClaudeError`,
+  `JSON_ONLY_SYSTEM_PROMPT`, `JsonSchema`, `extractJsonObject` moved here from `claude-cli.ts` and
+  re-exported unchanged; `LlmProvider`/`CompleteOptions`/`LlmConfig` types; `resolveLlmConfig`;
+  `createApiProvider` via `fetch`; `completeJson` as the provider-agnostic replacement for
+  `runClaudeJson`; `providerLabel` for `generated_by`) + `server/lib/llm-provider-node.ts` (Node-only:
+  `createLlmProviderForNode` wraps `runClaude` as a CLI `LlmProvider`). `writingEvaluation.ts` /
+  `speakingEvaluation.ts` are now async and take an injected provider, dropping their `claude-cli.ts`
+  import entirely so they stay Worker-safe. `services/writing-node.ts` was replaced by a portable
+  `services/writing-scoring.ts` (provider-injected submit/correct/complete), reused by both
+  `routes/node-routes.ts` (Node, provider from `c.get('llm')`, always set) and
+  `routes/practice-routes.ts` (Worker, only when `c.get('llm')` is set). `speaking-node.ts` gained the
+  same provider injection but stayed Node-only and unmounted on the Worker (Speaking scoring deferred,
+  per Open Questions). `worker.ts` builds the API provider from `ANTHROPIC_API_KEY`/`CLAUDE_API_MODEL`/
+  `CLAUDE_API_BASE_URL`/`CLAUDE_API_MAX_TOKENS` bindings and fails safe (no scoring, not a 500) if the
+  key is bound without a model. `scripts/enrich.ts` builds its provider via `createLlmProviderForNode`
+  and awaits `generateExplanation`. Tests: `server/lib/llm-provider.test.ts` (stubbed-`fetch` API
+  provider + `completeJson` retry logic, no real network) and new cases in `server/worker.test.ts`
+  (`aiScoring` true/fail-safe) and `server/routes/practice-routes.test.ts` (online scoring end-to-end
+  against a stub `LlmProvider`).
+  **Implementation note (Behaviour.8 realisation):** "mount the scoring routes when a key is bound"
+  cannot be literal static (un)registration on the Worker — Hono's route table is built once at module
+  evaluation, before any request's `c.env` (hence any secret) exists. It is realised instead as
+  request-time dispatch: `practice-routes.ts`'s writing submit/complete/correct handlers are always
+  registered and branch on the per-request `c.get('llm')`, which `worker.ts`'s middleware sets only
+  when the key (+ model) resolves. The observable contract (aiScoring flag, 404 on `/correct` without a
+  key) is unchanged from a literal reading of Behaviour.8.

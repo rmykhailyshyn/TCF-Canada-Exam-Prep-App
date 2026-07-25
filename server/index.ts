@@ -3,20 +3,24 @@ import { Hono } from "hono";
 import { getPort } from "./config/env";
 import { createDb } from "./db/factory";
 import { fail } from "./lib/envelope";
+import { createLlmProviderForNode } from "./lib/llm-provider-node";
 import { nodeCapabilities } from "./runtime/capabilities";
 import { NodeMediaStore } from "./runtime/node-media-store";
 import { createCoreApp } from "./app";
 import { type AppVars } from "./routes/app-vars";
 import { registerNodeRoutes } from "./routes/node-routes";
 
-// spec: docs/specs/server-runtime.md §Behaviour.1, 5, 6, 8 — the Node entry.
+// spec: docs/specs/server-runtime.md §Behaviour.1, 5, 6, 8; docs/specs/llm-provider.md §Behaviour.1
+// The Node entry.
 // Builds the runtime dependencies (libSQL DB via the factory, the filesystem MediaStore, the Node
-// capability flags), injects them into every request via context Variables, mounts the portable core
-// (createCoreApp), then layers the Node-only CLI routes (registerNodeRoutes) and the unknown-/api
-// fallback. Finally serves over HTTP with @hono/node-server on the same PORT the client proxies to.
+// capability flags, the LLM provider resolved from LLM_PROVIDER/.env), injects them into every
+// request via context Variables, mounts the portable core (createCoreApp), then layers the Node-only
+// CLI routes (registerNodeRoutes) and the unknown-/api fallback. Finally serves over HTTP with
+// @hono/node-server on the same PORT the client proxies to.
 async function main(): Promise<void> {
   const db = await createDb();
   const mediaStore = new NodeMediaStore();
+  const llm = createLlmProviderForNode();
 
   const app = new Hono<{ Variables: AppVars }>();
 
@@ -25,6 +29,7 @@ async function main(): Promise<void> {
     c.set("db", db);
     c.set("mediaStore", mediaStore);
     c.set("capabilities", nodeCapabilities);
+    c.set("llm", llm);
     return next();
   });
 

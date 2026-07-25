@@ -14,13 +14,15 @@ import {
   type OptionLabel,
   buildEnrichPrompt,
   generateExplanation,
-  runClaude,
 } from "./lib/claude";
+import { createLlmProviderForNode } from "../server/lib/llm-provider-node";
+import { providerLabel } from "../server/lib/llm-provider";
 
-// spec: docs/specs/llm-enrichment.md
-// Pre-generates per-question explanations with the LOCAL Claude CLI and stores them in the
-// `explanations` table. Idempotent (skips questions that already have one). Shell calls go through
-// scripts/lib/claude.ts; DB access stays in Drizzle.
+// spec: docs/specs/llm-enrichment.md; docs/specs/llm-provider.md §Behaviour.1, 6
+// Pre-generates per-question explanations and stores them in the `explanations` table. Idempotent
+// (skips questions that already have one). Routed through the LLM provider seam
+// (server/lib/llm-provider-node) — the local Claude CLI by default, or the Claude HTTP API when
+// LLM_PROVIDER=api — via scripts/lib/claude.ts; DB access stays in Drizzle.
 //
 //   npm run enrich                       # all questions without an explanation
 //   npm run enrich -- --section reading  # limit to a section
@@ -87,8 +89,9 @@ async function loadSourceText(
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  const model = process.env.CLAUDE_CLI_MODEL;
-  const generatedBy = model ? `claude-cli/${model}` : "claude-cli";
+  const { provider, config } = createLlmProviderForNode();
+  const model = config.model;
+  const generatedBy = providerLabel(config);
 
   // Questions that already have an explanation are skipped (Behaviour.6).
   const withExplanation = new Set(
@@ -159,7 +162,7 @@ async function main(): Promise<void> {
         console.log(`----- model output -----`);
         // Single grounded attempt (schema + JSON-only system prompt), no retry — a faithful preview.
         console.log(
-          runClaude(buildEnrichPrompt(input), {
+          await provider.complete(buildEnrichPrompt(input), {
             model,
             jsonSchema: EXPLANATION_SCHEMA,
           }),
@@ -170,9 +173,12 @@ async function main(): Promise<void> {
       continue;
     }
 
-    // spec: docs/specs/llm-enrichment.md §Behaviour.7 — a CLI/parse failure skips just this question.
+    // spec: docs/specs/llm-enrichment.md §Behaviour.7 — a provider/parse failure skips just this
+    // question.
     try {
-      const { explanation } = generateExplanation(input, { model });
+      const { explanation } = await generateExplanation(input, provider, {
+        model,
+      });
       await db.insert(explanations).values({
         questionId: q.id,
         correctReason: explanation.correctReason,

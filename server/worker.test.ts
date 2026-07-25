@@ -68,3 +68,36 @@ describe("worker entry (Cloudflare practice-only runtime)", () => {
     expect(allowed.status).toBe(200);
   });
 });
+
+// spec: docs/specs/llm-provider.md §Behaviour.8 — aiScoring flips true only when ANTHROPIC_API_KEY
+// (+ CLAUDE_API_MODEL) is bound; a misconfigured key (no model) fails safe rather than 500ing every
+// request, since resolveWorkerLlm runs unguarded in top-level middleware.
+describe("worker entry — aiScoring capability (llm-provider.md)", () => {
+  it("reports aiScoring: true when ANTHROPIC_API_KEY + CLAUDE_API_MODEL are bound", async () => {
+    const withKey: Env = {
+      ...env,
+      ANTHROPIC_API_KEY: "sk-ant-test",
+      CLAUDE_API_MODEL: "claude-opus-4-8",
+    };
+    const res = await app.request("/api/health", undefined, withKey);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: { capabilities: Record<string, boolean> };
+    };
+    expect(body.data.capabilities).toEqual({
+      aiScoring: true,
+      transcription: false,
+      imports: false,
+    });
+  });
+
+  it("fails safe to aiScoring: false when the key is bound without CLAUDE_API_MODEL", async () => {
+    const misconfigured: Env = { ...env, ANTHROPIC_API_KEY: "sk-ant-test" };
+    const res = await app.request("/api/health", undefined, misconfigured);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: { capabilities: Record<string, boolean> };
+    };
+    expect(body.data.capabilities.aiScoring).toBe(false);
+  });
+});

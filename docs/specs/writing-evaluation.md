@@ -235,3 +235,10 @@ Testable pass/fail conditions. Each maps back to the behaviours above.
 - 2026-06-27: The shared CLI invocation now always passes `--safe-mode` (§Behaviour.2), so scoring +
   correction run the local `claude` binary without project customizations; auth, model selection, and
   the grounding flags are unaffected. See `llm-enrichment.md` §Behaviour.3d.
+- 2026-07-09: **Divergence (Rule 4).** Milestone 17 (`llm-provider.md`) replaced the direct
+  `runClaudeJson` call with the provider-agnostic seam: `scoreWithClaude` / `correctWithClaude` are now
+  async, take an injected `LlmProvider`, and route through `completeJson` (`server/lib/llm-provider.ts`)
+  instead of `server/lib/claude-cli.ts` directly — this module has no `node:*` imports so it can also
+  run on the Cloudflare Worker's API provider. `SCORE_SCHEMA` / `CORRECTION_SCHEMA`, the prompt builders,
+  and the JSON parsers are unchanged; with the default CLI provider the observable behaviour is
+  unchanged. See `llm-provider.md` §Behaviour.4, 6.

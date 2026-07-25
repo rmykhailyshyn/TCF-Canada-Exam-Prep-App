@@ -1,10 +1,11 @@
 import {
   ClaudeError,
+  type CompleteOptions,
   type JsonSchema,
-  type RunClaudeOptions,
+  type LlmProvider,
+  completeJson,
   extractJsonObject,
-  runClaudeJson,
-} from "../lib/claude-cli";
+} from "../lib/llm-provider";
 
 // spec: docs/specs/writing-evaluation.md §Behaviour.2 — strict JSON Schemas passed to the CLI via
 // --json-schema so the model's scoring/correction content is constrained to the expected shape.
@@ -30,12 +31,14 @@ const CORRECTION_SCHEMA: JsonSchema = {
   },
 };
 
-// spec: docs/specs/writing-evaluation.md
-// Request-time local-Claude-CLI layer for the Writing section: scoring + feedback on submit (both
-// modes) and an on-request correction (training only). Reuses the shared CLI primitives
-// (server/lib/claude-cli). The prompt builders and JSON parsers are pure and unit-tested; only the
-// `*WithClaude` functions touch the process. A CLI/parse failure surfaces as ClaudeError so the
-// caller (server/services/writing.ts) can return EVALUATION_FAILED / CORRECTION_FAILED.
+// spec: docs/specs/writing-evaluation.md; docs/specs/llm-provider.md
+// Request-time LLM layer for the Writing section: scoring + feedback on submit (both modes) and an
+// on-request correction (training only). PORTABLE — no node:* imports — routed through the injected
+// LlmProvider seam (server/lib/llm-provider) rather than the CLI directly, so it runs unchanged on
+// Node (CLI or API provider) and on the Worker (API provider only). The prompt builders and JSON
+// parsers are pure and unit-tested; only the `*WithClaude` functions call the provider. A
+// provider/parse failure surfaces as ClaudeError so the caller can return EVALUATION_FAILED /
+// CORRECTION_FAILED.
 
 export type WritingFeedback = {
   strengths: string;
@@ -168,27 +171,32 @@ export function parseCorrectionResponse(raw: string): WritingCorrection {
   return { correctedText, suggestions };
 }
 
-// spec: docs/specs/writing-evaluation.md §Behaviour.3, 2 — score a submitted response via the grounded
-// CLI path (schema-constrained, JSON-only system prompt, retried on parse failure).
+// spec: docs/specs/llm-provider.md §Behaviour.4, 6 — score a submitted response through the injected
+// LlmProvider (schema-constrained, JSON-only system prompt, retried on parse failure). Portable: no
+// process/network primitives live in this module, only the seam's `completeJson`.
 export function scoreWithClaude(
   input: EvaluateInput,
-  opts: RunClaudeOptions = {},
-): WritingScore {
-  return runClaudeJson(buildScorePrompt(input), parseScoreResponse, {
+  provider: LlmProvider,
+  opts: CompleteOptions = {},
+): Promise<WritingScore> {
+  return completeJson(provider, buildScorePrompt(input), parseScoreResponse, {
     ...opts,
     jsonSchema: SCORE_SCHEMA,
   });
 }
 
-// spec: docs/specs/writing-evaluation.md §Behaviour.7, 2 — correct a draft via the grounded CLI path.
+// spec: docs/specs/llm-provider.md §Behaviour.4, 6 — correct a draft through the injected LlmProvider.
 export function correctWithClaude(
   input: CorrectInput,
-  opts: RunClaudeOptions = {},
-): WritingCorrection {
-  return runClaudeJson(buildCorrectionPrompt(input), parseCorrectionResponse, {
-    ...opts,
-    jsonSchema: CORRECTION_SCHEMA,
-  });
+  provider: LlmProvider,
+  opts: CompleteOptions = {},
+): Promise<WritingCorrection> {
+  return completeJson(
+    provider,
+    buildCorrectionPrompt(input),
+    parseCorrectionResponse,
+    { ...opts, jsonSchema: CORRECTION_SCHEMA },
+  );
 }
 
 function parseObject(raw: string): Record<string, unknown> {

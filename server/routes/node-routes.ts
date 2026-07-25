@@ -7,7 +7,7 @@ import {
   completeWritingSession,
   requestCorrection as writingRequestCorrection,
   submitResponse as writingSubmitResponse,
-} from "../services/writing-node";
+} from "../services/writing-scoring";
 import {
   completeSpeakingSession,
   requestCorrection as speakingRequestCorrection,
@@ -36,6 +36,14 @@ const tooLarge = (limit: number) => (c: Context) =>
     fail("PAYLOAD_TOO_LARGE", `Request body exceeds ${limit} bytes.`),
     413,
   );
+
+// spec: docs/specs/llm-provider.md §Behaviour.1 — the Node entry always injects an `llm` (CLI or API
+// provider, per config); its absence here would be a wiring bug, not a runtime condition to handle.
+function requireLlm(c: Context<{ Variables: AppVars }>) {
+  const llm = c.get("llm");
+  if (!llm) throw new ApiError("INTERNAL", "No LLM provider configured.", 500);
+  return llm;
+}
 
 export function registerNodeRoutes(app: Hono<{ Variables: AppVars }>): void {
   // spec: docs/specs/question-export-import.md §API contract POST /api/questions/import
@@ -69,10 +77,13 @@ export function registerNodeRoutes(app: Hono<{ Variables: AppVars }>): void {
     async (c) => {
       try {
         const body = await readBody(c);
+        const { provider, config } = requireLlm(c);
         return c.json(
           ok(
             await writingSubmitResponse(
               c.get("db"),
+              provider,
+              config,
               writingSessionId(c.req.param("id")),
               writingTaskNumber(c.req.param("taskNumber")),
               requireText(body),
@@ -92,10 +103,12 @@ export function registerNodeRoutes(app: Hono<{ Variables: AppVars }>): void {
     async (c) => {
       try {
         const body = await readBody(c);
+        const { provider } = requireLlm(c);
         return c.json(
           ok(
             await writingRequestCorrection(
               c.get("db"),
+              provider,
               writingSessionId(c.req.param("id")),
               writingTaskNumber(c.req.param("taskNumber")),
               requireText(body),
@@ -115,10 +128,13 @@ export function registerNodeRoutes(app: Hono<{ Variables: AppVars }>): void {
       const elapsedMs = Number.isInteger(body.elapsedMs)
         ? (body.elapsedMs as number)
         : null;
+      const { provider, config } = requireLlm(c);
       return c.json(
         ok(
           await completeWritingSession(
             c.get("db"),
+            provider,
+            config,
             writingSessionId(c.req.param("id")),
             elapsedMs,
           ),
@@ -174,10 +190,13 @@ export function registerNodeRoutes(app: Hono<{ Variables: AppVars }>): void {
     "/api/speaking/sessions/:id/responses/:taskNumber/submit",
     async (c) => {
       try {
+        const { provider, config } = requireLlm(c);
         return c.json(
           ok(
             await speakingSubmitResponse(
               c.get("db"),
+              provider,
+              config,
               speakingSessionId(c.req.param("id")),
               speakingTaskNumber(c.req.param("taskNumber")),
             ),
@@ -192,10 +211,12 @@ export function registerNodeRoutes(app: Hono<{ Variables: AppVars }>): void {
   // spec: docs/specs/speaking-session.md §API contract — correction (training only).
   app.post("/api/speaking/sessions/:id/correct/:taskNumber", async (c) => {
     try {
+      const { provider } = requireLlm(c);
       return c.json(
         ok(
           await speakingRequestCorrection(
             c.get("db"),
+            provider,
             speakingSessionId(c.req.param("id")),
             speakingTaskNumber(c.req.param("taskNumber")),
           ),
@@ -213,10 +234,13 @@ export function registerNodeRoutes(app: Hono<{ Variables: AppVars }>): void {
       const elapsedMs = Number.isInteger(body.elapsedMs)
         ? (body.elapsedMs as number)
         : null;
+      const { provider, config } = requireLlm(c);
       return c.json(
         ok(
           await completeSpeakingSession(
             c.get("db"),
+            provider,
+            config,
             speakingSessionId(c.req.param("id")),
             elapsedMs,
           ),
