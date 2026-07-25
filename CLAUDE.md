@@ -211,6 +211,7 @@ Track detailed status in `docs/milestones.md`. High-level order:
 15. Cloudflare deployment (single Worker + Static Assets + D1 + R2 + Access; practice-only, all capabilities `false`)
 16. Content seeding + online practice mode + client capability-gating (`npm run deploy:content`; online Writing/Speaking show sample answers, no AI score; unscored history)
 17. Selectable LLM provider — local CLI default + Claude HTTP API (`LLM_PROVIDER`); lets the Worker score online when an API key is bound (**draft — spec written, awaiting approval**)
+18. Reliability — free local **Node-native** static analysis (ESLint security+invariants pass, `npm run analyze`) + test-coverage tracking for both the unit (vitest) and e2e (client + server) suites, both gating (**planned — specs approved**)
 
 ---
 

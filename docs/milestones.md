@@ -601,3 +601,72 @@ seam supersedes their CLI-only invocation sections, flagged via Rule-4 revision-
 **Specs:**
 
 - `docs/specs/llm-provider.md` (approved, implemented)
+
+---
+
+# Reliability initiative (Milestone 18)
+
+Milestone 18 shifts focus from feature growth to **solution reliability** — making regressions
+visible before they ship. Two complementary safety nets are added to the existing quality gate
+(`typecheck` / `lint` / `test` / `build` / `test:e2e`): **static application security testing (SAST)**
+that reasons about code beyond what ESLint's style/type rules catch, and **test-coverage measurement**
+across both the unit (vitest) and end-to-end (Playwright) suites so untested surfaces are quantified,
+not guessed at. Both must stay **local-first and free** (no paid SaaS, no cloud dependency), consistent
+with the project's tooling philosophy.
+
+---
+
+## Milestone 18 — Reliability: static analysis + test-coverage tracking
+
+**Status:** planned (specs to be written and approved before any implementation — SDD Rules 1 & 3)
+
+Adds two reliability tools to the repo and its quality gate. Neither changes application behaviour; both
+are developer-facing tooling (like `lint` / `typecheck`).
+
+**(a) Static code analysis (SAST).** Introduce a free, local, **Node-native** static-analysis pass —
+built by extending **ESLint** (already in the stack) with a dedicated security + project-invariant
+config (`eslint-plugin-security`, type-aware `typescript-eslint`, `eslint-plugin-no-unsanitized`) run
+separately from the style `lint`. A repo-local ruleset enforces invariants ESLint's defaults cannot
+(no raw SQL outside Drizzle, no `node:*` reachable from the portable core, thin route handlers,
+platform-scoped shell-outs), via path-scoped `no-restricted-imports`/`no-restricted-syntax` (+ a small
+local rule plugin). Semgrep (Python) and CodeQL were rejected on the local-first / no-extra-toolchain
+constraint. A new `npm run analyze` runs it and is a **blocking gate step** from the outset (pre-existing
+findings triaged to a clean state at introduction).
+
+**(b) Test-coverage tracking (unit + e2e).** Measure, report, and **gate** coverage for both suites.
+`@vitest/coverage-v8` is already a devDependency, so unit coverage is a config + script away. Playwright
+e2e coverage covers **both** the client (istanbul-instrumented build via `vite-plugin-istanbul`) and the
+server (Node under `c8`), merged with unit coverage into one **combined** istanbul/`lcov` report. A
+baseline is recorded and a **minimum threshold fails the gate** — seeded at/just under the baseline
+(green on day one) and ratcheted upward over time.
+
+- [x] Spec: static-analysis approach (Node-native ESLint security+invariants pass), rule set, custom
+      project-invariant rules, triage, and blocking-gate integration (`docs/specs/static-analysis.md` — approved)
+- [x] Spec: coverage collection for unit + e2e (client + server), combined report, and the threshold-
+      enforcement decision (`docs/specs/test-coverage.md` — approved)
+- [ ] Static analysis wired as `npm run analyze` (Node-native ESLint pass); runs locally offline and as a
+      blocking gate step; a documented, committed ruleset; existing findings triaged (fix or suppress with rationale)
+- [ ] Unit coverage via `@vitest/coverage-v8`; e2e coverage collected from the Playwright run for **both**
+      client (`vite-plugin-istanbul`) and server (`c8`); combined report under a gitignored output dir; a
+      short "how to read coverage" note in the runbook
+- [ ] Baseline coverage recorded; a minimum threshold fails the gate (seeded at/just under the baseline)
+- [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` still pass;
+      new tooling documented in CLAUDE.md `## Commands`
+
+**Key decisions (resolved in the approved specs):**
+
+1. **Static-analysis tool:** Node-native ESLint-based security+invariants pass (no Python/Java); Semgrep
+   and CodeQL rejected on the local-first / no-extra-toolchain constraint.
+2. **E2e coverage:** cover **both** client (`vite-plugin-istanbul`) and server (`c8`), merged with unit
+   coverage into one combined istanbul/`lcov` report.
+3. **Enforcement:** both the SAST run and a coverage minimum **fail the quality gate** from the outset;
+   the coverage threshold is seeded at the baseline (green on day one) and ratcheted up over time.
+
+**Still open (deferred to implementation, not blocking):** vitest v8-vs-istanbul provider for the merge,
+threshold granularity + the measured baseline number, and whether to also add a CI workflow / pre-push hook
+(no CI exists in the repo yet).
+
+**Specs:**
+
+- `docs/specs/static-analysis.md` (approved)
+- `docs/specs/test-coverage.md` (approved)
