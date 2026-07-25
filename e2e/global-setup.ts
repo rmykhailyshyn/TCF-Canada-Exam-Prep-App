@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { config as loadDotenv } from "dotenv";
 
@@ -83,6 +83,9 @@ function resetE2eDatabase(): void {
 export default async function globalSetup(): Promise<void> {
   // 1. Ensure the four listening dev clips exist (real, playable MP3s). Generate any missing ones
   //    with ffmpeg — distinct sine tones, 6s each, matching the durations the listening seed uses.
+  //    scripts/dev-audio/ is gitignored, so on a fresh checkout (CI) the directory is absent — create
+  //    it first, otherwise ffmpeg can't write the output file and fails with a misleading error.
+  mkdirSync(AUDIO_DIR, { recursive: true });
   for (let i = 1; i <= 4; i += 1) {
     const file = resolve(
       AUDIO_DIR,
