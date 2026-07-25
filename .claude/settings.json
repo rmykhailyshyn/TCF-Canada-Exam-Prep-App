@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/romanmykhailyshyn/Library/Caches/ms-playwright/chromium-1223/**)",
+      "Bash(npx playwright *)",
+      "Bash(git commit *)",
+      "Read(//private/tmp/**)",
+      "Bash(curl -s \"localhost:3001/api/questions/export?section=reading&difficulty=intermediate\")",
+      "Bash(node -e \"const j=require\\('./m5-exp.json'\\);console.log\\('error:',j.error\\);console.log\\('count:',j.data.questions.length,'| filter:',JSON.stringify\\(j.data.filter\\),'| formatVersion:',j.data.formatVersion\\);const seqs=j.data.questions.map\\(q=>q.sequence\\);console.log\\('sequences:',[...new Set\\(seqs\\)].sort\\(\\(a,b\\)=>a-b\\).join\\(','\\)\\);\")",
+      "Bash(node -e \"const d=require\\('./m5-exp.json'\\).data;process.stdout.write\\(JSON.stringify\\({document:d,override:false}\\)\\)\")",
+      "Bash(curl -s -X POST localhost:3001/api/questions/import -H 'Content-Type: application/json' -d @m5-imp-off.json)",
+      "Bash(node -e \"let s='';process.stdin.on\\('data',c=>s+=c\\).on\\('end',\\(\\)=>console.log\\(s\\)\\)\")",
+      "Bash(node -e \"const d=require\\('./m5-exp.json'\\).data;process.stdout.write\\(JSON.stringify\\({document:d,override:true}\\)\\)\")",
+      "Bash(curl -s -X POST localhost:3001/api/questions/import -H 'Content-Type: application/json' -d @m5-imp-on.json)",
+      "Bash(curl -s \"localhost:3001/api/questions/export?section=both\")",
+      "Bash(curl -s \"localhost:3001/api/questions/export?difficulty=wizard\")",
+      "Bash(curl -s -X POST localhost:3001/api/questions/import -H 'Content-Type: application/json' -d '{\"document\":{\"formatVersion\":99,\"questions\":[]},\"override\":false}')",
+      "Bash(curl -s -X POST localhost:3001/api/questions/import -H 'Content-Type: application/json' -d '{\"document\":{\"formatVersion\":1,\"questions\":\"x\"}}')",
+      "Bash(curl -s -X POST localhost:3001/api/questions/import -H 'Content-Type: application/json' -d '{\"document\":{\"formatVersion\":1,\"questions\":[{\"section\":\"reading\",\"sourceFile\":\"/x.pdf\",\"sequence\":3,\"text\":\"t\",\"options\":[{\"label\":\"A\",\"text\":\"a\",\"isCorrect\":false},{\"label\":\"B\",\"text\":\"b\",\"isCorrect\":false},{\"label\":\"C\",\"text\":\"c\",\"isCorrect\":false},{\"label\":\"D\",\"text\":\"d\",\"isCorrect\":false}]}]},\"override\":true}')",
+      "Bash(curl -s \"localhost:3001/api/questions/export?section=listening&difficulty=beginner\")",
+      "Bash(node -e \"const j=require\\('./m5-lis.json'\\);console.log\\('count:',j.data.questions.length,'| sample audio:',JSON.stringify\\(j.data.questions[0]?.audio\\),'| transcript segs:',j.data.questions[0]?.transcript.length\\);\")",
+      "Bash(node -e \"const d=require\\('./m5-lis.json'\\).data;process.stdout.write\\(JSON.stringify\\({document:d,override:true}\\)\\)\")",
+      "Bash(curl -s -X POST localhost:3001/api/questions/import -H 'Content-Type: application/json' -d @m5-lis-imp.json)",
+      "Bash(node -e \"let s='';process.stdin.on\\('data',c=>s+=c\\).on\\('end',\\(\\)=>{const j=JSON.parse\\(s\\);console.log\\('summary:',{inserted:j.data.inserted,overridden:j.data.overridden,skipped:j.data.skipped,warnings:j.data.warnings.length}\\);console.log\\('first warning:',j.data.warnings[0]\\);}\\)\")"
+    ]
+  }
+}
