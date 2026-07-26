@@ -17,6 +17,7 @@ function createCliProvider(
   config: Extract<LlmConfig, { provider: "cli" }>,
 ): LlmProvider {
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- async to satisfy the LlmProvider.complete Promise contract; the CLI provider wraps the synchronous runClaude spawn with no behaviour change.
     async complete(prompt, opts = {}) {
       return runClaude(prompt, {
         bin: config.bin,

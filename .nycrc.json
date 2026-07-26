@@ -1,0 +1,11 @@
+{
+  "check-coverage": true,
+  "per-file": false,
+  "lines": 40,
+  "branches": 24,
+  "functions": 25,
+  "statements": 34,
+  "temp-dir": "coverage/combined/.nyc_output",
+  "report-dir": "coverage/combined",
+  "reporter": ["text-summary", "lcov", "json"]
+}

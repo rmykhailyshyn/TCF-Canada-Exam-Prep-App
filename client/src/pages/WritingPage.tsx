@@ -28,7 +28,7 @@ export function WritingPage(): JSX.Element {
     );
   }
 
-  return <WritingRunner config={config} onHome={() => navigate("/")} />;
+  return <WritingRunner config={config} onHome={() => void navigate("/")} />;
 }
 
 function WritingRunner({

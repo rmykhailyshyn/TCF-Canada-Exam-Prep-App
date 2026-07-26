@@ -20,6 +20,9 @@ import type { MediaStore } from "./media-store";
 // reaches the portable core (the future Worker bundle). The content-type mapping is shared with the
 // R2 store via ./content-type.
 
+/* eslint-disable @typescript-eslint/require-await -- every method is `async` to satisfy the MediaStore
+   Promise-returning contract (the R2 implementation is genuinely async); the Node/filesystem store
+   fulfils it with synchronous fs calls, so no `await` is needed here. */
 export class NodeMediaStore implements MediaStore {
   // spec: docs/specs/server-runtime.md §Behaviour.6 — size + contentType for range headers / 416.
   async stat(
@@ -39,7 +42,7 @@ export class NodeMediaStore implements MediaStore {
     const nodeStream = range
       ? createReadStream(path, { start: range.start, end: range.end })
       : createReadStream(path);
-    return Readable.toWeb(nodeStream) as unknown as ReadableStream;
+    return Readable.toWeb(nodeStream);
   }
 
   // spec: docs/specs/server-runtime.md §Runtime abstractions — persist recording bytes.

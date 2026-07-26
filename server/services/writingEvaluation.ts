@@ -205,7 +205,7 @@ function parseObject(raw: string): Record<string, unknown> {
     return JSON.parse(slice) as Record<string, unknown>;
   } catch (error) {
     throw new ClaudeError(
-      `Model output was not valid JSON: ${error instanceof Error ? error.message : error}`,
+      `Model output was not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }

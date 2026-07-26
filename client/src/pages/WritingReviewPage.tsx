@@ -29,7 +29,7 @@ export function WritingReviewPage(): JSX.Element {
       <header className="flex items-center gap-4 border-b border-slate-200 bg-white px-6 py-3">
         <button
           type="button"
-          onClick={() => navigate("/history")}
+          onClick={() => void navigate("/history")}
           className="text-sm text-slate-500 transition hover:text-slate-900"
         >
           ← Back

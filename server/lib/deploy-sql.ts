@@ -28,6 +28,7 @@ export function sqlLiteral(value: unknown): string {
     for (const b of value) hex += b.toString(16).padStart(2, "0");
     return `X'${hex}'`;
   }
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- deliberate best-effort string fallback for any residual scalar the SQLite driver may hand back; the result is then single-quote-escaped as a SQL literal.
   const s = typeof value === "string" ? value : String(value);
   // SQLite string literal: wrap in single quotes, double any embedded single quote.
   return `'${s.replace(/'/g, "''")}'`;

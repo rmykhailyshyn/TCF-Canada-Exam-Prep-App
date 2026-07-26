@@ -48,7 +48,7 @@ export function SessionDetailPage(): JSX.Element {
       <header className="border-b border-slate-200 bg-white px-6 py-3 flex items-center gap-4">
         <button
           type="button"
-          onClick={() => navigate("/history")}
+          onClick={() => void navigate("/history")}
           className="text-slate-500 hover:text-slate-900 transition text-sm"
         >
           ← History
@@ -98,14 +98,14 @@ export function SessionDetailPage(): JSX.Element {
           <div className="mt-8 flex justify-center gap-3">
             <button
               type="button"
-              onClick={() => navigate(`/review/${s.id}`)}
+              onClick={() => void navigate(`/review/${s.id}`)}
               className="rounded-xl border border-slate-200 px-4 py-2 font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
             >
               Review answers
             </button>
             <button
               type="button"
-              onClick={() => navigate("/")}
+              onClick={() => void navigate("/")}
               className="rounded-xl bg-sky-600 px-4 py-2 font-medium text-white transition hover:bg-sky-700"
             >
               Back to home

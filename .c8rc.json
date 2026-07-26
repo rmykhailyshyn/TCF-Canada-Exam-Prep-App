@@ -1,0 +1,20 @@
+{
+  "reporter": ["json", "text-summary"],
+  "reports-dir": "coverage/e2e-server",
+  "temp-directory": "coverage/.v8-e2e-server",
+  "extension": [".ts"],
+  "include": ["server/**"],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "server/db/migrations/**",
+    "**/*.config.*",
+    "**/*.d.ts",
+    "node_modules/**",
+    "dist/**",
+    "coverage/**"
+  ],
+  "all": false,
+  "exclude-node-modules": true,
+  "clean": true
+}

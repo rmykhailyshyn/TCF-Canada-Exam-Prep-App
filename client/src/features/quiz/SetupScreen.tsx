@@ -76,13 +76,13 @@ export function SetupScreen({ onStart }: Props): JSX.Element {
           />
           {/* spec: section-navigation §Behaviour.1,3 — Writing/Speaking hand off to their own setup. */}
           <Card
-            onClick={() => navigate("/writing")}
+            onClick={() => void navigate("/writing")}
             icon="📝"
             title="Writing"
             subtitle="Expression écrite"
           />
           <Card
-            onClick={() => navigate("/speaking")}
+            onClick={() => void navigate("/speaking")}
             icon="🎤"
             title="Speaking"
             subtitle="Expression orale"

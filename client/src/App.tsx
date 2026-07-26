@@ -39,7 +39,7 @@ function Home(): JSX.Element {
   if (config) {
     const onExit = () => {
       setConfig(null);
-      if (location.state) navigate("/", { replace: true, state: null });
+      if (location.state) void navigate("/", { replace: true, state: null });
     };
     return config.section === "listening" ? (
       <ListeningQuizPage config={config} onExit={onExit} />

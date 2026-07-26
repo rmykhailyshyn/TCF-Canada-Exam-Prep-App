@@ -293,6 +293,27 @@ npm run typecheck:server
 # Lint
 npm run lint
 
+# Static analysis (SAST) — Node-native, offline, a BLOCKING gate step (Milestone 18a).
+# A dedicated ESLint pass (config: eslint.analysis.config.js), SEPARATE from `npm run lint`:
+#   - eslint-plugin-security + eslint-plugin-no-unsanitized (client) — injection/unsafe-DOM heuristics
+#   - type-aware typescript-eslint (recommendedTypeChecked) — floating promises, unsafe any, etc.
+#   - the repo-local `invariants` plugin (tools/eslint-plugin-invariants/) enforcing CLAUDE.md rules:
+#     portable-core-no-node-builtins, no-raw-sql, thin-route-handlers, shell-out-location (all `error`),
+#     plus no-any-without-comment (advisory `warn`).
+npm run analyze
+# Read a finding as: <file>:<line>:<col>  <severity>  <message>  <ruleId>. Triage each:
+#   - fix the code, OR
+#   - suppress with a rationale on the line above the finding:
+#       // eslint-disable-next-line <ruleId> -- <why this is safe here>
+#     (a bare disable with no rationale is itself a smell — always explain).
+# `error`-level findings FAIL the gate (exit non-zero); `warn` (advisory no-any-without-comment) is
+# reported but does NOT fail. Keep `npm run analyze` at 0 errors.
+# Add a new project-invariant rule:
+#   1. tools/eslint-plugin-invariants/rules/<rule-id>.js  (a rule whose message cites the CLAUDE.md invariant)
+#   2. register it in tools/eslint-plugin-invariants/index.js
+#   3. wire its severity in eslint.analysis.config.js (structural invariants → `error`; advisory → `warn`)
+#   4. add a RuleTester test tools/eslint-plugin-invariants/rules/<rule-id>.test.ts (valid + invalid cases)
+
 # Run all unit / render tests (vitest)
 npm test
 
@@ -304,6 +325,18 @@ npm test -- <path/to/file.test.ts>
 # global-setup seeds reading + listening dev data (generating the listening MP3s with ffmpeg),
 # so the suite is self-contained. One-time browser install: `npx playwright install chromium`.
 npm run test:e2e
+
+# Test coverage (unit + e2e), combined report + BLOCKING threshold gate (Milestone 18b).
+# All coverage output lands under coverage/ (gitignored — never committed): unit → coverage/unit,
+# e2e client → coverage/e2e-client, e2e server → coverage/e2e-server, merged → coverage/combined.
+npm run coverage:unit          # vitest with the istanbul provider → coverage/unit (text summary + lcov + json)
+npm run coverage:e2e           # COVERAGE=1 playwright run: client (vite-plugin-istanbul) + server (c8)
+npm run coverage               # runs unit + e2e, merges all three via nyc, prints the text-summary total
+#                                and enforces the committed per-metric threshold in .nycrc.json.
+# Read the text-summary block (Lines / Branches / Funcs / Stmts, % covered). The combined `coverage`
+# run is the gate: nyc check-coverage exits non-zero if any metric drops below its .nycrc.json minimum.
+# Adjust the threshold in .nycrc.json (per-metric: lines / branches / functions / statements). Ratchet
+# these UPWARD as coverage improves; never lower them to make a red gate pass.
 
 # Seed a 4-question listening band (Beginner) with generated audio + authored transcripts, for
 # exercising the listening UI without the Whisper import (not part of any spec; needs ffmpeg)

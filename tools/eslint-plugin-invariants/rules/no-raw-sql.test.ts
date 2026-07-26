@@ -27,6 +27,11 @@ it("no-raw-sql flags raw-string DB execution but allows the drizzle sql tag and 
         code: "db.select().from(users).where(eq(users.id, 1));",
         filename: "server/services/x.ts",
       },
+      // Framework `.get`/`.all` calls collide with the exec-method names but are not SQL — the arg
+      // must lead with a SQL keyword to be flagged. spec: static-analysis.md §Scope (genuine raw SQL).
+      { code: 'router.get("/export", handler);', filename: "server/routes/x.ts" },
+      { code: 'c.get("db");', filename: "server/routes/x.ts" },
+      { code: 'app.all("/api/*", handler);', filename: "server/index.ts" },
     ],
     invalid: [
       {

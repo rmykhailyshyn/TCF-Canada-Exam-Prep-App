@@ -259,10 +259,8 @@ export function validateQuestion(raw: unknown): ExportQuestion {
     passage:
       section === "reading" && isPlainObject(q.passage)
         ? {
-            sourceFile: (
-              (q.passage as Record<string, unknown>).sourceFile as string
-            ).trim(),
-            text: (q.passage as Record<string, unknown>).text as string,
+            sourceFile: (q.passage.sourceFile as string).trim(),
+            text: q.passage.text as string,
           }
         : null,
     audio:

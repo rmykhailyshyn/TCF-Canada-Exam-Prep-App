@@ -159,7 +159,7 @@ export function registerNodeRoutes(app: Hono<{ Variables: AppVars }>): void {
             'An "audio" file part is required.',
           );
         }
-        const blob = file as File;
+        const blob = file;
         const buf = Buffer.from(await blob.arrayBuffer());
         if (buf.length === 0) {
           throw new ApiError(

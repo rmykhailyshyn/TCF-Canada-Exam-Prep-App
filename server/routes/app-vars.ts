@@ -43,7 +43,7 @@ export function errorResponse(error: unknown, c: Context): Response {
 // previous global express.json() behaviour where handlers read `req.body ?? {}`.
 export async function readBody(c: Context): Promise<Record<string, unknown>> {
   try {
-    const body = await c.req.json();
+    const body: unknown = await c.req.json();
     return (body ?? {}) as Record<string, unknown>;
   } catch {
     return {};
@@ -64,7 +64,7 @@ export async function serveMedia(
   const store = c.get("mediaStore") as MediaStore;
   const meta = await store.stat(key);
   if (!meta) options.missing();
-  const size = meta!.size;
+  const size = meta.size;
 
   const headers: Record<string, string> = { "Content-Type": contentType };
   if (!options.rangeable) {

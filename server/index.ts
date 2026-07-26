@@ -45,6 +45,13 @@ async function main(): Promise<void> {
   serve({ fetch: app.fetch, port }, () => {
     console.log(`Server listening on http://localhost:${port}`);
   });
+
+  // spec: docs/specs/test-coverage.md §Behaviour.2 — exit gracefully on the signals the process
+  // manager (Playwright's webServer / concurrently) sends on teardown, so Node flushes NODE_V8_COVERAGE
+  // to disk and the c8 e2e-server coverage report is complete. No-op impact on normal dev/prod runs.
+  for (const signal of ["SIGTERM", "SIGINT"] as const) {
+    process.once(signal, () => process.exit(0));
+  }
 }
 
 void main();

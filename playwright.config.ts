@@ -38,7 +38,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev",
+    // spec: docs/specs/test-coverage.md §Behaviour.2 (server coverage via a c8-wrapped web-server),
+    // §Behaviour.8 (only under COVERAGE=1 — plain `npm run test:e2e` keeps using `npm run dev`). The
+    // `env: { DATABASE_URL: E2E_DATABASE_URL }` isolation override is preserved for BOTH commands.
+    command:
+      process.env.COVERAGE === "1" ? "npm run dev:coverage" : "npm run dev",
     url: "http://localhost:5173",
     // Always start a fresh server bound to the isolated e2e DB; never reuse a dev-DB server that may
     // be running on these ports. (Stop any local `npm run dev` before invoking the e2e suite.)

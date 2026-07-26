@@ -33,6 +33,11 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Node-native SAST (eslint-plugin-security + repo-local invariants). Blocking: any
+      # error-level finding fails the gate; advisory warnings do not (M18 static-analysis spec).
+      - name: Analyze
+        run: npm run analyze
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -66,8 +71,12 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run e2e suite
-        run: npm run test:e2e
+      # `npm run coverage` runs the e2e suite under instrumentation (COVERAGE=1 playwright test —
+      # same assertions as `test:e2e`), plus unit coverage, then merges all three (unit + e2e
+      # client + e2e server) and checks the committed per-metric threshold in .nycrc.json. This
+      # is the blocking combined-coverage gate; the coverage/ output stays gitignored/uncommitted.
+      - name: Run e2e suite under coverage + combined threshold gate
+        run: npm run coverage
 
       - name: Upload Playwright report on failure
         if: failure()

@@ -29,7 +29,7 @@ export type TaskTiming = {
 
 // spec: docs/specs/quiz-session.md §Configuration.18
 export function getExamConfig(): ExamConfig {
-  return examConfig as ExamConfig;
+  return examConfig;
 }
 
 // spec: docs/specs/quiz-session.md §Real mode.8 — timer initialised from the configured limit.

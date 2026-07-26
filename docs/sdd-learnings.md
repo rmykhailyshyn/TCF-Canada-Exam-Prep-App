@@ -528,3 +528,28 @@ is what let an orthogonal engine swap pass through one seam instead of smearing 
   `systemPrompt`) intersect the draft M17 provider seam (`complete(prompt, opts)`), which currently declares
   prompt/output changes out of scope. Annotating llm-provider.md *now* — so its future API provider must
   thread and translate these rather than regress them — was cheaper than letting M17 rediscover the gap.
+
+## Milestone 18 — Reliability (a "tooling-only" spec that was mostly real-code triage)
+
+- **"Tooling-only, no behaviour change" undersold the work: the static-analysis pass turned up 146 errors
+  on introduction.** Both specs read like config-and-a-script additions, but turning on `eslint-plugin-security`
+  + type-aware `typescript-eslint` + the repo-local invariant rules surfaced a large backlog of real findings
+  (unsafe-any, floating promises, etc.) that had to be triaged to a clean 0-error state — fix or
+  suppress-with-rationale — before the gate could be blocking. The residue (61 advisory `no-any-without-comment`
+  warnings, non-blocking by design) is the honest measure of "acceptable but not clean." **Lesson:** a spec that
+  introduces a *judgement tool* onto an existing codebase is never zero-diff to that codebase; budget the triage,
+  not just the wiring, because the tool's whole value is that it disagrees with code already shipped.
+
+- **The combined-coverage number is an approximation of three providers, and the spec had to name it as one.**
+  Merging vitest (istanbul), e2e-client (`vite-plugin-istanbul`) and e2e-server (`c8`) into one `nyc` figure
+  means the "combined %" is a union across instrumentation mechanisms that count slightly differently — it is a
+  *floor to ratchet*, not a precise truth. Seeding the `.nycrc.json` thresholds just under the measured baseline
+  (lines 40 / branches 24 / functions 25 / statements 34) keeps the gate green on day one while still catching
+  regressions; treating the number as exact would have made the gate flaky.
+
+- **The specs' "no CI exists" was wrong, and planning caught it before it became a wrong implementation.** Both
+  approved specs asserted no CI workflow existed; `.github/workflows/ci.yml` already ran lint→typecheck→test→build
+  + an e2e job. The Rule-4 divergence note in the plan turned a false premise into a concrete decision (Q-C1: wire
+  `analyze` + combined `coverage` into the existing jobs now) rather than letting an implementer either skip CI
+  wiring or bolt on a redundant second workflow. **Lesson:** an "approved" spec's factual claims about the repo
+  are still worth re-verifying at planning time — approval gates *intent*, not the accuracy of the spec's world-model.

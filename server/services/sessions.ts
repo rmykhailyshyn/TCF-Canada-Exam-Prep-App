@@ -128,7 +128,7 @@ export async function createSession(
     // kept (including multiple candidates that share a sequence position) — only the presentation
     // order is shuffled, no per-position pruning.
     let bandQuestions = sectionQuestions.filter((q) =>
-      sequenceInBand(q.sequence, band!),
+      sequenceInBand(q.sequence, band),
     );
 
     // Optional retry filter (review-mode). Every supplied id must fall within the band.
