@@ -165,3 +165,15 @@ Testable pass/fail conditions. Each maps back to a behaviour above.
   to the verified full Node-only set; the raw-SQL rule allows the `drizzle-orm` `sql` tag and
   `server/lib/deploy-sql.ts`; the shell-out allow-list adds `server/lib/` (for `claude-cli.ts`). Status
   stays approved.
+- 2026-07-25: Implemented (Status approved → implemented). Two Rule-4 scope clarifications surfaced in
+  review and recorded here rather than left silent: (1) **e2e/ is test infrastructure and is exempt from
+  the security + invariant rule blocks.** `npm run analyze` parses `e2e/**` (it lints the whole repo) but
+  the `eslint-plugin-security`, type-aware, and `invariants` rule blocks are scoped to `server/**` +
+  `scripts/**` + `client/**` — not `e2e/**` — so e2e's legitimate test-only `spawnSync` (ffmpeg in
+  `e2e/global-setup.ts`) is intentionally not flagged by `shell-out-location`. Behaviour.1's "…client/,
+  server/, scripts/, e2e/…" wording refers to the parsed source set; test infrastructure (not shipped
+  code) carries no security/invariant rules by design. (2) **The base style config `eslint.config.js` was
+  minimally touched** — the local `invariants` plugin is registered there and `reportUnusedDisableDirectives`
+  is set off — so a cross-pass `// eslint-disable invariants/…` directive needed by `analyze` resolves and
+  does not read as "unused" under `npm run lint`. This is integration plumbing so the two passes coexist; it
+  changes no style/hook/type rule. Both are accepted, documented deviations, not silent patches.

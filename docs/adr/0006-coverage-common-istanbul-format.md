@@ -33,8 +33,15 @@ local-first, no-SaaS constraint.
 
 ## Consequences
 
-- One common format means unit and e2e results merge deterministically into a single
-  reported total without a conversion step.
+- One common format means unit and e2e results merge into a single reported total via
+  `nyc`/`istanbul-lib-coverage` without a separate v8→istanbul conversion step for the
+  unit + e2e-client sources. The merge is deterministic (same inputs → same total), but the
+  combined figure is a **floor to ratchet, not a precise truth**: server files exercised by
+  BOTH the unit run (istanbul-native instrumentation) and the e2e-server run (`c8`, V8→istanbul-
+  converted) are merged by statement key across possibly-misaligned statement maps, so their
+  combined per-file statement/branch counts are an approximation. Acceptable for a threshold
+  gate seeded at the measured baseline; a truer figure would require both halves to share one
+  instrumenter.
 - Istanbul instrumentation is **slower** than v8's built-in coverage — accepted for the
   merge benefit; the cost is confined to the coverage runs, not plain `test`/`build`.
 - A **dedicated `c8`-wrapped coverage web-server** keeps plain `test:e2e` and the
