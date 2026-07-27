@@ -23,7 +23,7 @@ e2e/
 │   ├── test.ts          # extends base test with page-object + api fixtures (import from here)
 │   ├── api-client.ts    # ApiClient — session lifecycle + envelope unwrapping
 │   └── listening-data.ts# seeded listening question data
-├── global-setup.ts      # resets/migrates/seeds the dedicated tcf_prep_e2e.db SQLite file (referenced by config)
+├── global-setup.ts      # migrates/seeds the run's own tcf_prep_e2e-<id>.db SQLite file (referenced by config)
 └── README.md
 ```
 
@@ -66,10 +66,18 @@ e2e/
 ## Determinism & isolation
 
 The suite runs serially (`workers: 1`, `fullyParallel: false`) because flows mutate shared session
-state through one set of dev servers. `global-setup.ts` provisions a dedicated `tcf_prep_e2e.db`
-SQLite file (reset + migrate + reading/listening seeds, generating listening MP3s via ffmpeg) and the
+state through one set of dev servers. `global-setup.ts` provisions a dedicated `tcf_prep_e2e-<id>.db`
+SQLite file (migrate + reading/listening seeds, generating listening MP3s via ffmpeg) and the
 webServer runs the app against that same DB, so runs never touch the dev DB. Stop any local
 `npm run dev` before invoking the suite (the config never reuses an existing server).
+
+The `<id>` is per run, and previous runs' files are cleaned up at the start of the next one. That
+matters because Playwright starts `webServer` **before** `globalSetup`: the dev server has normally
+already opened (and created) the database file by the time setup runs, so deleting a fixed-name file
+there would strand the server on an unlinked, table-less inode and every `/api` call would fail for
+the rest of the run. A fresh name per run means there is nothing stale to delete — `migrate` applies
+the schema to the same file the server already holds. Setup then waits for `GET /api/health` before
+the first spec, because `webServer.url` only proves the Vite client is up, not the backend.
 
 Tests stay tolerant of dev-DB question counts where totals aren't seed-guaranteed (assert behaviour,
 not exact numbers) — except real-mode reading, where the seed fills all 39 positions.
