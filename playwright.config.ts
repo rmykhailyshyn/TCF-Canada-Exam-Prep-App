@@ -50,9 +50,9 @@ export default defineConfig({
     timeout: 120_000,
     env: { DATABASE_URL: E2E_DATABASE_URL },
     // Tear the server down with SIGTERM and WAIT for it to close. Without this Playwright force-kills
-    // the whole process group (SIGKILL), so the server never runs its own shutdown path — which the
-    // Milestone 18 coverage gate relies on to flush NODE_V8_COVERAGE to disk.
-    // spec: docs/specs/test-coverage.md §Behaviour.2
+    // the whole process group (SIGKILL), so server/index.ts's signal handler never runs and Node
+    // never flushes NODE_V8_COVERAGE — leaving coverage/.v8-e2e-server missing and
+    // `coverage:e2e:report` with nothing to convert. spec: docs/specs/test-coverage.md §Behaviour.2
     gracefulShutdown: { signal: "SIGTERM", timeout: 15_000 },
   },
 });

@@ -553,3 +553,17 @@ is what let an orthogonal engine swap pass through one seam instead of smearing 
   `analyze` + combined `coverage` into the existing jobs now) rather than letting an implementer either skip CI
   wiring or bolt on a redundant second workflow. **Lesson:** an "approved" spec's factual claims about the repo
   are still worth re-verifying at planning time — approval gates *intent*, not the accuracy of the spec's world-model.
+
+- **The e2e suite's CI break was a race the specs could not describe, in a seam neither spec owns: process
+  startup order.** Two independent defects sat between Playwright and the app, both invisible locally and
+  deterministic-looking in CI. (1) Playwright starts `webServer` *before* `globalSetup`, so the dev server had
+  usually opened the SQLite file already when setup deleted and re-created it — leaving the server bound to an
+  unlinked, table-less inode, so every `/api` request failed for the whole run while the client-only specs
+  passed. (2) Playwright force-kills (`SIGKILL`) the web-server process group unless `webServer.gracefulShutdown`
+  is configured, so the server's SIGTERM handler — the thing that flushes `NODE_V8_COVERAGE` — never ran, and the
+  new coverage gate had nothing to report on. Both are properties of *the harness's lifecycle*, not of any
+  behaviour a spec states; the specs' acceptance criteria were met by code that could not work. **Lesson:** when
+  a spec's mechanism depends on someone else's process lifecycle (who starts first, which signal arrives, who
+  waits for whom), that dependency is the risky part and deserves to be written down and pinned by a test —
+  `tools/e2e-runtime-invariants.test.ts` now does exactly that, because a green local run proves nothing about
+  ordering that CI's different timing will resolve the other way.
