@@ -61,7 +61,7 @@
     "nyc": "17.1.0",
     "prettier": "^3.9.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
+    "typescript": "^7.0.2",
     "typescript-eslint": "^8.18.1",
     "vite": "^6.0.5",
     "vite-plugin-istanbul": "7.2.1",
