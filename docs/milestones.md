@@ -618,7 +618,7 @@ with the project's tooling philosophy.
 
 ## Milestone 18 — Reliability: static analysis + test-coverage tracking
 
-**Status:** planned (specs to be written and approved before any implementation — SDD Rules 1 & 3)
+**Status:** implemented
 
 Adds two reliability tools to the repo and its quality gate. Neither changes application behaviour; both
 are developer-facing tooling (like `lint` / `typecheck`).
@@ -644,14 +644,34 @@ baseline is recorded and a **minimum threshold fails the gate** — seeded at/ju
       project-invariant rules, triage, and blocking-gate integration (`docs/specs/static-analysis.md` — approved)
 - [x] Spec: coverage collection for unit + e2e (client + server), combined report, and the threshold-
       enforcement decision (`docs/specs/test-coverage.md` — approved)
-- [ ] Static analysis wired as `npm run analyze` (Node-native ESLint pass); runs locally offline and as a
-      blocking gate step; a documented, committed ruleset; existing findings triaged (fix or suppress with rationale)
-- [ ] Unit coverage via `@vitest/coverage-v8`; e2e coverage collected from the Playwright run for **both**
-      client (`vite-plugin-istanbul`) and server (`c8`); combined report under a gitignored output dir; a
-      short "how to read coverage" note in the runbook
-- [ ] Baseline coverage recorded; a minimum threshold fails the gate (seeded at/just under the baseline)
-- [ ] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` still pass;
+- [x] Static analysis wired as `npm run analyze` (Node-native ESLint pass: `eslint-plugin-security` +
+      type-aware `typescript-eslint` + `eslint-plugin-no-unsanitized` + the repo-local `invariants` plugin);
+      runs locally offline and as a **blocking** gate step; a documented, committed ruleset; existing findings
+      triaged. **Runs clean at introduction — 0 errors** (61 advisory `no-any-without-comment` warnings, non-blocking)
+- [x] Unit coverage via `@vitest/coverage-istanbul` (swapped from v8 for one common merge format); e2e
+      coverage collected from the Playwright run for **both** client (`vite-plugin-istanbul`, `COVERAGE=1`) and
+      server (Node under `c8`); combined report merged with `nyc` under the gitignored `coverage/` dir; a
+      "how to read coverage" note added to the CLAUDE.md runbook
+- [x] Baseline coverage recorded; a per-metric minimum fails the gate (seeded at/just under the baseline —
+      green on day one, ratchet upward over time)
+- [x] Both new gates wired into `.github/workflows/ci.yml` (Q-C1): `analyze` in the `check` job; combined
+      `coverage` (which runs the e2e suite under instrumentation) in the `e2e` job
+- [x] `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e` still pass;
       new tooling documented in CLAUDE.md `## Commands`
+
+**Measured combined coverage baseline (2026-07-25)** — recorded at introduction; thresholds committed in
+`.nycrc.json` seeded at/just under each figure so the gate is green on day one and ratchets upward:
+
+| Metric     | Baseline | Threshold (`.nycrc.json`) |
+| ---------- | -------- | ------------------------- |
+| Lines      | 40.35%   | 40                        |
+| Branches   | 24.39%   | 24                        |
+| Functions  | 25.72%   | 25                        |
+| Statements | 34.67%   | 34                        |
+
+Static analysis runs **clean (0 errors)** at introduction: all pre-existing structural findings were fixed
+or suppressed-with-rationale; the only remaining output is 61 advisory `no-any-without-comment` warnings,
+which are reported but do not fail the gate.
 
 **Key decisions (resolved in the approved specs):**
 

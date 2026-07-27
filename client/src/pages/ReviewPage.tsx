@@ -54,7 +54,7 @@ export function ReviewPage(): JSX.Element {
       difficulty: band.difficulty,
       questionIds: band.questionIds,
     };
-    navigate("/", { state: { retryConfig } });
+    void navigate("/", { state: { retryConfig } });
   }
 
   return (
@@ -62,7 +62,7 @@ export function ReviewPage(): JSX.Element {
       <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-slate-200 bg-white px-6 py-3">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => void navigate(-1)}
           className="text-sm text-slate-500 transition hover:text-slate-900"
         >
           ← Back

@@ -38,7 +38,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev",
+    // spec: docs/specs/test-coverage.md §Behaviour.2 (server coverage via a c8-wrapped web-server),
+    // §Behaviour.8 (only under COVERAGE=1 — plain `npm run test:e2e` keeps using `npm run dev`). The
+    // `env: { DATABASE_URL: E2E_DATABASE_URL }` isolation override is preserved for BOTH commands.
+    command:
+      process.env.COVERAGE === "1" ? "npm run dev:coverage" : "npm run dev",
     url: "http://localhost:5173",
     // Always start a fresh server bound to the isolated e2e DB; never reuse a dev-DB server that may
     // be running on these ports. (Stop any local `npm run dev` before invoking the e2e suite.)
@@ -46,9 +50,9 @@ export default defineConfig({
     timeout: 120_000,
     env: { DATABASE_URL: E2E_DATABASE_URL },
     // Tear the server down with SIGTERM and WAIT for it to close. Without this Playwright force-kills
-    // the whole process group (SIGKILL), so the server never runs its own shutdown path — which the
-    // Milestone 18 coverage gate relies on to flush NODE_V8_COVERAGE to disk.
-    // spec: docs/specs/test-coverage.md §Behaviour.2
+    // the whole process group (SIGKILL), so server/index.ts's signal handler never runs and Node
+    // never flushes NODE_V8_COVERAGE — leaving coverage/.v8-e2e-server missing and
+    // `coverage:e2e:report` with nothing to convert. spec: docs/specs/test-coverage.md §Behaviour.2
     gracefulShutdown: { signal: "SIGTERM", timeout: 15_000 },
   },
 });

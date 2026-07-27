@@ -25,6 +25,11 @@ __pycache__/
 /blob-report/
 /playwright/.cache/
 
+# Coverage reports (unit + e2e client/server + combined) and nyc merge temp — all generated (M18)
+coverage/
+.nyc_output
+.nyc_output/
+
 # Local media directory (MEDIA_DIR): imported audio + dev-seed placeholder images, all generated
 /media/
 

@@ -32,19 +32,19 @@ export function TopNav({ active }: Props): JSX.Element {
     switch (key) {
       case "reading":
       case "listening":
-        navigate("/", { state: { section: key } });
+        void navigate("/", { state: { section: key } });
         break;
       case "writing":
-        navigate("/writing");
+        void navigate("/writing");
         break;
       case "speaking":
-        navigate("/speaking");
+        void navigate("/speaking");
         break;
       case "history":
-        navigate("/history");
+        void navigate("/history");
         break;
       case "questionBank":
-        navigate("/question-bank");
+        void navigate("/question-bank");
         break;
     }
   }
@@ -61,7 +61,7 @@ export function TopNav({ active }: Props): JSX.Element {
     <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/70 bg-white/80 px-6 py-3 backdrop-blur-md">
       <button
         type="button"
-        onClick={() => navigate("/")}
+        onClick={() => void navigate("/")}
         aria-label="Home"
         className="text-left"
       >

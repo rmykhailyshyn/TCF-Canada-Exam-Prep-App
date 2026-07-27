@@ -28,7 +28,7 @@ export function SpeakingPage(): JSX.Element {
     );
   }
 
-  return <SpeakingRunner config={config} onHome={() => navigate("/")} />;
+  return <SpeakingRunner config={config} onHome={() => void navigate("/")} />;
 }
 
 function SpeakingRunner({

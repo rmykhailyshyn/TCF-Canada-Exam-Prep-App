@@ -54,8 +54,9 @@ function parseArgs(argv: string[]): Args {
 
 // Read a whole content table as primitives (no Drizzle Date/boolean coercion) for raw SQL generation.
 async function readTable(name: string): Promise<DeployTable> {
+  // eslint-disable-next-line invariants/no-raw-sql -- content-deploy tool (spec-sanctioned) dumping known internal content tables; `name` is a fixed table identifier from the deploy manifest, not user input.
   const res = await client.execute(`SELECT * FROM "${name}"`);
-  const columns = res.columns as string[];
+  const columns = res.columns;
   const rows = res.rows.map((r) => {
     const obj: Record<string, unknown> = {};
     for (const c of columns) obj[c] = (r as Record<string, unknown>)[c];

@@ -2,7 +2,7 @@
 
 ## Status
 
-approved
+implemented
 
 > Milestone 18, part (a). Adds a free, local, **Node-native** static-analysis pass to the repo and the
 > quality gate. Developer-facing tooling only — like `lint` / `typecheck`, it changes no application
@@ -37,16 +37,23 @@ introduction so the blocking gate starts green.
   - A committed repo-local **project-invariant ruleset**, expressed with flat-config
     `no-restricted-imports` / `no-restricted-syntax` (path-scoped) and, where a pattern rule cannot
     express it, a small local ESLint rule plugin. Invariants drawn from CLAUDE.md — at minimum:
-    - no `node:*` (esp. `node:child_process` / `node:fs`) import in the **portable core** — approximated
-      as a path-scoped restriction on `server/app.ts` + `server/routes/**` **except** the Node-only
-      `server/routes/node-routes.ts` and `server/services/*-node.ts` (see Open questions on the
-      approximation), so the Worker bundle stays clean;
-    - no raw SQL string / template outside Drizzle query builders (DB access goes through Drizzle);
+    - no **Worker-forbidden** `node:*` builtin (`node:child_process`, `node:fs`, `node:stream`) import
+      in the **portable core** — approximated as a path-scoped restriction, **not** a blanket ban on all
+      `node:*`: the Worker-safe `node:path` / `node:url` used by portable services (`services/questions.ts`,
+      `services/speaking.ts`, `services/export-import.ts`, `config/env.ts`) are allowed. The restriction
+      exempts the verified Node-only set: `server/routes/node-routes.ts`, `server/services/*-node.ts`,
+      `server/lib/claude-cli.ts`, `server/lib/llm-provider-node.ts`, `server/runtime/node-media-store.ts`,
+      `server/db/sqlite-path.ts`, and `server/db/migrate.ts` (see Open questions on the approximation), so
+      the Worker bundle stays clean;
+    - no raw SQL string / template outside Drizzle query builders (DB access goes through Drizzle) —
+      **allowing** the legitimate `drizzle-orm` `sql` tag (schema defaults / check constraints in
+      `server/db/schema.ts`) and the `server/lib/deploy-sql.ts` content-deploy export tool, which produce
+      SQL strings by design; the rule targets only genuine raw-string DB execution;
     - route handlers stay thin (no direct DB / `child_process` calls in `server/routes/**` — go through a
       service);
     - no `any` without an accompanying explanation comment (advisory / warn-level);
     - no Apple-Silicon/macOS-specific logic (`child_process`, whisper/tesseract shell-outs) outside
-      `scripts/` and `server/services/`.
+      `scripts/`, `server/services/`, and `server/lib/` (the last for `claude-cli.ts`).
   - A dedicated config (e.g. `eslint.analysis.config.js`) and an npm script (`npm run analyze`, working
     name) that runs this stricter pass over the repo and **exits non-zero on any finding at or above the
     configured blocking severity**.
@@ -113,7 +120,7 @@ Testable pass/fail conditions. Each maps back to a behaviour above.
 - [ ] The command exits non-zero when a finding at/above the blocking severity exists and zero otherwise. (Behaviour.2)
 - [ ] The scan reuses/extends the repo's ESLint ignores so generated/third-party/media/data paths produce no findings. (Behaviour.3)
 - [ ] The security layer (`eslint-plugin-security`, type-aware `typescript-eslint`, `eslint-plugin-no-unsanitized` on the client) is enabled via committed config. (Behaviour.4)
-- [ ] A committed repo-local invariant ruleset enforces at least: no `node:*` reachable from the portable core; no raw SQL outside Drizzle; no direct DB/`child_process` in route handlers; no OCR/Whisper shell-outs outside `scripts/`+`server/services/`. Each rule has an id, invariant-referencing message, and severity, and a crafted violation is reported. (Behaviour.5)
+- [ ] A committed repo-local invariant ruleset enforces at least: no `node:*` reachable from the portable core; no raw SQL outside Drizzle; no direct DB/`child_process` in route handlers; no OCR/Whisper shell-outs outside `scripts/`+`server/services/`+`server/lib/`. Each rule has an id, invariant-referencing message, and severity, and a crafted violation is reported. (Behaviour.5)
 - [ ] A finding can be suppressed inline with a rationale, and suppression prevents a gate failure for that site. (Behaviour.6)
 - [ ] Introducing the pass leaves a **clean** run: every pre-existing finding is fixed or suppressed with rationale, so the blocking gate is green. (Behaviour.9)
 - [ ] `npm run analyze` is a blocking step of the documented quality gate, and CLAUDE.md `## Commands` documents how to run, read, triage, and extend it. (Behaviour.2, Behaviour.10)
@@ -140,8 +147,10 @@ Testable pass/fail conditions. Each maps back to a behaviour above.
    highest-value few (portable-core purity + no-raw-SQL) for the first pass and grow later?
 5. **Blocking severity.** Confirm only `error`-level findings block, with the advisory
    `any`-without-comment rule (and similar low-signal rules) at `warn` (non-blocking).
-6. **Where else does it run?** Local gate is confirmed; also wire a pre-push hook and/or CI? No CI
-   workflow currently exists in the repo — introducing one is a separate decision.
+6. ~~**Where else does it run?**~~ **Resolved 2026-07-25:** CI **does** exist
+   (`.github/workflows/ci.yml`, jobs `check` + `e2e`) — the earlier "no CI workflow exists" premise was
+   wrong. The real decision was therefore whether to add `analyze` to `ci.yml`: **confirmed yes** — wire
+   `analyze` in as a blocking `ci.yml` step this milestone. A pre-push hook remains optional/out of scope.
 
 ## Revision history
 
@@ -149,3 +158,22 @@ Testable pass/fail conditions. Each maps back to a behaviour above.
 - 2026-07-25: Resolved Open Q1 (Node-native ESLint-based pass; Semgrep/CodeQL rejected) and Q2 (blocking
   gate from the outset, no report-only phase) per the human's decisions; Goal/Scope/Behaviour/AC updated
   accordingly. Status draft → approved.
+- 2026-07-25: Rule-4 correction (CI exists). Corrected Open Q6 — `.github/workflows/ci.yml` already exists,
+  so the real decision was "add `analyze` to `ci.yml`", confirmed yes. Tightened the invariant wording: the
+  `node:*` rule targets only the Worker-forbidden builtins (`node:child_process`/`node:fs`/`node:stream`),
+  NOT the Worker-safe `node:path`/`node:url` used by portable services, with the exempt-path list expanded
+  to the verified full Node-only set; the raw-SQL rule allows the `drizzle-orm` `sql` tag and
+  `server/lib/deploy-sql.ts`; the shell-out allow-list adds `server/lib/` (for `claude-cli.ts`). Status
+  stays approved.
+- 2026-07-25: Implemented (Status approved → implemented). Two Rule-4 scope clarifications surfaced in
+  review and recorded here rather than left silent: (1) **e2e/ is test infrastructure and is exempt from
+  the security + invariant rule blocks.** `npm run analyze` parses `e2e/**` (it lints the whole repo) but
+  the `eslint-plugin-security`, type-aware, and `invariants` rule blocks are scoped to `server/**` +
+  `scripts/**` + `client/**` — not `e2e/**` — so e2e's legitimate test-only `spawnSync` (ffmpeg in
+  `e2e/global-setup.ts`) is intentionally not flagged by `shell-out-location`. Behaviour.1's "…client/,
+  server/, scripts/, e2e/…" wording refers to the parsed source set; test infrastructure (not shipped
+  code) carries no security/invariant rules by design. (2) **The base style config `eslint.config.js` was
+  minimally touched** — the local `invariants` plugin is registered there and `reportUnusedDisableDirectives`
+  is set off — so a cross-pass `// eslint-disable invariants/…` directive needed by `analyze` resolves and
+  does not read as "unused" under `npm run lint`. This is integration plumbing so the two passes coexist; it
+  changes no style/hook/type rule. Both are accepted, documented deviations, not silent patches.

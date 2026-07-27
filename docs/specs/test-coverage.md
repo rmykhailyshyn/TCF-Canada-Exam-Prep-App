@@ -2,7 +2,7 @@
 
 ## Status
 
-approved
+implemented
 
 > Milestone 18, part (b). Measures and reports code coverage for **both** test suites — the vitest
 > unit/render suite (`npm test`) and the Playwright end-to-end suite (`npm run test:e2e`) — and **fails
@@ -113,20 +113,20 @@ Testable pass/fail conditions. Each maps back to a behaviour above.
 2. ~~**Threshold enforcement.**~~ **Resolved 2026-07-25:** enforce a **minimum threshold that fails the
    gate**. The initial value is set at/just under the recorded baseline (so day-one green) and ratcheted
    upward over time — not an aspirational number that blocks work immediately.
-3. **Provider consistency for the merge.** To merge unit + e2e into one istanbul/`lcov` figure, vitest
-   likely needs its **istanbul** provider (rather than the installed `v8` provider) for a common format,
-   or a v8→istanbul conversion step. Which: switch vitest to `@vitest/coverage-istanbul`, or keep `v8`
-   and convert? (Affects which devDependency is added.)
-4. **Threshold granularity + initial number.** One overall lines threshold, or per-metric
-   (lines/branches/functions), and enforced on the **combined** figure only or per-suite too? The exact
-   baseline number is measured during implementation and recorded then.
-5. **Coverage in the gate vs. CI.** The combined coverage run is confirmed as a gate step; also add it
-   to CI? No CI workflow exists yet — introducing one is a separate decision (shared with
-   `static-analysis.md` Open Q6).
-6. **E2e server coverage wiring.** Running the dev server under `c8` during `test:e2e` means the
-   Playwright `webServer.command` (`npm run dev`) is wrapped for the coverage run only, without
-   disturbing the normal `test:e2e` invocation or the `E2E_DATABASE_URL` isolation. Confirm the wrapping
-   approach (a dedicated coverage web-server command) at implementation time.
+3. ~~**Provider consistency for the merge.**~~ **Resolved 2026-07-25:** switch vitest to the
+   **`@vitest/coverage-istanbul`** provider (dropping the installed `@vitest/coverage-v8`) so unit + e2e
+   share one common istanbul format and merge deterministically, with no v8→istanbul conversion step.
+4. ~~**Threshold granularity + initial number.**~~ **Resolved 2026-07-25:** enforce a **per-metric**
+   threshold (lines/branches/functions) on the **combined** figure only (not per-suite), seeded at/just
+   under the measured baseline. The exact baseline number is measured during implementation and recorded
+   then.
+5. ~~**Coverage in the gate vs. CI.**~~ **Resolved 2026-07-25:** CI **does** exist
+   (`.github/workflows/ci.yml`, jobs `check` + `e2e`) — the earlier "no CI workflow exists" premise was
+   wrong. The combined `coverage` run **will** be added to `ci.yml` as a blocking step this milestone
+   (confirmed, shared with `static-analysis.md` Open Q6).
+6. ~~**E2e server coverage wiring.**~~ **Resolved 2026-07-25:** use a **dedicated `c8`-wrapped coverage
+   web-server** command (source-map aware) as the Playwright `webServer.command` for the coverage run
+   only, leaving the normal `test:e2e` invocation and the `E2E_DATABASE_URL` isolation untouched.
 
 ## Revision history
 
@@ -135,3 +135,8 @@ Testable pass/fail conditions. Each maps back to a behaviour above.
   client, `c8` for the server) and Q2 (enforce a gate-failing minimum threshold, seeded at the baseline)
   per the human's decisions; Goal/Scope/Behaviour/AC updated for combined reporting + threshold gating.
   Status draft → approved.
+- 2026-07-25: Rule-4 correction (CI exists). Corrected Open Q5 — `.github/workflows/ci.yml` already
+  exists, and the combined `coverage` run will be added to it as a blocking step (confirmed). Resolved
+  Open Q3 (switch vitest to `@vitest/coverage-istanbul`, dropping `@vitest/coverage-v8`), Q4 (per-metric
+  threshold on the combined figure only, seeded at baseline), and Q6 (dedicated `c8`-wrapped coverage
+  web-server for e2e server coverage). Status stays approved.

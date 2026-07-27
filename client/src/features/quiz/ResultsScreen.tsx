@@ -83,9 +83,9 @@ export function ResultsScreen({
           <button
             type="button"
             disabled={sessionId == null}
-            onClick={() =>
-              sessionId != null && navigate(`/review/${sessionId}`)
-            }
+            onClick={() => {
+              if (sessionId != null) void navigate(`/review/${sessionId}`);
+            }}
             className="rounded-xl border border-slate-200 px-5 py-2.5 font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
           >
             Review answers

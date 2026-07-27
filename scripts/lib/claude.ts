@@ -118,7 +118,7 @@ export function parseExplanationResponse(raw: string): Explanation {
     obj = JSON.parse(slice) as Record<string, unknown>;
   } catch (error) {
     throw new ClaudeError(
-      `Model output was not valid JSON: ${error instanceof Error ? error.message : error}`,
+      `Model output was not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
   for (const field of REASON_FIELDS) {

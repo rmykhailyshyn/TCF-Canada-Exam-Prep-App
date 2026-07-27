@@ -46,7 +46,7 @@ export function parseWhisperJson(raw: string): WhisperResult {
     json = JSON.parse(raw) as WhisperJson;
   } catch (error) {
     throw new WhisperError(
-      `Whisper produced unparseable JSON: ${error instanceof Error ? error.message : error}`,
+      `Whisper produced unparseable JSON: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 

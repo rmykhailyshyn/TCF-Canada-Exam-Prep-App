@@ -33,6 +33,7 @@ function insertIntoTextarea(
   const end = textarea.selectionEnd ?? start;
   const { value, caret } = computeInsertion(textarea.value, start, end, glyph);
   // Use the native setter so React's value tracker sees the change and onChange fires.
+  // eslint-disable-next-line @typescript-eslint/unbound-method -- native value setter is invoked with an explicit `this` via setter.call(textarea, …) below, so it is never called unbound.
   const setter = Object.getOwnPropertyDescriptor(
     window.HTMLTextAreaElement.prototype,
     "value",

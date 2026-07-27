@@ -29,6 +29,7 @@ export async function createDb(): Promise<DbClient> {
   const client = createClient({ url });
   // `foreign_keys` is OFF by default in SQLite; enable it so the schema's references(...) constraints
   // are enforced.
+  // eslint-disable-next-line invariants/no-raw-sql -- static PRAGMA on the raw libSQL client (no user input); Drizzle's query builder cannot issue connection PRAGMAs.
   await client.execute("PRAGMA foreign_keys = ON");
   return drizzle(client, { schema });
 }

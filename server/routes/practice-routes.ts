@@ -159,7 +159,7 @@ export function registerPracticeRoutes(
             'An "audio" file part is required.',
           );
         }
-        const blob = file as File;
+        const blob = file;
         const buf = new Uint8Array(await blob.arrayBuffer());
         if (buf.length === 0) {
           throw new ApiError(

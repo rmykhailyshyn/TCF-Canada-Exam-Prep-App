@@ -81,7 +81,7 @@ export function HistoryPage(): JSX.Element {
                   <button
                     type="button"
                     onClick={() =>
-                      navigate(
+                      void navigate(
                         s.section === "writing"
                           ? `/writing/${s.id}`
                           : s.section === "speaking"

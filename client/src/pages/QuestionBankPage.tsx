@@ -169,7 +169,7 @@ function ExportPanel(): JSX.Element {
         <button
           type="button"
           disabled={busy}
-          onClick={runExport}
+          onClick={() => void runExport()}
           className="rounded-xl bg-brand-600 px-6 py-2.5 font-semibold text-white shadow-brand-glow transition enabled:hover:bg-brand-700 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
         >
           {busy ? "Exporting…" : "Export"}
@@ -263,7 +263,7 @@ function ImportPanel(): JSX.Element {
         <button
           type="button"
           disabled={busy || !file}
-          onClick={runImport}
+          onClick={() => void runImport()}
           className="rounded-xl bg-brand-600 px-6 py-2.5 font-semibold text-white shadow-brand-glow transition enabled:hover:bg-brand-700 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
         >
           {busy ? "Importing…" : "Import"}
