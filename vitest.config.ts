@@ -10,6 +10,9 @@ export default defineConfig({
       "scripts/**/*.test.ts",
       "client/**/*.test.ts",
       "client/**/*.test.tsx",
+      // Repo-tooling invariants (e.g. the e2e harness config pinned by
+      // tools/e2e-runtime-invariants.test.ts).
+      "tools/**/*.test.ts",
     ],
   },
 });

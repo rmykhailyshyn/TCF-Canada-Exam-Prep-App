@@ -4,7 +4,7 @@ import { E2E_DATABASE_URL } from "./e2e/global-setup";
 // End-to-end regression suite for the quiz UI (reading + listening). Runs against the dev servers
 // (`npm run dev`) using Playwright's bundled Chromium — no system Chrome required. The suite is
 // self-contained AND isolated: e2e/global-setup.ts creates, migrates and seeds a DEDICATED
-// `tcf_prep_e2e` database (reading + listening dev seeds with generated audio), and the webServer
+// per-run `tcf_prep_e2e-<id>` database (reading + listening dev seeds with generated audio), and the webServer
 // below launches the app against that same DB — so the run is deterministic and never touches the
 // dev DB (which may hold real imports with several questions per position). Invoke with
 // `npm run test:e2e`.
@@ -45,5 +45,10 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120_000,
     env: { DATABASE_URL: E2E_DATABASE_URL },
+    // Tear the server down with SIGTERM and WAIT for it to close. Without this Playwright force-kills
+    // the whole process group (SIGKILL), so the server never runs its own shutdown path — which the
+    // Milestone 18 coverage gate relies on to flush NODE_V8_COVERAGE to disk.
+    // spec: docs/specs/test-coverage.md §Behaviour.2
+    gracefulShutdown: { signal: "SIGTERM", timeout: 15_000 },
   },
 });
