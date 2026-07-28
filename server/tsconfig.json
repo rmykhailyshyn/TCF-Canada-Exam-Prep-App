@@ -8,5 +8,10 @@
   // The Cloudflare Worker entry + R2 store are typed against @cloudflare/workers-types in a separate
   // program (tsconfig.worker.json) to avoid clashing global libs with @types/node. spec:
   // docs/specs/cloud-deployment.md §Open questions (nodejs_compat extent).
-  "exclude": ["worker.ts", "worker.test.ts", "runtime/r2-media-store.ts"]
+  "exclude": [
+    "worker.ts",
+    "worker.test.ts",
+    "runtime/r2-media-store.ts",
+    "runtime/r2-media-store.test.ts"
+  ]
 }

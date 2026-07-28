@@ -673,6 +673,36 @@ Static analysis runs **clean (0 errors)** at introduction: all pre-existing stru
 or suppressed-with-rationale; the only remaining output is 61 advisory `no-any-without-comment` warnings,
 which are reported but do not fail the gate.
 
+### Follow-up: unit coverage raised to ≥70% (2026-07-27, `chore/unit-test-coverage-70`)
+
+`test-coverage.md` put test-*writing* out of scope ("measurement + threshold first"). This follow-up did
+that writing: ~370 new unit/render tests across the server services + routes, the client session hooks,
+the history/review pages and the pure libs (593 tests total, all green). No production behaviour changed.
+
+A **per-suite unit threshold of 70% on all four metrics** was added to `vitest.config.ts`, alongside the
+combined `.nycrc.json` one (a Rule-4 revision — `test-coverage.md` Open Q4 had said "combined only"). The
+CI `check` job now runs `npm run coverage:unit` in place of `npm test`, so the unit gate blocks PRs.
+
+| Metric     | Unit before | Unit after | Unit threshold | Combined before | Combined after | Combined threshold |
+| ---------- | ----------- | ---------- | -------------- | --------------- | -------------- | ------------------ |
+| Lines      | 39.72%      | **84.60%** | 70             | 40.35%          | **56.60%**     | 55                 |
+| Branches   | 40.97%      | **76.15%** | 70             | 24.39%          | **59.84%**     | 58                 |
+| Functions  | 34.92%      | **76.49%** | 70             | 25.72%          | **54.17%**     | 53                 |
+| Statements | 39.12%      | **84.32%** | 70             | 34.67%          | **49.72%**     | 48                 |
+
+Two coverage-config corrections went in with it (both Rule-4, recorded in `test-coverage.md`):
+
+- `scripts/.venv/**` is now excluded — `scripts/**` was sweeping the gitignored Python venv's vendored
+  third-party JS (torch/preact/htm, urllib3) into the denominator, ~450 lines this project does not own.
+  This alone moved the measured unit baseline from 34.34% to 39.72% lines.
+- The `scripts/*.ts` CLI mains and the process bootstraps (`server/index.ts`, `server/db/migrate.ts`,
+  `server/db/index.ts`, `client/src/main.tsx`) are excluded from the unit denominator — 507 lines of argv
+  shells with no importable surface, covered by the e2e suite and manual runs instead.
+
+The combined figures were measured with 3 pre-existing `e2e/features/listening.spec.ts` failures (they
+fail identically on a clean `main` checkout locally, unrelated to this work), so the real combined number
+is at or above what is recorded here and the thresholds are conservative.
+
 **Key decisions (resolved in the approved specs):**
 
 1. **Static-analysis tool:** Node-native ESLint-based security+invariants pass (no Python/Java); Semgrep

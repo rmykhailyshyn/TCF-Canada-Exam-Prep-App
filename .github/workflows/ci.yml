@@ -41,8 +41,10 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Unit tests
-        run: npm test
+      # Runs the same vitest suite as `npm test`, with coverage, and fails below the per-metric
+      # unit threshold committed in vitest.config.ts (spec: test-coverage.md §Behaviour.7).
+      - name: Unit tests + coverage threshold
+        run: npm run coverage:unit
 
       - name: Build
         run: npm run build

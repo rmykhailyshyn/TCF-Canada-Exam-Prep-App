@@ -230,4 +230,196 @@ describe("validateQuestion (shape + answer key)", () => {
     const l = validateQuestion(listeningQuestion({ transcript: [] }));
     expect(l.transcript).toEqual([]);
   });
+
+  // The remaining per-field rejections, each naming the offending key so the operator can find it.
+  const moreCases: [string, unknown, string][] = [
+    ["a non-object question", "not an object", "object"],
+    ["a null question", null, "object"],
+    [
+      "an option that is not an object",
+      readingQuestion({
+        options: ["A", "B", "C", "D"],
+      }),
+      "option",
+    ],
+    [
+      "an option label outside A–D",
+      readingQuestion({
+        options: [
+          { label: "E", text: "e", isCorrect: true },
+          { label: "B", text: "b", isCorrect: false },
+          { label: "C", text: "c", isCorrect: false },
+          { label: "D", text: "d", isCorrect: false },
+        ],
+      }),
+      "label",
+    ],
+    [
+      "a duplicate option label",
+      readingQuestion({
+        options: [
+          { label: "A", text: "a", isCorrect: true },
+          { label: "A", text: "a2", isCorrect: false },
+          { label: "C", text: "c", isCorrect: false },
+          { label: "D", text: "d", isCorrect: false },
+        ],
+      }),
+      "Duplicate option label",
+    ],
+    [
+      "an option with a non-string text",
+      readingQuestion({
+        options: [
+          { label: "A", text: 1, isCorrect: true },
+          { label: "B", text: "b", isCorrect: false },
+          { label: "C", text: "c", isCorrect: false },
+          { label: "D", text: "d", isCorrect: false },
+        ],
+      }),
+      "text",
+    ],
+    [
+      "an option with a non-boolean isCorrect",
+      readingQuestion({
+        options: [
+          { label: "A", text: "a", isCorrect: "yes" },
+          { label: "B", text: "b", isCorrect: false },
+          { label: "C", text: "c", isCorrect: false },
+          { label: "D", text: "d", isCorrect: false },
+        ],
+      }),
+      "isCorrect",
+    ],
+    ["a non-integer sequence", readingQuestion({ sequence: 1.5 }), "sequence"],
+    ["a sequence below 1", readingQuestion({ sequence: 0 }), "sequence"],
+    ["a non-numeric sequence", readingQuestion({ sequence: "3" }), "sequence"],
+    [
+      "a passage that is neither an object nor null",
+      readingQuestion({ passage: "just text" }),
+      "passage",
+    ],
+    [
+      "a passage with an empty sourceFile",
+      readingQuestion({ passage: { sourceFile: " ", text: "t" } }),
+      "sourceFile",
+    ],
+    [
+      "a passage with a non-string text",
+      readingQuestion({ passage: { sourceFile: "p.png", text: 7 } }),
+      "text",
+    ],
+    [
+      "a transcript segment that is not an object",
+      listeningQuestion({ transcript: ["bonjour"] }),
+      "segment",
+    ],
+    [
+      "a transcript segment with no numeric sequence",
+      listeningQuestion({
+        transcript: [{ text: "a", startMs: 0, endMs: 1 }],
+      }),
+      "sequence",
+    ],
+    [
+      "a transcript segment with a non-string text",
+      listeningQuestion({
+        transcript: [{ sequence: 0, text: 5, startMs: 0, endMs: 1 }],
+      }),
+      "text",
+    ],
+    [
+      "a transcript segment with a non-numeric startMs",
+      listeningQuestion({
+        transcript: [{ sequence: 0, text: "a", startMs: "0", endMs: 1 }],
+      }),
+      "startMs",
+    ],
+    [
+      "a transcript segment with a non-numeric endMs",
+      listeningQuestion({
+        transcript: [{ sequence: 0, text: "a", startMs: 0, endMs: null }],
+      }),
+      "endMs",
+    ],
+    [
+      "an audio reference with an empty fileName",
+      listeningQuestion({ audio: { fileName: "  ", durationMs: 1 } }),
+      "fileName",
+    ],
+    [
+      "an audio durationMs that is neither a number nor null",
+      listeningQuestion({ audio: { fileName: "q.mp3", durationMs: "30s" } }),
+      "durationMs",
+    ],
+  ];
+
+  for (const [name, q, key] of moreCases) {
+    it(`rejects ${name}`, () => {
+      expect(() => validateQuestion(q)).toThrow(ApiError);
+      try {
+        validateQuestion(q);
+      } catch (e) {
+        expect((e as ApiError).code).toBe("VALIDATION_FAILED");
+        expect((e as ApiError).message).toContain(key);
+      }
+    });
+  }
+
+  // spec: §Behaviour.14 — the message labels the question so a bad element can be located.
+  it("labels the offending question in the error message", () => {
+    try {
+      validateQuestion(readingQuestion({ text: "" }));
+    } catch (e) {
+      expect((e as ApiError).message).toContain("reading/12");
+    }
+    try {
+      validateQuestion("nonsense");
+    } catch (e) {
+      expect((e as ApiError).message).toContain("?/?");
+    }
+  });
+
+  it("trims the sourceFile and the passage sourceFile", () => {
+    const r = validateQuestion(
+      readingQuestion({
+        sourceFile: "  results.pdf  ",
+        passage: { sourceFile: "  p.png  ", text: "t" },
+      }),
+    );
+    expect(r.sourceFile).toBe("results.pdf");
+    expect(r.passage?.sourceFile).toBe("p.png");
+  });
+
+  it("normalises a missing audio durationMs to null", () => {
+    const l = validateQuestion(
+      listeningQuestion({ audio: { fileName: "q.mp3", durationMs: null } }),
+    );
+    expect(l.audio?.durationMs).toBeNull();
+  });
+
+  it("accepts an absent (undefined) reading passage", () => {
+    expect(validateQuestion(readingQuestion({ passage: undefined })).passage)
+      .toBeNull();
+  });
+});
+
+describe("assertDocumentShape (via validateDocument)", () => {
+  it("rejects a document that is not an object", () => {
+    for (const bad of ["a string", 42, null, ["array"]]) {
+      expect(() => validateDocument(bad)).toThrow(ApiError);
+    }
+  });
+
+  it("names the unsupported formatVersion in the message", () => {
+    try {
+      validateDocument({ formatVersion: 99, questions: [] });
+    } catch (e) {
+      expect((e as ApiError).code).toBe("INVALID_FORMAT");
+      expect((e as ApiError).message).toContain("99");
+    }
+  });
+
+  it("accepts an empty question list", () => {
+    expect(validateDocument({ formatVersion: 1, questions: [] })).toEqual([]);
+  });
 });

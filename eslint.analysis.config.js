@@ -112,13 +112,18 @@ export default tseslint.config(
     },
   },
 
-  // Test scaffolding (unit + render tests) is categorically outside the reach of these rules: tests
-  // legitimately mock DB clients, import node:fs to build fixtures, run static PRAGMAs, and stub async
-  // methods that never await. The security SAST heuristics, the cross-file project invariants, and the
-  // strict type-aware safety rules all target shipped production code, so they are disabled here — the
-  // production sources they protect are still fully covered above. spec: static-analysis.md §Behaviour.9
+  // Test scaffolding (unit + render tests, and the shared harnesses under */test-support/ they build
+  // on) is categorically outside the reach of these rules: tests legitimately mock DB clients, import
+  // node:fs to build fixtures, run static PRAGMAs, and stub async methods that never await. The
+  // security SAST heuristics, the cross-file project invariants, and the strict type-aware safety
+  // rules all target shipped production code, so they are disabled here — the production sources they
+  // protect are still fully covered above. spec: static-analysis.md §Behaviour.9
   {
-    files: ["**/*.test.{ts,tsx}", "**/*.spec.ts"],
+    files: [
+      "**/*.test.{ts,tsx}",
+      "**/*.spec.ts",
+      "**/test-support/**/*.{ts,tsx}",
+    ],
     rules: {
       "invariants/portable-core-no-node-builtins": "off",
       "invariants/no-raw-sql": "off",

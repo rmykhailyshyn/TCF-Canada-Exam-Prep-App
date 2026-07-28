@@ -64,14 +64,20 @@ _Developer-facing: "the user" is the developer running the repo's tooling._
 4. Coverage counts the project's own source (`client/src/**`, `server/**`, `scripts/**` `.ts`/`.tsx`)
    and **excludes** non-source and generated/third-party paths: `node_modules/`, `dist/`, test files
    themselves (`**/*.test.ts(x)`, `e2e/**`), generated migrations (`server/db/migrations/**`), config
-   files, and type-only declaration files.
+   files, and type-only declaration files. It **also excludes process entrypoints** — the `scripts/*.ts`
+   CLI mains and the `server/index.ts` / `server/db/migrate.ts` / `server/db/index.ts` /
+   `client/src/main.tsx` bootstraps — which are argv/`process`-level shells with no importable surface;
+   they are exercised by the e2e suite and by manual runs, not by unit tests. (Revised 2026-07-27.)
 5. All coverage **output artifacts are written under a gitignored directory** (e.g. `coverage/`) and are
    never committed; only the configuration and the recorded baseline number are committed.
 6. The reports are produced in a **common istanbul/`lcov` format** so unit and e2e results are
    mergeable into the combined figure; the merge is deterministic and documented.
 7. **Threshold enforcement:** the coverage command exits non-zero when total coverage is below the
    configured minimum, and zero at/above it. The threshold is committed in config and part of the
-   quality gate.
+   quality gate. Thresholds are enforced at **two levels**: per-metric on the **combined** figure
+   (`.nycrc.json`) and per-metric on the **unit** suite alone (`vitest.config.ts` `coverage.thresholds`),
+   so `npm run coverage:unit` is itself a gate and unit coverage cannot regress behind a healthy
+   combined number. (Revised 2026-07-27 — supersedes the "combined figure only" resolution of Open Q4.)
 8. Generating coverage does **not** change how the plain `npm test` / `npm run test:e2e` commands behave
    when run **without** the coverage script — the existing suites and the e2e DB isolation (dedicated
    `tcf_prep_e2e` DB, `e2e/global-setup.ts`, Chromium-only) are unaffected.
@@ -95,7 +101,7 @@ Testable pass/fail conditions. Each maps back to a behaviour above.
 - [ ] A unit-coverage command runs the vitest suite with coverage and emits a text summary + a machine-readable report under the gitignored output dir. (Behaviour.1)
 - [ ] An e2e-coverage command runs the Playwright suite collecting **both** client (istanbul-instrumented build) and server (`c8`) coverage, and emits reports for the exercised code. (Behaviour.2; Open Q1 resolved)
 - [ ] A combined command merges unit + e2e (client + server) into one report + printed total from a common istanbul/`lcov` format. (Behaviour.3, Behaviour.6)
-- [ ] Coverage includes `client/src/**`, `server/**`, `scripts/**` source and excludes `node_modules/`, `dist/`, test files, `e2e/**`, generated migrations, config, and `.d.ts` files. (Behaviour.4)
+- [ ] Coverage includes `client/src/**`, `server/**`, `scripts/**` source and excludes `node_modules/`, `dist/`, test files, `e2e/**`, generated migrations, config, `.d.ts` files, and the CLI/bootstrap entrypoints. (Behaviour.4)
 - [ ] All coverage output lands under a gitignored directory (e.g. `coverage/`); `.gitignore` is updated; no report artifact is committed. (Behaviour.5)
 - [ ] The coverage command **fails (non-zero)** below the configured minimum and passes at/above it; the threshold is committed and part of the gate. (Behaviour.7; Open Q2 resolved)
 - [ ] Plain `npm test` and `npm run test:e2e` (no coverage script) behave exactly as before, and e2e DB isolation is unchanged. (Behaviour.8)
@@ -119,7 +125,9 @@ Testable pass/fail conditions. Each maps back to a behaviour above.
 4. ~~**Threshold granularity + initial number.**~~ **Resolved 2026-07-25:** enforce a **per-metric**
    threshold (lines/branches/functions) on the **combined** figure only (not per-suite), seeded at/just
    under the measured baseline. The exact baseline number is measured during implementation and recorded
-   then.
+   then. **Revised 2026-07-27:** the "combined only" half no longer holds — a **per-suite unit
+   threshold** was added in `vitest.config.ts` alongside the combined one, so `npm run coverage:unit`
+   gates on its own (see Behaviour.7).
 5. ~~**Coverage in the gate vs. CI.**~~ **Resolved 2026-07-25:** CI **does** exist
    (`.github/workflows/ci.yml`, jobs `check` + `e2e`) — the earlier "no CI workflow exists" premise was
    wrong. The combined `coverage` run **will** be added to `ci.yml` as a blocking step this milestone
@@ -140,3 +148,13 @@ Testable pass/fail conditions. Each maps back to a behaviour above.
   Open Q3 (switch vitest to `@vitest/coverage-istanbul`, dropping `@vitest/coverage-v8`), Q4 (per-metric
   threshold on the combined figure only, seeded at baseline), and Q6 (dedicated `c8`-wrapped coverage
   web-server for e2e server coverage). Status stays approved.
+- 2026-07-27: Rule-4 revision for the follow-up test-writing work (branch `chore/unit-test-coverage-70`,
+  which raises the unit suite to ≥70% on all four metrics — the work this spec listed as out of scope).
+  Two divergences from what was implemented, both recorded here before the code changed: (a)
+  **Behaviour.4** now also excludes the `scripts/*.ts` CLI mains and the `server/index.ts` /
+  `server/db/migrate.ts` / `server/db/index.ts` / `client/src/main.tsx` bootstraps from the measured
+  denominator — 507 lines of argv/`process` shells with no importable surface, which the e2e suite and
+  manual runs cover instead, and whose inclusion made the unit figure measure reachability rather than
+  test quality; (b) **Behaviour.7** and **Open Q4** now specify a **per-suite unit threshold** in
+  `vitest.config.ts` in addition to the combined `.nycrc.json` one, superseding the "combined figure
+  only" resolution. Status stays implemented.
