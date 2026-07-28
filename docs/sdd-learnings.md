@@ -567,3 +567,54 @@ is what let an orthogonal engine swap pass through one seam instead of smearing 
   waits for whom), that dependency is the risky part and deserves to be written down and pinned by a test —
   `tools/e2e-runtime-invariants.test.ts` now does exactly that, because a green local run proves nothing about
   ordering that CI's different timing will resolve the other way.
+
+---
+
+## Milestone 18 follow-up — raising unit coverage to ≥70% (`chore/unit-test-coverage-70`)
+
+- **"Measure first, write tests later" worked exactly as the spec intended — and the measurement immediately
+  changed what "later" should mean.** `test-coverage.md` deliberately put test-writing out of scope and shipped
+  only the instrument. Coming back to write the tests, the per-file report turned a vague goal ("more coverage")
+  into an ordered worklist: three files (`services/sessions.ts`, `services/export-import.ts`,
+  `routes/node-routes.ts` + the portable core's routes) carried ~470 of the ~790 lines needed. Two test files
+  moved the figure 39.7% → 56.0%. Without the instrument this would have been a scattershot effort across 80
+  files. **Lesson:** splitting "build the meter" from "move the needle" into two units of work is a genuine win,
+  not bureaucratic ceremony — but only because the meter reports *per file*, not just a headline number.
+
+- **A coverage denominator is a spec decision, and ours was quietly wrong in two ways.** The instrument had been
+  green and "correct" for two days while measuring (a) ~450 lines of third-party JS vendored inside the
+  gitignored Python venv (`scripts/**` swept up `scripts/.venv/**`), and (b) 507 lines of argv-parsing CLI mains
+  that no unit test can meaningfully drive. Neither is a bug in the tooling; both are *unstated scope*. The
+  headline number was 34.34% when the honest figure was 39.72%. **Lesson:** when a spec says "counts the
+  project's own source", that phrase is doing real work and deserves an explicit file list — otherwise the first
+  person to act on the metric discovers the definition by being confused by it.
+
+- **Rule 4 earned its keep twice in one branch, on the *spec's own* resolved questions.** Open Q4 had been
+  resolved as "combined figure only, not per-suite" — but a unit-coverage goal is unenforceable without a unit
+  threshold, so the resolution had to be reopened and superseded in writing before the config changed. Same for
+  Behaviour.4's denominator. Both are cases where implementation revealed the *decision* was wrong rather than
+  the code; the spec history now explains why `vitest.config.ts` carries thresholds that an earlier reader of
+  the spec would think shouldn't exist. **Lesson:** "resolved" open questions are the most dangerous kind of
+  spec text — they read as settled fact, so a divergence from one needs a louder paper trail than a divergence
+  from a plain requirement.
+
+- **Test-writing is where the architecture gets audited, and this one passed.** Because the services take
+  `DbClient`, `MediaStore` and `LlmProvider` as *parameters* (Milestone 14's portable-core work), covering
+  `services/sessions.ts` needed no mocking framework at all — just a migrated temp-file SQLite database and the
+  real functions. The one place the architecture pushed back was `createCoreApp()`: middleware must be
+  registered on an *outer* app before mounting the core, exactly as `server/index.ts` does it, or every handler
+  gets an undefined `db`. That cost one debugging cycle and is now written down in the test's header comment.
+  **Lesson:** dependency injection's payoff shows up in the test-writing phase, months after the refactor that
+  introduced it — worth remembering when the next injection refactor looks like over-engineering.
+
+- **The metrics do not move together, and the last one is the expensive one.** Lines, statements and functions
+  all crossed 70% together on the back of the happy-path tests; branches lagged 12 points behind and needed a
+  separate, deliberate pass over error paths, validation rejections and capability-gated fallbacks. Roughly a
+  third of the total effort went into the final metric. **Lesson:** budget a coverage target as "the slowest
+  metric", not "the headline metric" — and if a gate enforces all four, say so before estimating.
+
+- **Testing-library's auto-cleanup depends on vitest `globals: true`, which this repo does not use.** Five DOM
+  test files silently accumulated mounted components across tests; the symptom was "found multiple elements",
+  three tests failing on assertions that were individually correct. The fix is one `cleanup()` per file, but the
+  failure mode is worth recording: **an opt-in convenience that keys off unrelated config is a trap**, because
+  the tests that break are not the ones that introduced the problem.

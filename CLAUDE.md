@@ -333,10 +333,20 @@ npm run coverage:unit          # vitest with the istanbul provider → coverage/
 npm run coverage:e2e           # COVERAGE=1 playwright run: client (vite-plugin-istanbul) + server (c8)
 npm run coverage               # runs unit + e2e, merges all three via nyc, prints the text-summary total
 #                                and enforces the committed per-metric threshold in .nycrc.json.
-# Read the text-summary block (Lines / Branches / Funcs / Stmts, % covered). The combined `coverage`
-# run is the gate: nyc check-coverage exits non-zero if any metric drops below its .nycrc.json minimum.
-# Adjust the threshold in .nycrc.json (per-metric: lines / branches / functions / statements). Ratchet
-# these UPWARD as coverage improves; never lower them to make a red gate pass.
+# Read the text-summary block (Lines / Branches / Funcs / Stmts, % covered).
+#
+# TWO gates, both blocking, both per-metric (lines / branches / functions / statements):
+#   - UNIT      `npm run coverage:unit` — minimum 70% on all four, in vitest.config.ts
+#               (test.coverage.thresholds). Also the CI `check` job's test step.
+#   - COMBINED  `npm run coverage`      — minimums in .nycrc.json, enforced by nyc check-coverage.
+#               Also the CI `e2e` job's step.
+# Ratchet BOTH upward as coverage improves; never lower one to make a red gate pass.
+#
+# The two figures are NOT comparable: the unit denominator (vitest.config.ts coverage.include/exclude)
+# counts only unit-testable source — it excludes the scripts/*.ts CLI mains and the process bootstraps
+# (server/index.ts, db/migrate.ts, db/index.ts, client/src/main.tsx), which are argv shells the e2e
+# suite and manual runs cover instead. The combined figure merges in the c8/istanbul e2e reports, whose
+# own include set (.c8rc.json, client/vite.config.ts) is wider — so it reads lower on the same code.
 
 # Seed a 4-question listening band (Beginner) with generated audio + authored transcripts, for
 # exercising the listening UI without the Whisper import (not part of any spec; needs ffmpeg)
