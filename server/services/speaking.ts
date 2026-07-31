@@ -1,96 +1,51 @@
-import { extname } from "node:path";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import type { DbClient } from "../db/factory";
-import {
-  sessions,
-  speakingEvaluations,
-  speakingResponses,
-  speakingTasks,
-} from "../db/schema";
+import { sessions, speakingResponses, speakingTasks } from "../db/schema";
 import { ApiError } from "../lib/errors";
 import { type Rng, pickOne } from "../lib/random";
 import { scoreToNclc } from "../lib/nclc";
-import { type TaskTiming, getSpeakingTiming } from "../config/exam";
+import { getSpeakingTiming } from "../config/exam";
 import type { MediaStore } from "../runtime/media-store";
-import type { SpeakingFeedback } from "./speakingEvaluation";
+import {
+  TASK_COUNT,
+  audioKeyFor,
+  audioUrlFor,
+  contentTypeForKey,
+  extensionForMime,
+  loadEvaluations,
+  loadResponse,
+  loadSession,
+  overallFromScores,
+} from "./speaking-shared";
+import type {
+  CompleteResult,
+  CreateSpeakingSessionInput,
+  CreateSpeakingSessionResult,
+  SpeakingSessionDetail,
+  SpeakingTaskDto,
+  SpeakingTaskReview,
+  UploadResult,
+} from "./speaking-shared";
 
 // spec: docs/specs/speaking-session.md
 // Speaking session lifecycle — PORTABLE parts only (no CLI, no `node:fs`). Create (resolve the
-// per-task draw), read back for review, resolve the playback key, plus the shared loaders/types/
-// helpers reused by the Node-only path (services/speaking-node.ts), which performs the Whisper
-// transcription and Claude scoring (saveRecording / submit / correct / complete).
+// per-task draw), read back for review, resolve the playback key, plus the practice-only (online)
+// store + complete. The shared types/loaders/media helpers live in ./speaking-shared, which the
+// Node-only path (services/speaking-node.ts) also consumes for the Whisper transcription and Claude
+// scoring (saveRecording / submit / correct / complete).
 // spec: docs/specs/server-runtime.md §Behaviour.8 — portable/Node split.
 // The DB is injected (server-runtime §Behaviour.5); no module singleton is imported.
 
-export type SpeakingMode = "learning" | "real";
-
-export type SpeakingTaskDto = {
-  taskId: number;
-  taskNumber: number;
-  question: string;
-  // Training mode only (omitted in real mode).
-  sampleAnswer?: string | null;
-};
-
-export type CreateSpeakingSessionInput = {
-  mode: SpeakingMode;
-  taskNumbers?: number[];
-};
-
-export type CreateSpeakingSessionResult = {
-  sessionId: number;
-  mode: SpeakingMode;
-  tasks: SpeakingTaskDto[];
-  timing: TaskTiming[] | null;
-};
-
-export type UploadResult = {
-  transcript: string;
-  audioUrl: string;
-  durationMs: number | null;
-};
-export type SubmitResult = {
-  score: number;
-  level: string;
-  feedback: SpeakingFeedback;
-};
-export type CompleteResult = {
-  tasks: { taskNumber: number; score: number | null; level: string | null }[];
-  // spec: docs/specs/content-deploy.md §Behaviour.7 — null (not 0) when no task is scored, so an
-  // online/practice session is never shown a fabricated /20.
-  overallScore: number | null;
-  submitted: number;
-};
-
-export type ResponseRow = typeof speakingResponses.$inferSelect;
-
-const TASK_COUNT = 3;
-
-// spec: docs/specs/speaking-session.md §Behaviour.3 — the per-task audio URL the UI streams from.
-export function audioUrlFor(sessionId: number, taskNumber: number): string {
-  return `/api/speaking/sessions/${sessionId}/responses/${taskNumber}/audio`;
-}
-
-// spec: docs/specs/speaking-session.md §Behaviour.15; server-runtime §Behaviour.6 — the portable,
-// MediaStore-resolvable RELATIVE key under the speaking/ subfolder (was an absolute path pre-M14).
-export function audioKeyFor(
-  sessionId: number,
-  taskNumber: number,
-  ext: string,
-): string {
-  return `speaking/session-${sessionId}-task-${taskNumber}.${ext}`;
-}
-
-// Map an upload's MIME type to a file extension (browsers record webm/opus by default).
-export function extensionForMime(mimetype: string | undefined): string {
-  const m = (mimetype ?? "").toLowerCase();
-  if (m.includes("webm")) return "webm";
-  if (m.includes("ogg")) return "ogg";
-  if (m.includes("mp4") || m.includes("m4a") || m.includes("aac")) return "m4a";
-  if (m.includes("wav")) return "wav";
-  if (m.includes("mpeg") || m.includes("mp3")) return "mp3";
-  return "webm";
-}
+// The DTOs the route layer builds its request/response shapes from stay re-exported here, so the
+// routes keep a single import site for the speaking service.
+export type {
+  CompleteResult,
+  CreateSpeakingSessionInput,
+  CreateSpeakingSessionResult,
+  SpeakingMode,
+  SpeakingSessionDetail,
+  UploadResult,
+} from "./speaking-shared";
 
 // spec: docs/specs/speaking-session.md §Behaviour.4–6 — resolve the requested task numbers.
 function resolveTaskNumbers(input: CreateSpeakingSessionInput): number[] {
@@ -175,108 +130,6 @@ export async function createSpeakingSession(
   };
 }
 
-// Shared loader exported for the Node-only path (services/speaking-node.ts).
-export async function loadSession(
-  db: DbClient,
-  sessionId: number,
-): Promise<typeof sessions.$inferSelect> {
-  const [session] = await db
-    .select()
-    .from(sessions)
-    .where(eq(sessions.id, sessionId));
-  if (!session || session.section !== "speaking") {
-    throw new ApiError(
-      "SESSION_NOT_FOUND",
-      `Speaking session ${sessionId} not found.`,
-      404,
-    );
-  }
-  return session;
-}
-
-// Shared loader exported for the Node-only path (services/speaking-node.ts).
-export async function loadResponse(
-  db: DbClient,
-  sessionId: number,
-  taskNumber: number,
-): Promise<ResponseRow> {
-  const [row] = await db
-    .select()
-    .from(speakingResponses)
-    .where(
-      and(
-        eq(speakingResponses.sessionId, sessionId),
-        eq(speakingResponses.taskNumber, taskNumber),
-      ),
-    );
-  if (!row) {
-    throw new ApiError(
-      "NOT_FOUND",
-      `No task ${taskNumber} in session ${sessionId}.`,
-      404,
-    );
-  }
-  return row;
-}
-
-// Shared loader exported for the Node-only path (services/speaking-node.ts).
-export async function loadTaskForResponse(
-  db: DbClient,
-  row: ResponseRow,
-): Promise<typeof speakingTasks.$inferSelect> {
-  const [task] = await db
-    .select()
-    .from(speakingTasks)
-    .where(eq(speakingTasks.id, row.speakingTaskId));
-  if (!task) {
-    throw new ApiError(
-      "NOT_FOUND",
-      `Task for response ${row.id} not found.`,
-      404,
-    );
-  }
-  return task;
-}
-
-// Shared loader exported for the Node-only path (services/speaking-node.ts).
-export async function loadEvaluations(
-  db: DbClient,
-  responseIds: number[],
-): Promise<Map<number, typeof speakingEvaluations.$inferSelect>> {
-  if (responseIds.length === 0) return new Map();
-  const rows = await db
-    .select()
-    .from(speakingEvaluations)
-    .where(inArray(speakingEvaluations.responseId, responseIds));
-  return new Map(rows.map((e) => [e.responseId, e]));
-}
-
-export type SpeakingTaskReview = {
-  taskNumber: number;
-  question: string;
-  sampleAnswer: string | null;
-  transcript: string | null;
-  durationMs: number | null;
-  hasAudio: boolean;
-  audioUrl: string | null;
-  submitted: boolean;
-  score: number | null;
-  level: string | null;
-  feedback: SpeakingFeedback | null;
-};
-
-export type SpeakingSessionDetail = {
-  session: {
-    id: number;
-    mode: string;
-    completedAt: string | null;
-    elapsedMs: number | null;
-    overallScore: number | null;
-    submitted: number;
-  };
-  tasks: SpeakingTaskReview[];
-};
-
 // spec: docs/specs/speaking-session.md §Behaviour.16, 17a; API contract — read-only results/review.
 export async function getSpeakingSession(
   db: DbClient,
@@ -324,10 +177,6 @@ export async function getSpeakingSession(
     };
   });
 
-  // spec: docs/specs/content-deploy.md §Behaviour.7 — null (not 0) when nothing is scored, so an
-  // online/practice session reads as unscored. With at least one score the mean is over all tasks.
-  const overallScore = overallFromScores(tasks);
-
   return {
     session: {
       id: session.id,
@@ -336,21 +185,13 @@ export async function getSpeakingSession(
         ? session.completedAt.toISOString()
         : null,
       elapsedMs: session.elapsedMs ?? null,
-      overallScore: session.completedAt ? overallScore : null,
+      // spec: docs/specs/content-deploy.md §Behaviour.7 — null (not 0) when nothing is scored, so an
+      // online/practice session reads as unscored. With at least one score the mean is over all tasks.
+      overallScore: session.completedAt ? overallFromScores(tasks) : null,
       submitted: tasks.filter((t) => t.score != null).length,
     },
     tasks,
   };
-}
-
-// spec: docs/specs/content-deploy.md §Behaviour.7 — shared overall-score rule: null when no task is
-// scored; otherwise the mean over all tasks (unscored/unrecorded count as 0, per speaking §Behaviour.17a).
-function overallFromScores(tasks: { score: number | null }[]): number | null {
-  const hasScore = tasks.some((t) => t.score != null);
-  if (!hasScore || tasks.length === 0) return null;
-  return Math.round(
-    tasks.reduce((sum, t) => sum + (t.score ?? 0), 0) / tasks.length,
-  );
 }
 
 // spec: docs/specs/content-deploy.md §Behaviour.5 — PORTABLE online recording upload: store the audio
@@ -457,14 +298,4 @@ export async function getResponseAudioKey(
     );
   }
   return { key: row.audioPath, contentType: contentTypeForKey(row.audioPath) };
-}
-
-export function contentTypeForKey(key: string): string {
-  const ext = extname(key).toLowerCase();
-  if (ext === ".webm") return "audio/webm";
-  if (ext === ".ogg") return "audio/ogg";
-  if (ext === ".m4a") return "audio/mp4";
-  if (ext === ".wav") return "audio/wav";
-  if (ext === ".mp3") return "audio/mpeg";
-  return "application/octet-stream";
 }

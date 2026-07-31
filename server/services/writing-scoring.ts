@@ -16,7 +16,7 @@ import {
   loadEvaluations,
   loadResponse,
   loadTaskForResponse,
-} from "./writing";
+} from "./writing-shared";
 import {
   type WritingCorrection,
   type WritingFeedback,

@@ -567,3 +567,25 @@ is what let an orthogonal engine swap pass through one seam instead of smearing 
   waits for whom), that dependency is the risky part and deserves to be written down and pinned by a test —
   `tools/e2e-runtime-invariants.test.ts` now does exactly that, because a green local run proves nothing about
   ordering that CI's different timing will resolve the other way.
+
+## Chore — File-length refactoring (no spec, by design)
+
+- **A pure refactor is the one change SDD Rule 1 does not cover, and saying so is part of the process.**
+  Splitting the seven files that had grown past ~400 lines added no behaviour, so there was nothing for a
+  spec to state: every `Behaviour` and `Acceptance criteria` item already lived in the specs the moved code
+  cites. The rule that mattered instead was Rule 5 — traceability comments are what make a split *safe*,
+  because each extracted module arrives already carrying the `spec:` line that says which contract it owes.
+  **Lesson:** "spec before code" needs an explicit carve-out for behaviour-preserving moves, otherwise the
+  gate either blocks routine hygiene or gets quietly ignored.
+
+- **The traceability comments earned their keep as split seams.** Deciding where to cut
+  `services/sessions.ts` (762 lines) took no design thinking: the `spec:` annotations already grouped the
+  file into quiz-session create / answer+complete / progress-tracking history / review-mode detail. The
+  comments have mostly read as noise during feature work; as a map for restructuring they were the whole
+  answer. That is a real, if narrow, vote in favour of Rule 5.
+
+- **Duplication that two specs each justify is invisible until the file is split.** `loadWritingAggregates`
+  and `loadSpeakingAggregates` were near-identical, each with its own spec citation (progress-tracking
+  §Behaviour.9 and speaking-session §Behaviour.17) — which is exactly why neither looked wrong in place.
+  Pulling them into one file made the copy obvious and collapsible into a shared reducer. **Lesson:** a spec
+  citation can legitimise a duplicate; file size is the pressure that eventually exposes it.

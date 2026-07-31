@@ -1,77 +1,46 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import type { DbClient } from "../db/factory";
-import {
-  sessions,
-  writingEvaluations,
-  writingResponses,
-  writingTasks,
-} from "../db/schema";
+import { sessions, writingResponses, writingTasks } from "../db/schema";
 import { ApiError } from "../lib/errors";
 import { type Rng, pickOne } from "../lib/random";
 import { scoreToNclc } from "../lib/nclc";
 import { getWritingTaskCount, getWritingTimeLimitMs } from "../config/exam";
-import type { WritingFeedback } from "./writingEvaluation";
+import {
+  countWords,
+  loadEvaluations,
+  loadResponse,
+  overallFromScores,
+} from "./writing-shared";
+import type {
+  CompleteResult,
+  CreateWritingSessionInput,
+  CreateWritingSessionResult,
+  LockResult,
+  WritingSessionDetail,
+  WritingTaskDto,
+  WritingTaskReview,
+} from "./writing-shared";
 
 // spec: docs/specs/writing-session.md
 // Writing session lifecycle — PORTABLE parts only (no CLI). Create (resolve the per-task draw),
-// autosave drafts, and read back for review, plus the shared loaders/types reused by the Node-only
-// scoring path (services/writing-node.ts). The CLI-backed submit / correct / complete live there so
-// that this module — and the portable core that imports it — never pulls in `child_process`.
+// autosave drafts, the practice-only lock + complete, and the read-back for review. The shared
+// types/loaders live in ./writing-shared, which the Node-only scoring path (services/writing-node.ts,
+// services/writing-scoring.ts) also consumes. The CLI-backed submit / correct / complete live there
+// so that this module — and the portable core that imports it — never pulls in `child_process`.
 // spec: docs/specs/server-runtime.md §Behaviour.8 — portable/Node split.
 // The DB is injected (server-runtime §Behaviour.5); no module singleton is imported.
 
-export type WritingMode = "learning" | "real";
-
-export type WritingTaskDto = {
-  taskId: number;
-  taskNumber: number;
-  title: string | null;
-  prompt: string;
-  instructions: string | null;
-  minWords: number | null;
-  maxWords: number | null;
-  // Training mode only (omitted in real mode).
-  sampleAnswer?: string | null;
-  template?: string | null;
-};
-
-export type CreateWritingSessionInput = {
-  mode: WritingMode;
-  taskNumbers?: number[];
-};
-
-export type CreateWritingSessionResult = {
-  sessionId: number;
-  mode: WritingMode;
-  tasks: WritingTaskDto[];
-  timeLimitMs: number | null;
-};
-
-export type SubmitResult = {
-  score: number;
-  level: string;
-  feedback: WritingFeedback;
-};
-export type CompleteResult = {
-  tasks: { taskNumber: number; score: number | null; level: string | null }[];
-  // spec: docs/specs/content-deploy.md §Behaviour.7 — null (not 0) when no task is scored, so an
-  // online/practice session is never shown a fabricated /20.
-  overallScore: number | null;
-  submitted: number;
-};
-
-// spec: docs/specs/content-deploy.md §Behaviour.4 — the online (practice-only) lock result: a draft is
-// locked (submitted) with its word count, but no evaluation is produced.
-export type LockResult = { wordCount: number; submitted: true };
-
-export type ResponseRow = typeof writingResponses.$inferSelect;
-
-// spec: docs/specs/writing-ui.md §Editor.6 — words counted the same as typed input.
-export function countWords(text: string): number {
-  const trimmed = text.trim();
-  if (!trimmed) return 0;
-  return trimmed.split(/\s+/).length;
-}
+// The DTOs the route layer builds its request/response shapes from stay re-exported here, so the
+// routes keep a single import site for the writing service.
+export type {
+  CompleteResult,
+  CreateWritingSessionInput,
+  CreateWritingSessionResult,
+  LockResult,
+  WritingMode,
+  WritingSessionDetail,
+} from "./writing-shared";
+export { countWords } from "./writing-shared";
 
 // spec: docs/specs/writing-session.md §Task selection — resolve the requested task numbers.
 function resolveTaskNumbers(input: CreateWritingSessionInput): number[] {
@@ -159,31 +128,6 @@ export async function createWritingSession(
   };
 }
 
-// Shared loader exported for the Node-only scoring path (services/writing-node.ts).
-export async function loadResponse(
-  db: DbClient,
-  sessionId: number,
-  taskNumber: number,
-): Promise<ResponseRow> {
-  const [row] = await db
-    .select()
-    .from(writingResponses)
-    .where(
-      and(
-        eq(writingResponses.sessionId, sessionId),
-        eq(writingResponses.taskNumber, taskNumber),
-      ),
-    );
-  if (!row) {
-    throw new ApiError(
-      "NOT_FOUND",
-      `No task ${taskNumber} in session ${sessionId}.`,
-      404,
-    );
-  }
-  return row;
-}
-
 // spec: docs/specs/writing-session.md §Behaviour.9, 13; API contract — autosave a draft.
 export async function saveDraft(
   db: DbClient,
@@ -218,72 +162,11 @@ export async function lockResponse(
   return { wordCount, submitted: true };
 }
 
-// Shared loader exported for the Node-only scoring path (services/writing-node.ts).
-export async function loadTaskForResponse(
-  db: DbClient,
-  row: ResponseRow,
-): Promise<typeof writingTasks.$inferSelect> {
-  const [task] = await db
-    .select()
-    .from(writingTasks)
-    .where(eq(writingTasks.id, row.writingTaskId));
-  if (!task) {
-    throw new ApiError(
-      "NOT_FOUND",
-      `Task for response ${row.id} not found.`,
-      404,
-    );
-  }
-  return task;
-}
-
-// Shared loader exported for the Node-only scoring path (services/writing-node.ts).
-export async function loadEvaluations(
-  db: DbClient,
-  responseIds: number[],
-): Promise<Map<number, typeof writingEvaluations.$inferSelect>> {
-  if (responseIds.length === 0) return new Map();
-  const rows = await db
-    .select()
-    .from(writingEvaluations)
-    .where(inArray(writingEvaluations.responseId, responseIds));
-  return new Map(rows.map((e) => [e.responseId, e]));
-}
-
-export type WritingTaskReview = {
-  taskNumber: number;
-  title: string | null;
-  prompt: string;
-  instructions: string | null;
-  minWords: number | null;
-  maxWords: number | null;
-  sampleAnswer: string | null;
-  template: string | null;
-  responseText: string;
-  wordCount: number | null;
-  submitted: boolean;
-  score: number | null;
-  level: string | null;
-  feedback: WritingFeedback | null;
-};
-
-export type WritingSessionDetail = {
-  session: {
-    id: number;
-    mode: string;
-    completedAt: string | null;
-    elapsedMs: number | null;
-    overallScore: number | null;
-    submitted: number;
-  };
-  tasks: WritingTaskReview[];
-};
-
-// spec: docs/specs/writing-session.md §Behaviour.16; API contract — read-only results/review.
-export async function getWritingSession(
+// The writing-session read paths 404 on anything that is not a writing session.
+async function loadWritingSession(
   db: DbClient,
   sessionId: number,
-): Promise<WritingSessionDetail> {
+): Promise<typeof sessions.$inferSelect> {
   const [session] = await db
     .select()
     .from(sessions)
@@ -295,6 +178,15 @@ export async function getWritingSession(
       404,
     );
   }
+  return session;
+}
+
+// spec: docs/specs/writing-session.md §Behaviour.16; API contract — read-only results/review.
+export async function getWritingSession(
+  db: DbClient,
+  sessionId: number,
+): Promise<WritingSessionDetail> {
+  const session = await loadWritingSession(db, sessionId);
 
   const rows = await db
     .select({
@@ -341,11 +233,6 @@ export async function getWritingSession(
     };
   });
 
-  // spec: docs/specs/content-deploy.md §Behaviour.7 — null (not 0) when nothing is scored, so an
-  // online/practice session reads as unscored rather than 0 / 20. When at least one task is scored the
-  // mean is taken over all tasks (unscored tasks count as 0), matching real-mode local scoring.
-  const overallScore = overallFromScores(tasks);
-
   return {
     session: {
       id: session.id,
@@ -354,21 +241,14 @@ export async function getWritingSession(
         ? session.completedAt.toISOString()
         : null,
       elapsedMs: session.elapsedMs ?? null,
-      overallScore: session.completedAt ? overallScore : null,
+      // spec: docs/specs/content-deploy.md §Behaviour.7 — null (not 0) when nothing is scored, so an
+      // online/practice session reads as unscored rather than 0 / 20. When at least one task is scored
+      // the mean is taken over all tasks (unscored tasks count as 0), matching real-mode local scoring.
+      overallScore: session.completedAt ? overallFromScores(tasks) : null,
       submitted: tasks.filter((t) => t.score != null).length,
     },
     tasks,
   };
-}
-
-// spec: docs/specs/content-deploy.md §Behaviour.7 — shared overall-score rule: null when no task is
-// scored; otherwise the mean over all tasks (unscored count as 0).
-function overallFromScores(tasks: { score: number | null }[]): number | null {
-  const hasScore = tasks.some((t) => t.score != null);
-  if (!hasScore || tasks.length === 0) return null;
-  return Math.round(
-    tasks.reduce((sum, t) => sum + (t.score ?? 0), 0) / tasks.length,
-  );
 }
 
 // spec: docs/specs/content-deploy.md §Behaviour.4, 7 — PORTABLE online complete: finalise the session
@@ -380,17 +260,7 @@ export async function completeWritingSessionUnscored(
   sessionId: number,
   elapsedMs: number | null,
 ): Promise<CompleteResult> {
-  const [session] = await db
-    .select()
-    .from(sessions)
-    .where(eq(sessions.id, sessionId));
-  if (!session || session.section !== "writing") {
-    throw new ApiError(
-      "SESSION_NOT_FOUND",
-      `Writing session ${sessionId} not found.`,
-      404,
-    );
-  }
+  const session = await loadWritingSession(db, sessionId);
 
   const responses = await db
     .select()
