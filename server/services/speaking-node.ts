@@ -22,7 +22,7 @@ import {
   loadResponse,
   loadSession,
   loadTaskForResponse,
-} from "./speaking";
+} from "./speaking-shared";
 import {
   type SpeakingCorrection,
   type SpeakingFeedback,

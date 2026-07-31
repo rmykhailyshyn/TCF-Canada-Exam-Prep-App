@@ -13,21 +13,23 @@ import {
   uploadSpeakingRecording,
 } from "../../lib/api";
 import { useCapabilities } from "../../lib/capabilities-context";
-import { type SpeakingConfig, preferredAudioMime } from "./types";
+import type { SpeakingConfig } from "./types";
+import { type LocalRecording, useAudioRecorder } from "./useAudioRecorder";
 
 // spec: docs/specs/speaking-session.md + docs/specs/speaking-ui.md
-// Drives a speaking session: create, in-browser recording (getUserMedia + MediaRecorder), upload +
-// transcription, training submit/correct, and the real-mode two-phase (prep → record) per-task
-// timers with auto-stop and auto-advance. Mirrors useWritingSession but with audio instead of text.
-// Mutually-referencing callbacks (recorder onstop → upload → advance) are routed through refs so the
-// MediaRecorder callback never captures a stale `sessionId`.
+// Drives a speaking session: create, upload + transcription of each take, training submit/correct,
+// and the real-mode two-phase (prep → record) per-task timers with auto-stop and auto-advance.
+// Mirrors useWritingSession but with audio instead of text. The MediaRecorder capture itself lives
+// in ./useAudioRecorder; the recorder's finished-take callback re-enters this hook through
+// `uploadTake`, and the advance-after-upload callback is routed through a ref so it never captures
+// a stale `tasks` / `sessionId`.
 
 export type SpeakingStatus = "loading" | "error" | "active" | "finished";
 
 // Real-mode per-task phase: prep countdown (recording disabled) → recording countdown → uploading.
 export type RealPhase = "prep" | "recording" | "uploading";
 
-export type LocalRecording = { url: string };
+export type { LocalRecording };
 
 export type SpeakingSession = {
   status: SpeakingStatus;
@@ -70,9 +72,6 @@ export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [tasks, setTasks] = useState<SpeakingTask[]>([]);
   const [timing, setTiming] = useState<TaskTiming[] | null>(null);
-  const [recordings, setRecordings] = useState<Record<number, LocalRecording>>(
-    {},
-  );
   const [transcripts, setTranscripts] = useState<Record<number, string>>({});
   const [evaluations, setEvaluations] = useState<
     Record<number, SpeakingEvaluation>
@@ -82,9 +81,7 @@ export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
   >({});
   const [uploading, setUploading] = useState<Record<number, boolean>>({});
   const [taskError, setTaskError] = useState<Record<number, string>>({});
-  const [recordingTask, setRecordingTask] = useState<number | null>(null);
   const [busyTask, setBusyTask] = useState<number | null>(null);
-  const [micError, setMicError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [realPhase, setRealPhase] = useState<RealPhase>("prep");
   const [phaseRemainingMs, setPhaseRemainingMs] = useState<number | null>(null);
@@ -95,63 +92,10 @@ export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
   const startTsRef = useRef(0);
   const completedRef = useRef(false);
   const sessionIdRef = useRef<number | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const streamRef = useRef<MediaStream | null>(null);
-  const recordingTaskRef = useRef<number | null>(null);
   const phaseDeadlineRef = useRef(0);
-  // Mirror of `recordings` so the unmount cleanup (empty deps) can revoke every blob URL it holds.
-  const recordingsRef = useRef<Record<number, LocalRecording>>({});
-  recordingsRef.current = recordings;
   // Mutually-referencing callbacks resolved at call time so onstop never sees a stale closure.
-  const uploadTakeRef = useRef<(taskNumber: number, blob: Blob) => void>(
-    () => {},
-  );
   const advanceRealRef = useRef<() => void>(() => {});
   const isReal = config.mode === "real";
-
-  useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-    createSpeakingSession(config.mode, config.taskNumbers)
-      .then((res) => {
-        sessionIdRef.current = res.sessionId;
-        setSessionId(res.sessionId);
-        setTasks(res.tasks);
-        setTiming(res.timing);
-        startTsRef.current = Date.now();
-        setStatus("active");
-      })
-      .catch((err: unknown) => {
-        setError(
-          err instanceof ApiError
-            ? err.message
-            : "Failed to start the speaking session.",
-        );
-        setStatus("error");
-      });
-  }, [config]);
-
-  // Stop any live stream/recorder and release every captured blob URL on unmount.
-  useEffect(() => {
-    return () => {
-      try {
-        recorderRef.current?.stop();
-      } catch {
-        /* ignore */
-      }
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      for (const rec of Object.values(recordingsRef.current)) {
-        URL.revokeObjectURL(rec.url);
-      }
-    };
-  }, []);
-
-  const timingFor = useCallback(
-    (taskNumber: number): TaskTiming | undefined =>
-      timing?.find((t) => t.taskNumber === taskNumber),
-    [timing],
-  );
 
   // spec: docs/specs/speaking-evaluation.md §Behaviour.3–5 — upload the take, store the transcript.
   const uploadTake = useCallback(
@@ -184,76 +128,39 @@ export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
     },
     [isReal],
   );
-  uploadTakeRef.current = (taskNumber, blob) =>
+
+  const recorder = useAudioRecorder((taskNumber, blob) => {
     void uploadTake(taskNumber, blob);
+  });
+  const { begin: beginRecorder, isRecording, stop: stopRecording } = recorder;
 
-  // spec: docs/specs/speaking-ui.md §Recorder (Behaviour.5–7) — capture a take via MediaRecorder.
-  const beginRecorder = useCallback(
-    async (taskNumber: number): Promise<boolean> => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-        });
-        streamRef.current = stream;
-        const mime = preferredAudioMime();
-        const recorder = new MediaRecorder(
-          stream,
-          mime ? { mimeType: mime } : undefined,
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    createSpeakingSession(config.mode, config.taskNumbers)
+      .then((res) => {
+        sessionIdRef.current = res.sessionId;
+        setSessionId(res.sessionId);
+        setTasks(res.tasks);
+        setTiming(res.timing);
+        startTsRef.current = Date.now();
+        setStatus("active");
+      })
+      .catch((err: unknown) => {
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "Failed to start the speaking session.",
         );
-        chunksRef.current = [];
-        recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) chunksRef.current.push(e.data);
-        };
-        recorder.onstop = () => {
-          const blob = new Blob(chunksRef.current, {
-            type: recorder.mimeType || "audio/webm",
-          });
-          streamRef.current?.getTracks().forEach((t) => t.stop());
-          streamRef.current = null;
-          const url = URL.createObjectURL(blob);
-          setRecordings((r) => {
-            const prev = r[taskNumber];
-            if (prev) URL.revokeObjectURL(prev.url);
-            return { ...r, [taskNumber]: { url } };
-          });
-          uploadTakeRef.current(taskNumber, blob);
-        };
-        recorder.start();
-        recorderRef.current = recorder;
-        recordingTaskRef.current = taskNumber;
-        setRecordingTask(taskNumber);
-        setMicError(null);
-        return true;
-      } catch {
-        setMicError(
-          "Microphone access was denied. Allow it in your browser and try again.",
-        );
-        return false;
-      }
-    },
-    [],
-  );
+        setStatus("error");
+      });
+  }, [config]);
 
-  const startRecording = useCallback(
-    (taskNumber: number) => {
-      if (recordingTaskRef.current != null) return;
-      void beginRecorder(taskNumber);
-    },
-    [beginRecorder],
+  const timingFor = useCallback(
+    (taskNumber: number): TaskTiming | undefined =>
+      timing?.find((t) => t.taskNumber === taskNumber),
+    [timing],
   );
-
-  const stopRecording = useCallback(() => {
-    const recorder = recorderRef.current;
-    recorderRef.current = null;
-    recordingTaskRef.current = null;
-    setRecordingTask(null);
-    if (!recorder) return;
-    try {
-      if (recorder.state !== "inactive") recorder.stop();
-    } catch {
-      /* ignore */
-    }
-  }, []);
 
   const submit = useCallback(
     (taskNumber: number) => {
@@ -367,7 +274,7 @@ export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
       }
       phaseDeadlineRef.current = Date.now() + prepMs;
       setPhaseRemainingMs(prepMs);
-    } else if (realPhase === "recording" && recordingTaskRef.current == null) {
+    } else if (realPhase === "recording" && !isRecording()) {
       phaseDeadlineRef.current = Date.now() + recordMs;
       setPhaseRemainingMs(recordMs);
       void beginRecorder(task.taskNumber);
@@ -397,6 +304,7 @@ export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
     tasks,
     timingFor,
     beginRecorder,
+    isRecording,
     stopRecording,
   ]);
 
@@ -407,21 +315,21 @@ export function useSpeakingSession(config: SpeakingConfig): SpeakingSession {
     mode: config.mode,
     tasks,
     timing,
-    recordings,
+    recordings: recorder.recordings,
     transcripts,
     evaluations,
     corrections,
     uploading,
     taskError,
-    recordingTask,
+    recordingTask: recorder.recordingTask,
     busyTask,
-    micError,
+    micError: recorder.micError,
     currentIndex,
     realPhase,
     phaseRemainingMs,
     results,
     elapsedMs,
-    startRecording,
+    startRecording: recorder.start,
     stopRecording,
     submit,
     correct,

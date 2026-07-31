@@ -116,9 +116,12 @@ export default tseslint.config(
   // legitimately mock DB clients, import node:fs to build fixtures, run static PRAGMAs, and stub async
   // methods that never await. The security SAST heuristics, the cross-file project invariants, and the
   // strict type-aware safety rules all target shipped production code, so they are disabled here — the
-  // production sources they protect are still fully covered above. spec: static-analysis.md §Behaviour.9
+  // production sources they protect are still fully covered above. `*.test-support.ts` is the shared
+  // harness a test file imports (fixtures, fake stores, app factories) — the same scaffolding, just
+  // hoisted out of the spec file, so it is scoped here too.
+  // spec: static-analysis.md §Behaviour.9
   {
-    files: ["**/*.test.{ts,tsx}", "**/*.spec.ts"],
+    files: ["**/*.test.{ts,tsx}", "**/*.spec.ts", "**/*.test-support.ts"],
     rules: {
       "invariants/portable-core-no-node-builtins": "off",
       "invariants/no-raw-sql": "off",
